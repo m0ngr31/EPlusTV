@@ -10,7 +10,7 @@ RUN pip install streamlink
 
 RUN \
   cd /app && \
-  npm install -g pm2 \
+  npm install -g pm2 typescript \
   npm ci && \
   npm run build
 
