@@ -65,13 +65,12 @@ export const launchChannel = async (channelId: string, appStatus, appUrl) => {
   }
 
   const now = new Date().valueOf();
-  const entries = _.sortBy(await db.entries.find(e => e.channel == channelId && e.end > now), 'start');
-
-  const playingNow = _.find(entries, e => e.start < now);
+  const channel = parseInt(channelId, 10);
+  const playingNow = await db.entries.findOne({channel, end: {$gt: now}, start: {$lt: now}});
 
   if (playingNow) {
     console.log('There is an active event. Going to start the stream.');
-    appStatus.channels[channelId].current = playingNow.id;
+    appStatus.channels[channelId].current = (playingNow as any).id;
     startChannelStream(channelId, appStatus, appUrl);
   }
 };
@@ -83,16 +82,17 @@ export const checkNextStream = async (channelId: string, appStatus, appUrl) => {
     return;
   }
 
-  const entries = _.sortBy(await db.entries.find(e => e.channel == channelId && e.start > now), 'start');
+  const channel = parseInt(channelId, 10);
+  const entries = await db.entries.find({channel, start: {$gt: now}}).sort({start: 1});
 
   const now2 = new Date().valueOf();
 
   if (entries && entries.length > 0 && now - appStatus.channels[channelId].heartbeat < 30 * 1000) {
-    const diff = entries[0].start - now2;
+    const diff = (entries[0] as any).start - now2;
 
     console.log('Channel has upcoming event. Set timer to start');
 
-    appStatus.channels[channelId].nextUp = entries[0].id;
+    appStatus.channels[channelId].nextUp = (entries[0] as any).id;
     appStatus.channels[channelId].nextUpTimer = setTimeout(() => delayedStart(channelId, appStatus, appUrl), diff);
   }
 };

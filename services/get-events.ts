@@ -1,17 +1,16 @@
 import { webkit } from 'playwright';
-import _ from 'lodash';
 import moment from 'moment';
 
 import { db } from './database';
 
 const parseAirings = async events => {
   for (const event of events) {
-    const entryExists = await db.entries.exists(e => e.id === event.id);
+    const entryExists = await db.entries.findOne({id: event.id});
 
     if (!entryExists) {
       console.log('Adding event: ', event.name);
 
-      await db.entries.save({
+      await db.entries.insert({
         id: event.id,
         name: event.name,
         start: new Date(event.startDateTime).valueOf(),
@@ -71,9 +70,5 @@ export const getEventSchedules = async () => {
 
   console.log('Cleaning up old events');
   const now = new Date().valueOf();
-  const events = await db.entries.find(e => e.end < now);
-
-  for (const event of events) {
-    await db.entries.delete(event.id);
-  }
+  await db.entries.remove({end: {$lt: now}}, {multi: true});
 };

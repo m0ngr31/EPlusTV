@@ -10,7 +10,6 @@ import { slateStream } from './services/stream-slate';
 import { initDirectories } from './services/init-directories';
 import { generateXml } from './services/generate-xmltv';
 import { checkNextStream, launchChannel } from './services/launch-channel';
-import { db } from './services/database';
 import { getEventSchedules } from './services/get-events';
 import { scheduleEntries } from './services/build-schedule';
 
@@ -56,10 +55,6 @@ const shutDown = async () => {
   _.forOwn(appStatus.channels, (val, key) => {
     val.pid && kill(val.pid);
   });
-
-  try {
-    await db.close();
-  } catch (e) { }
 
   process.exit(0);
 };
@@ -181,7 +176,6 @@ process.on('SIGINT', shutDown);
 
 
 (async () => {
-  await db.init();
   await schedule();
 
   console.log('=== Starting Server ===')

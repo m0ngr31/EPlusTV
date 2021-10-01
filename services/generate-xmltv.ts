@@ -38,18 +38,18 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
     });
   });
 
-  const scheduledEntries = _.sortBy(await db.entries.find(e => e.channel), 'start');
+  const scheduledEntries = await db.entries.find({channel: {$exists: true}}).sort({start: 1});
 
   for (const entry of scheduledEntries) {
-    const channelNum = startChannel + entry.channel;
+    const channelNum = startChannel + (entry as any).channel;
 
     wrap.tv.push({
       programme: [
         {
           _attr: {
             'channel': `${channelNum}.eplustv`,
-            start: moment(entry.start).format('YYYYMMDDHHmmss ZZ'),
-            stop: moment(entry.end).format('YYYYMMDDHHmmss ZZ'),
+            start: moment((entry as any).start).format('YYYYMMDDHHmmss ZZ'),
+            stop: moment((entry as any).end).format('YYYYMMDDHHmmss ZZ'),
           },
         },
         {
@@ -59,7 +59,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
                 'lang': 'en',
               },
             },
-            entry.name,
+            (entry as any).name,
           ],
         },
         {
@@ -69,14 +69,14 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
                 'lang': 'en',
               },
             },
-            entry.name,
+            (entry as any).name,
           ]
         },
         {
           icon: [
             {
               _attr: {
-                'src': entry.image,
+                'src': (entry as any).image,
               },
             },
           ],
