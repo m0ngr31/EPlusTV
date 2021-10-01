@@ -10,12 +10,10 @@ RUN pip install streamlink
 
 RUN \
   cd /app && \
-  npm install -g pm2 typescript && \
+  npm install -g pm2 && \
   npm ci && \
-  npm run build
-
-RUN echo '#!/bin/sh\npm2 start pm2.json --no-daemon' > run.sh
-RUN echo 'chmod +x run.sh'
+  npm run build && \
+  chmod +x pm2.sh
 
 EXPOSE 8000
-ENTRYPOINT "./run.sh"
+ENTRYPOINT "./pm2.sh"
