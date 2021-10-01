@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import xml from 'xml';
-import {addHours, format} from 'date-fns';
 import moment from 'moment';
 
 import { db } from './database';
@@ -39,9 +38,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
     });
   });
 
-  const [entriesDb, scheduleDb, hash] = await db.initCopy();
-  const scheduledEntries = _.sortBy(await entriesDb.find(e => e.channel), 'start');
-  await db.closeCopy(entriesDb, scheduleDb, hash);
+  const scheduledEntries = _.sortBy(await db.entries.find(e => e.channel), 'start');
 
   for (const entry of scheduledEntries) {
     const channelNum = startChannel + entry.channel;

@@ -10,6 +10,9 @@ import { slateStream } from './services/stream-slate';
 import { initDirectories } from './services/init-directories';
 import { generateXml } from './services/generate-xmltv';
 import { checkNextStream, launchChannel } from './services/launch-channel';
+import { db } from './services/database';
+import { getEventSchedules } from './services/get-events';
+import { scheduleEntries } from './services/build-schedule';
 
 const NUM_OF_CHANNELS: number = 100;
 
@@ -54,7 +57,20 @@ const shutDown = async () => {
     val.pid && kill(val.pid);
   });
 
+  try {
+    await db.close();
+  } catch (e) { }
+
   process.exit(0);
+};
+
+const schedule = async () => {
+  console.log('=== Getting events ===');
+  await getEventSchedules();
+  console.log('=== Done getting events ===');
+  console.log('=== Building the schedule ===');
+  await scheduleEntries();
+  console.log('=== Done building the schedule ===');
 };
 
 const app = express();
@@ -159,10 +175,18 @@ app.get('/channels/:id/:part.ts', (req, res) => {
 // 404 Handler
 app.use(notFound);
 
-app.listen(8000, () => console.log('Server started on port 8000'));
 
 process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
+
+
+(async () => {
+  await db.init();
+  await schedule();
+
+  console.log('=== Starting Server ===')
+  app.listen(8000, () => console.log('Server started on port 8000'));
+})();
 
 
 // Cleanup intervals
@@ -189,3 +213,8 @@ setInterval(() => {
     }
   });
 }, 60 * 1000);
+
+// Check for events every 4 hours and set the schedule
+setInterval(async () => {
+  await schedule();
+}, 1000 * 60 * 60 * 4);

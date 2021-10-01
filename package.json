@@ -1,6 +1,6 @@
 {
   "name": "eplustv",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,6 @@
   "license": "MIT",
   "dependencies": {
     "a1-database": "^1.8.0",
-    "date-fns": "^2.24.0",
     "express": "^4.17.1",
     "find-remove": "^3.1.0",
     "fs-extra": "^10.0.0",

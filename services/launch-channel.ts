@@ -65,9 +65,7 @@ export const launchChannel = async (channelId: string, appStatus, appUrl) => {
   }
 
   const now = new Date().valueOf();
-  const [entriesDb, scheduleDb, hash] = await db.initCopy();
-  const entries = _.sortBy(await entriesDb.find(e => e.channel == channelId && e.end > now), 'start');
-  await db.closeCopy(entriesDb, scheduleDb, hash);
+  const entries = _.sortBy(await db.entries.find(e => e.channel == channelId && e.end > now), 'start');
 
   const playingNow = _.find(entries, e => e.start < now);
 
@@ -85,9 +83,7 @@ export const checkNextStream = async (channelId: string, appStatus, appUrl) => {
     return;
   }
 
-  const [entriesDb, scheduleDb, hash] = await db.initCopy();
-  const entries = _.sortBy(await entriesDb.find(e => e.channel == channelId && e.start > now), 'start');
-  await db.closeCopy(entriesDb, scheduleDb, hash);
+  const entries = _.sortBy(await db.entries.find(e => e.channel == channelId && e.start > now), 'start');
 
   const now2 = new Date().valueOf();
 

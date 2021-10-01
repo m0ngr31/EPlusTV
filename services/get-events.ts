@@ -1,6 +1,6 @@
 import { webkit } from 'playwright';
 import _ from 'lodash';
-import { addSeconds, addDays, format } from 'date-fns';
+import moment from 'moment';
 
 import { db } from './database';
 
@@ -16,7 +16,7 @@ const parseAirings = async events => {
         name: event.name,
         start: new Date(event.startDateTime).valueOf(),
         duration: event.duration,
-        end: addSeconds(new Date(event.startDateTime), event.duration).valueOf(),
+        end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),
         feed: event.feedName,
         image: event.image?.url,
       });
@@ -63,8 +63,8 @@ export const getEventSchedules = async () => {
       console.log('Looking for upcoming events...');
 
       for (const [i] of [1, 2, 3].entries()) {
-        const date = addDays(today, i);
-        await getEvents(`${url}/${format(date, 'yyyyMMdd')}`)
+        const date = moment(today).add(i, 'days');
+        await getEvents(`${url}/${date.format('YYYYMMDD')}`)
       }
     }
   }

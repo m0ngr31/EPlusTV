@@ -1,19 +1,17 @@
-FROM nikolaik/python-nodejs:python3.9-nodejs14-alpine
+FROM nikolaik/python-nodejs:python3.9-nodejs14
 
 RUN mkdir /app
 WORKDIR /app
 
 COPY . .
 
-RUN apk update && apk add --no-cache ffmpeg libxslt-dev libxml2-dev build-base libffi-dev
-RUN pip install streamlink
+RUN apt update && apt install ffmpeg -y && pip install streamlink
 
 RUN \
   cd /app && \
-  npm install -g pm2 && \
+  npm install -g npm && \
   npm ci && \
-  npm run build && \
-  chmod +x pm2.sh
+  npm run build
 
 EXPOSE 8000
-ENTRYPOINT "./pm2.sh"
+ENTRYPOINT ["node", "dist/index.js"]

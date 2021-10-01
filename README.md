@@ -3,7 +3,15 @@
 Current version: **0.9.0**
 
 ## About
-This takes ESPN+ and transforms it into a "live TV" experience. It will discover what is on, create a schedule of channels and give you an m3u and xmltv file that you can import into things like Jellyfin, Emby, TVHeadend, NextPVR, Channels DVR, ect.
+This takes ESPN+ and transforms it into a "live TV" experience. It will discover what is on, create a schedule of channels and give you an m3u and xmltv file that you can import into things like Jellyfin, Channels DVR, or just maybe Jellyfin through Channels DVR!
+
+## Using
+The server exposes 2 main endpoints:
+
+| Endpoint | Description |
+|---|---|
+| /channels.m3u | The channel list you'll import into your client |
+| /xmltv.xml | The schedule that you'll import into your client |
 
 ## Running
 The recommended way of running is to pull the image from [Docker Hub](https://hub.docker.com/r/m0ngr31/eplustv).
@@ -29,5 +37,5 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 By default, the easiest way to get running is:
 
 ```bash
-docker run -p 8000:8000 -v /config_dir:/app/config -v /dev/shm:/app/tmp m0ngr31/eplustv
+docker run -p 8000:8000 -v /config_dir:/app/config -v /dev/shm:/app/tmp -e ACCESS_URI='http://192.168.0.10:8000' -e ESPN_USER='...' -e ESPN_PASS='...'  m0ngr31/eplustv
 ```

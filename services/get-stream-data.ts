@@ -52,7 +52,7 @@ export const getStreamData = async (eventId: string) => {
     const frame = await (await page.$(pathSelector)).contentFrame();
 
     if (frame) {
-      await frame.click("text=Log In");
+      await frame.click('text=Log In');
       await sleep(500);
       await page.keyboard.press('Tab');
       await page.keyboard.type(process.env.ESPN_USER);
