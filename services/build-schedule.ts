@@ -1,6 +1,6 @@
 import { db } from './database';
 
-export const scheduleEntries = async () => {
+export const scheduleEntries = async (START_CHANNEL) => {
   const unscheduledEntries = await db.entries.find({channel: {$exists: false}}).sort({start: 1});
   unscheduledEntries && unscheduledEntries.length && console.log(`There are ${unscheduledEntries.length} unscheduled entries`);
 
@@ -14,7 +14,7 @@ export const scheduleEntries = async () => {
         continue;
       }
 
-      const newChannelNum = channelNums + 1;
+      const newChannelNum = channelNums + START_CHANNEL;
 
       console.log('Creating a new channel: ', newChannelNum);
 

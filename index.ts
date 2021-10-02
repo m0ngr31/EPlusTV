@@ -62,7 +62,7 @@ const schedule = async () => {
   await getEventSchedules();
   console.log('=== Done getting events ===');
   console.log('=== Building the schedule ===');
-  await scheduleEntries();
+  await scheduleEntries(START_CHANNEL);
   console.log('=== Done building the schedule ===');
 };
 
@@ -174,7 +174,7 @@ process.on('SIGINT', shutDown);
 
 
 (async () => {
-  initDirectories(NUM_OF_CHANNELS);
+  initDirectories(NUM_OF_CHANNELS, START_CHANNEL);
 
   await schedule();
 

@@ -24,6 +24,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | ACCESS_URI | What accessable URL your clients will be connecting from. For example: `http://192.168.0.1:8000` |
 | ESPN_USER | Your ESPN+ Username |
 | ESPN_PASS | Your ESPN+ Password |
+| START_CHANNEL | What the first channel number should be. Keep in mind this generates 100 channels to keep a healthy buffer. |
 
 
 #### Volumes

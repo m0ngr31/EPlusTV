@@ -6,7 +6,7 @@ import _ from 'lodash';
 const tmpPath = path.join(process.cwd(), 'tmp');
 const configPath = path.join(process.cwd(), 'config');
 
-export const initDirectories = (numChannels) => {
+export const initDirectories = (numChannels, startChannel) => {
   if (!fs.existsSync(tmpPath)) {
     fs.mkdirSync(tmpPath);
   }
@@ -14,7 +14,7 @@ export const initDirectories = (numChannels) => {
   fsExtra.emptyDirSync(tmpPath);
 
   _.times(numChannels, i => {
-    const channelPath = path.join(tmpPath, `${i + 1}`);
+    const channelPath = path.join(tmpPath, `${i + startChannel}`);
     fs.mkdirSync(channelPath);
   });
 
