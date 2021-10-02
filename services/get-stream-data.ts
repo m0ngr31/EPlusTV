@@ -1,11 +1,11 @@
-import { webkit } from 'playwright';
+import { firefox } from 'playwright';
 import _ from 'lodash';
 
 import { sleep } from './sleep';
 
 export const getStreamData = async (eventId: string) => {
   console.log('Getting stream for event: ', eventId);
-  const browser = await webkit.launch();
+  const browser = await firefox.launch();
   const context = await browser.newContext({storageState: 'config/state.json'});
   const page = await context.newPage();
 

@@ -21,5 +21,13 @@ export const initDirectories = (numChannels) => {
   if (!fs.existsSync(path.join(configPath, 'state.json'))) {
     fs.writeFileSync(path.join(configPath, 'state.json'), JSON.stringify({}));
   }
+
+  if (!fs.existsSync(path.join(configPath, 'entries.db'))) {
+    fs.writeFileSync(path.join(configPath, 'entries.db'), '');
+  }
+
+  if (!fs.existsSync(path.join(configPath, 'schedule.db'))) {
+    fs.writeFileSync(path.join(configPath, 'schedule.db'), '');
+  }
 };
 

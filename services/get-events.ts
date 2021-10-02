@@ -1,4 +1,4 @@
-import { webkit } from 'playwright';
+import { firefox } from 'playwright';
 import moment from 'moment';
 
 import { db } from './database';
@@ -31,7 +31,7 @@ const responseIntercept = async response => {
 };
 
 const getEvents = async url => {
-  const browser = await webkit.launch();
+  const browser = await firefox.launch();
   const context = await browser.newContext({ storageState: 'config/state.json' });
   const page = await context.newPage();
 

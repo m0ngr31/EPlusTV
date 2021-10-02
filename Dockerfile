@@ -5,10 +5,11 @@ WORKDIR /app
 
 COPY . .
 
-RUN apt update && apt install ffmpeg -y && pip install streamlink
+RUN pip install streamlink
 
 RUN \
   cd /app && \
+  npm install -g npm && \
   npm ci
 
 EXPOSE 8000

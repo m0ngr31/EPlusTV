@@ -30,8 +30,6 @@ while (ACCESS_URL.endsWith('/')) {
   ACCESS_URL = ACCESS_URL.slice(0, -1);
 }
 
-initDirectories(NUM_OF_CHANNELS);
-
 interface IChannelStatus {
   heartbeat: number;
   pid?: any;
@@ -176,6 +174,8 @@ process.on('SIGINT', shutDown);
 
 
 (async () => {
+  initDirectories(NUM_OF_CHANNELS);
+
   await schedule();
 
   console.log('=== Starting Server ===')
