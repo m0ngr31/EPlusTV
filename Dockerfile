@@ -9,8 +9,7 @@ RUN apt update && apt install ffmpeg -y && pip install streamlink
 
 RUN \
   cd /app && \
-  npm ci && \
-  npm run build
+  npm ci
 
 EXPOSE 8000
-ENTRYPOINT ["node", "dist/index.js"]
+ENTRYPOINT ["npx", "ts-node", "index.ts"]
