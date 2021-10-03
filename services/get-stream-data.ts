@@ -64,8 +64,10 @@ export const getStreamData = async (eventId: string) => {
       await page.keyboard.type(process.env.ESPN_USER);
       await page.keyboard.press('Tab');
       await page.keyboard.type(process.env.ESPN_PASS);
+      await page.keyboard.down('Shift');
       await page.keyboard.press('Tab');
-      await page.keyboard.press('Space');
+      await page.keyboard.up('Shift');
+      await page.keyboard.press('Enter');
     }
   } catch (e) {}
 
