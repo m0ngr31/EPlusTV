@@ -7,7 +7,6 @@ export const getStreamData = async (eventId: string) => {
   console.log('Getting stream for event: ', eventId);
   const browser = await chromium.launch({
     channel: 'chrome',
-    headless: false,
   });
   const context = await browser.newContext({storageState: 'config/state.json'});
   const page = await context.newPage();
