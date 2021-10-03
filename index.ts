@@ -7,7 +7,7 @@ import kill from 'tree-kill';
 import { generateM3u } from './services/generate-m3u';
 import { cleanupParts } from './services/clean-parts';
 import { slateStream } from './services/stream-slate';
-import { initDirectories } from './services/init-directories';
+import { initDirectories, tmpPath } from './services/init-directories';
 import { generateXml } from './services/generate-xmltv';
 import { checkNextStream, launchChannel } from './services/launch-channel';
 import { getEventSchedules } from './services/get-events';
@@ -98,8 +98,8 @@ app.get('/xmltv.xml', async (req, res) => {
 
 app.get('/channels/:id.m3u8', async (req, res) => {
   const {id} = req.params;
-  const fileStr = `tmp/${id}/${id}.m3u8`;
-  const filename = path.join(process.cwd(), fileStr);
+  const fileStr = `${id}/${id}.m3u8`;
+  const filename = path.join(tmpPath, fileStr);
 
   let contents = null;
 
@@ -139,16 +139,17 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 app.get('/channels/:id/:part.ts', (req, res) => {
   const {id, part} = req.params;
   let fileStr;
+  let filename;
 
   const isSlate = id === 'starting' || id === 'soon';
 
   if (isSlate) {
     fileStr = `slate/${id}/${part}.ts`;
+    filename = path.join(process.cwd(), fileStr);
   } else {
-    fileStr = `tmp/${id}/${part}.ts`;
+    fileStr = `${id}/${part}.ts`;
+    filename = path.join(tmpPath, fileStr);
   }
-
-  const filename = path.join(process.cwd(), fileStr);
 
   if (!fs.existsSync(filename)) {
     console.log('Error opening part: ', filename);

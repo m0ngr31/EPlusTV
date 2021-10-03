@@ -8,6 +8,7 @@ import fs from 'fs';
 import { db } from './database';
 import { getStreamData } from './get-stream-data';
 import { slateStream } from './stream-slate';
+import { tmpPath } from './init-directories';
 
 let checkingStream = {};
 
@@ -36,11 +37,11 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
 
   const currentM3u8 = slateStream.getSlate('soon', appUrl);
 
-  fs.writeFileSync(path.join(process.cwd(), `tmp/${channelId}/${channelId}.m3u8`), currentM3u8, 'utf8');
+  fs.writeFileSync(path.join(tmpPath, `${channelId}/${channelId}.m3u8`), currentM3u8, 'utf8');
   const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl}, detached: true, stdio: 'ignore'});
   appStatus.channels[channelId].pid = child.pid;
 
-  child.on('close', () => fsExtra.emptyDirSync(path.join(process.cwd(), `tmp/${channelId}`)));
+  child.on('close', () => fsExtra.emptyDirSync(path.join(tmpPath, `${channelId}`)));
 };
 
 const delayedStart = async (channelId: string, appStatus, appUrl) => {

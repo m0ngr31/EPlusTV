@@ -3,12 +3,12 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import _ from 'lodash';
 
-const tmpPath = path.join(process.cwd(), 'tmp');
+export const tmpPath = path.join(process.cwd(), 'tmp/eplustv');
 const configPath = path.join(process.cwd(), 'config');
 
 export const initDirectories = (numChannels, startChannel) => {
   if (!fs.existsSync(tmpPath)) {
-    fs.mkdirSync(tmpPath);
+    fs.mkdirSync(tmpPath, {recursive: true});
   }
 
   fsExtra.emptyDirSync(tmpPath);
