@@ -31,7 +31,9 @@ const responseIntercept = async response => {
 };
 
 const getEvents = async url => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    channel: 'chrome',
+  });
   const context = await browser.newContext({ storageState: 'config/state.json' });
   const page = await context.newPage();
 

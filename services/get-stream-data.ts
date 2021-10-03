@@ -5,27 +5,37 @@ import { sleep } from './sleep';
 
 export const getStreamData = async (eventId: string) => {
   console.log('Getting stream for event: ', eventId);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    channel: 'chrome',
+  });
   const context = await browser.newContext({storageState: 'config/state.json'});
   const page = await context.newPage();
 
   let authToken = null;
   let m3u8 = null;
-  let totalTries = 500;
+  let totalTries = 1000;
   let currentTry = 0;
 
+  const close = async () => {
+    await context.storageState({ path: 'config/state.json' });
+    await context.close();
+    await browser.close();
+    return [m3u8, authToken];
+  };
+
   page.on('request', async request => {
-    if (request.url().indexOf('keys') > -1) {
-      authToken = await request.headerValue('Authorization');
+    if (request.url().indexOf('keys') > -1 && !authToken) {
+      const isAuthToken = await request.headerValue('Authorization');
+      authToken = isAuthToken && isAuthToken;
     }
 
-    if (request.url().endsWith('m3u8') && request.url().indexOf('master') > -1) {
+    if (request.url().endsWith('m3u8') && request.url().indexOf('master') > -1 && !m3u8) {
       m3u8 = request.url();
     }
   });
 
   await page.goto(`https://www.espn.com/espnplus/player/_/id/${eventId}`, {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
   });
 
   // Check to see if we're logged in
@@ -39,10 +49,7 @@ export const getStreamData = async (eventId: string) => {
 
   if (m3u8 && authToken) {
     console.log('Got credentials from local storage');
-    await context.storageState({ path: 'config/state.json' });
-    await context.close();
-    await browser.close();
-    return [m3u8, authToken];
+    return await close();
   }
 
   try {
@@ -53,8 +60,7 @@ export const getStreamData = async (eventId: string) => {
 
     if (frame) {
       await frame.click('text=Log In');
-      await sleep(500);
-      await page.keyboard.press('Tab');
+      await sleep(1000);
       await page.keyboard.type(process.env.ESPN_USER);
       await page.keyboard.press('Tab');
       await page.keyboard.type(process.env.ESPN_PASS);
@@ -62,7 +68,7 @@ export const getStreamData = async (eventId: string) => {
     }
   } catch (e) {}
 
-  totalTries = 1000;
+  totalTries = 1500;
   currentTry = 0;
 
   while (!m3u8 || !authToken) {
@@ -73,13 +79,5 @@ export const getStreamData = async (eventId: string) => {
     currentTry += 1;
   }
 
-  await context.storageState({ path: 'config/state.json' });
-  await context.close();
-  await browser.close();
-
-  if (currentTry === totalTries) {
-    return [null, null];
-  }
-
-  return [m3u8, authToken];
+  return await close();
 };

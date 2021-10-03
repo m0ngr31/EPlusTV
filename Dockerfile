@@ -1,16 +1,24 @@
 FROM mcr.microsoft.com/playwright:focal
 
+RUN \
+  npm install -g npm && \
+  npx playwright install chrome
+
+RUN pip install streamlink
+
 RUN mkdir /app
 WORKDIR /app
 
 COPY . .
 
-RUN pip install streamlink
-
 RUN \
   cd /app && \
-  npm install -g npm && \
   npm ci
 
 EXPOSE 8000
+
+RUN chown pwuser:pwuser /app
+
+USER pwuser
+
 ENTRYPOINT ["npx", "ts-node", "index.ts"]

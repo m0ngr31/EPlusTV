@@ -41,7 +41,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
   const scheduledEntries = await db.entries.find({channel: {$exists: true}}).sort({start: 1});
 
   for (const entry of scheduledEntries) {
-    const channelNum = startChannel + (entry as any).channel;
+    const channelNum = (entry as any).channel;
 
     wrap.tv.push({
       programme: [
