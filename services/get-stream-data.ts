@@ -7,6 +7,7 @@ export const getStreamData = async (eventId: string) => {
   console.log('Getting stream for event: ', eventId);
   const browser = await chromium.launch({
     channel: 'chrome',
+    headless: false,
   });
   const context = await browser.newContext({storageState: 'config/state.json'});
   const page = await context.newPage();
@@ -64,7 +65,8 @@ export const getStreamData = async (eventId: string) => {
       await page.keyboard.type(process.env.ESPN_USER);
       await page.keyboard.press('Tab');
       await page.keyboard.type(process.env.ESPN_PASS);
-      await page.keyboard.press('Enter');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Space');
     }
   } catch (e) {}
 
