@@ -17,6 +17,7 @@ RUN \
 
 EXPOSE 8000
 
+RUN chmod +x stream_channel.sh
 RUN chown pwuser:pwuser /app
 
 USER pwuser

@@ -33,15 +33,21 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
     return;
   }
 
-  console.log('Starting stream');
-
   const currentM3u8 = slateStream.getSlate('soon', appUrl);
 
   fs.writeFileSync(path.join(tmpPath, `${channelId}/${channelId}.m3u8`), currentM3u8, 'utf8');
-  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl}, detached: true, stdio: 'ignore'});
+
+  const out = fs.openSync(path.join(tmpPath, `${channelId}-log.txt`), 'a');
+  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl}, detached: true, stdio: ['ignore', out, out]});
+
   appStatus.channels[channelId].pid = child.pid;
 
-  child.on('close', () => fsExtra.emptyDirSync(path.join(tmpPath, `${channelId}`)));
+  console.log('Stream started on PID: ', child.pid);
+
+  child.on('close', () => {
+    console.log(`Stream for ${channelId} stopped.`);
+    fsExtra.emptyDirSync(path.join(tmpPath, `${channelId}`));
+  });
 };
 
 const delayedStart = async (channelId: string, appStatus, appUrl) => {
