@@ -17,6 +17,10 @@ export const initDirectories = (numChannels, startChannel) => {
     const channelPath = path.join(tmpPath, `${i + startChannel}`);
     fs.mkdirSync(channelPath);
   });
+  
+  if (!fs.existsSync(configPath)) {
+    fs.mkdirSync(configPath);
+  }
 
   if (!fs.existsSync(path.join(configPath, 'state.json'))) {
     fs.writeFileSync(path.join(configPath, 'state.json'), JSON.stringify({}));
