@@ -179,8 +179,13 @@ process.on('SIGINT', shutDown);
 
   await schedule();
 
+  let port = 8000;
+  if (process.env.PORT && !isNaN(parseInt(process.env.PORT))){
+  	port = parseInt(process.env.PORT)
+  }
+
   console.log('=== Starting Server ===')
-  app.listen(8000, () => console.log('Server started on port 8000'));
+  app.listen(port, () => console.log(`Server started on port ${port}`));
 })();
 
 

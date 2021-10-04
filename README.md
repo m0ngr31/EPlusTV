@@ -1,3 +1,4 @@
+
 # EPlusTV
 
 <p align="center">
@@ -34,6 +35,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | ESPN_USER | Your ESPN+ Username | Yes |
 | ESPN_PASS | Your ESPN+ Password | Yes |
 | START_CHANNEL | What the first channel number should be. Keep in mind this generates 100 channels to keep a healthy buffer. | No. If not set, the start channel will default to 1. |
+| PORT | What port the server should expose itself on | No. If not set, the port will default to 8000. |
 
 
 #### Volumes
