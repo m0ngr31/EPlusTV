@@ -3,6 +3,16 @@ import moment from 'moment';
 
 import { db } from './database';
 
+const parseCategories = event => {
+  const categories = ['Sports'];
+  for (const classifier of [event.category, event.subcategory, event.sport, event.league]){
+    if (classifier !== null && classifier.name !== null){
+      categories.push(classifier.name);
+    }
+  }
+  return [...new Set(categories)];
+}
+
 const parseAirings = async events => {
   for (const event of events) {
     const entryExists = await db.entries.findOne({id: event.id});
@@ -18,6 +28,7 @@ const parseAirings = async events => {
         end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),
         feed: event.feedName,
         image: event.image?.url,
+        categories: parseCategories(event)
       });
     }
   }

@@ -4,6 +4,23 @@ import moment from 'moment';
 
 import { db } from './database';
 
+const formatCategories = categories => {
+  const tagList = [];
+  for (const category of categories){
+    tagList.push({
+      category: [
+        {
+          _attr: {
+            'lang': 'en',
+          },
+        },
+        category
+      ]
+    });
+  }
+  return tagList;
+}
+
 export const generateXml = async (numChannels: number, startChannel: number) => {
   const wrap: any = {
     tv: [
@@ -81,6 +98,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
             },
           ],
         },
+        ...formatCategories((entry as any).categories)
       ],
     });
   }
