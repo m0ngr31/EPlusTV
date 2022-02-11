@@ -108,7 +108,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     contents = slateStream.getSlate('soon', `${req.protocol}://${req.headers.host}`);
 
     // Start stream
-    launchChannel(id, appStatus, `${req.protocol}:\/\/${req.headers.host}`);
+    launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
   }
 
   if (!contents) {
