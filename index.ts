@@ -64,7 +64,7 @@ const schedule = async () => {
 const app = express();
 
 app.get('/channels.m3u', (req, res) => {
-  const m3uFile = generateM3u(NUM_OF_CHANNELS, 'http://'+req.headers.host, START_CHANNEL);
+  const m3uFile = generateM3u(NUM_OF_CHANNELS, `${req.protocol}://${req.headers.host}`, START_CHANNEL);
 
   if (!m3uFile) {
     notFound(req, res);
@@ -105,10 +105,10 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
   if (!fs.existsSync(filename)) {
-    contents = slateStream.getSlate('soon', 'http://'+req.headers.host);
+    contents = slateStream.getSlate('soon', `${req.protocol}://${req.headers.host}`);
 
     // Start stream
-    launchChannel(id, appStatus, 'http://'+req.headers.host);
+    launchChannel(id, appStatus, `${req.protocol}:\/\/${req.headers.host}`);
   }
 
   if (!contents) {
@@ -122,7 +122,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     }
   }
 
-  checkNextStream(id, appStatus, 'http://'+req.headers.host);
+  checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 
   res.writeHead(200, {
     'Content-Type': 'application/vnd.apple.mpegurl',
