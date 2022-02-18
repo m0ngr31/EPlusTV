@@ -46,5 +46,5 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 By default, the easiest way to get running is:
 
 ```bash
-docker run -p 8000:8000 -v /config_dir:/app/config -v /dev/shm:/app/tmp -e ESPN_USER='...' -e ESPN_PASS='...'  m0ngr31/eplustv
+docker run -p 8000:8000 -v /config_dir:/app/config -v /dev/shm:/app/tmp -e ESPN_USER="..." -e ESPN_PASS="..."  m0ngr31/eplustv
 ```
