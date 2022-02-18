@@ -4,7 +4,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **0.9.0**
+Current version: **0.9.1**
 
 ## About
 This takes ESPN+ and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like Jellyfin or VLC.
