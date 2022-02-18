@@ -98,6 +98,18 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
             },
           ],
         },
+        {
+          live: [
+            {},
+            '',
+          ],
+        },
+        {
+          new: [
+            {},
+            '',
+          ],
+        },
         ...formatCategories((entry as any).categories)
       ],
     });
