@@ -4,7 +4,7 @@ import moment from 'moment';
 import { db } from './database';
 
 const parseCategories = event => {
-  const categories = ['Sports'];
+  const categories = ['Sports', 'Live'];
   for (const classifier of [event.category, event.subcategory, event.sport, event.league]){
     if (classifier !== null && classifier.name !== null){
       categories.push(classifier.name);
