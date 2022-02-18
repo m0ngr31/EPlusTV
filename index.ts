@@ -25,11 +25,6 @@ if (_.isNaN(START_CHANNEL)) {
   START_CHANNEL = 1;
 }
 
-let ACCESS_URL = process.env.ACCESS_URI;
-while (ACCESS_URL.endsWith('/')) {
-  ACCESS_URL = ACCESS_URL.slice(0, -1);
-}
-
 interface IChannelStatus {
   heartbeat: number;
   pid?: any;
@@ -69,7 +64,7 @@ const schedule = async () => {
 const app = express();
 
 app.get('/channels.m3u', (req, res) => {
-  const m3uFile = generateM3u(NUM_OF_CHANNELS, ACCESS_URL, START_CHANNEL);
+  const m3uFile = generateM3u(NUM_OF_CHANNELS, `${req.protocol}://${req.headers.host}`, START_CHANNEL);
 
   if (!m3uFile) {
     notFound(req, res);
@@ -110,10 +105,10 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
   if (!fs.existsSync(filename)) {
-    contents = slateStream.getSlate('soon', ACCESS_URL);
+    contents = slateStream.getSlate('soon', `${req.protocol}://${req.headers.host}`);
 
     // Start stream
-    launchChannel(id, appStatus, ACCESS_URL);
+    launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
   }
 
   if (!contents) {
@@ -127,7 +122,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     }
   }
 
-  checkNextStream(id, appStatus, ACCESS_URL);
+  checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 
   res.writeHead(200, {
     'Content-Type': 'application/vnd.apple.mpegurl',

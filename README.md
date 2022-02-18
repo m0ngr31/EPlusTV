@@ -4,7 +4,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **0.9.0**
+Current version: **0.9.1**
 
 ## About
 This takes ESPN+ and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like Jellyfin or VLC.
@@ -30,7 +30,6 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 #### Environement Variables
 | Environment Variable | Description | Required? |
 |---|---|---|
-| ACCESS_URI | What accessable URL your clients will be connecting from. For example: `http://192.168.0.1:8000` | Yes |
 | ESPN_USER | Your ESPN+ Username | Yes |
 | ESPN_PASS | Your ESPN+ Password | Yes |
 | START_CHANNEL | What the first channel number should be. Keep in mind this generates 100 channels to keep a healthy buffer. | No. If not set, the start channel will default to 1. |
@@ -47,5 +46,5 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 By default, the easiest way to get running is:
 
 ```bash
-docker run -p 8000:8000 -v /config_dir:/app/config -v /dev/shm:/app/tmp -e ACCESS_URI='http://192.168.0.10:8000' -e ESPN_USER='...' -e ESPN_PASS='...'  m0ngr31/eplustv
+docker run -p 8000:8000 -v /config_dir:/app/config -v /dev/shm:/app/tmp -e ESPN_USER="..." -e ESPN_PASS="..."  m0ngr31/eplustv
 ```
