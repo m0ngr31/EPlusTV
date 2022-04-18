@@ -18,6 +18,8 @@ RUN \
 EXPOSE 8000
 
 RUN chmod +x stream_channel.sh
+RUN chmod +x kill_chrome_processes.sh
+
 RUN chown pwuser:pwuser /app
 
 USER pwuser
