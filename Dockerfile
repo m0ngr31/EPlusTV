@@ -7,6 +7,8 @@ WORKDIR /app
 
 COPY . .
 
+RUN apt-get update && apt-get install wget -y
+
 RUN npm install -g npm@^7
 
 RUN \
