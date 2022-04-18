@@ -4,7 +4,7 @@ RUN \
   npm install -g npm && \
   npx playwright install chrome
 
-RUN apt install python3-pip && \
+RUN apt install python3-pip -y && \
   pip install streamlink
 
 RUN mkdir /app
