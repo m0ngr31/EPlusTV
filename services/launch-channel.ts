@@ -9,6 +9,7 @@ import { db } from './database';
 import { getStreamData } from './get-stream-data';
 import { slateStream } from './stream-slate';
 import { tmpPath } from './init-directories';
+import { sleep } from './sleep';
 
 let checkingStream = {};
 
@@ -24,7 +25,7 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
 
   try {
     [url, authToken] = await getStreamData(appStatus.channels[channelId].current);
-  } catch (e) { }
+  } catch (e) {}
 
   checkingStream[channelId] = false;
 
@@ -42,10 +43,11 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
 
   appStatus.channels[channelId].pid = child.pid;
 
-  console.log('Stream started on PID: ', child.pid);
+  console.log(`Stream for Channel ${channelId} started on PID: `, child.pid);
 
-  child.on('close', () => {
-    console.log(`Stream for ${channelId} stopped.`);
+  child.on('close', async () => {
+    console.log(`Stream for Channel ${channelId} stopped.`);
+    await sleep(2000);
     fsExtra.emptyDirSync(path.join(tmpPath, `${channelId}`));
   });
 };

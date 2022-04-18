@@ -3,6 +3,8 @@ import _ from 'lodash';
 
 import { sleep } from './sleep';
 
+const pathSelector = 'xpath=//iframe[starts-with(@src,"https://plus.espn.com/en/paywall")]';
+
 export const getStreamData = async (eventId: string) => {
   console.log('Getting stream for event: ', eventId);
   const browser = await chromium.launch({
@@ -13,13 +15,17 @@ export const getStreamData = async (eventId: string) => {
 
   let authToken = null;
   let m3u8 = null;
-  let totalTries = 1000;
+  let totalTries = 45;
   let currentTry = 0;
 
   const close = async () => {
-    await context.storageState({ path: 'config/state.json' });
-    await context.close();
-    await browser.close();
+    try {
+      await page.close();
+      await context.storageState({ path: 'config/state.json' });
+      await context.close();
+      await browser.close();
+    } catch (e) {}
+
     return [m3u8, authToken];
   };
 
@@ -32,60 +38,47 @@ export const getStreamData = async (eventId: string) => {
     if (request.url().endsWith('m3u8') && request.url().indexOf('master') > -1 && !m3u8) {
       m3u8 = request.url();
     }
-  });
 
-  await page.goto(`https://www.espn.com/espnplus/player/_/id/${eventId}`, {
-    waitUntil: 'domcontentloaded',
-  });
-
-  // Check to see if we're logged in
-  while (!m3u8 || !authToken) {
-    if (currentTry >= totalTries) {
-      break;
+    if (m3u8 && authToken) {
+      console.log('Got stream and credentials');
+      await close();
     }
-    await sleep(10);
-    currentTry += 1;
-  }
+  });
 
-  if (m3u8 && authToken) {
-    console.log('Got credentials from local storage');
-    return await close();
-  }
+  page.goto(`https://www.espn.com/espnplus/player/_/id/${eventId}`);
 
-  try {
-    // Not logged in, do it manually
-    const pathSelector = 'xpath=//iframe[starts-with(@src,"https://plus.espn.com/en/paywall")]';
-    await page.waitForSelector(pathSelector);
-    const frame = await (await page.$(pathSelector)).contentFrame();
-
-    if (frame) {
-      await frame.click('text=Log In');
-      await page.waitForSelector('#disneyid-iframe');
-      const loginFrame = await (await page.$('#disneyid-iframe')).contentFrame();
-
-      if (loginFrame) {
-        await sleep(1000);
-        await loginFrame.fill('xpath=//input[@type="email"]', process.env.ESPN_USER);
-        await sleep(1000);
-        await loginFrame.fill('xpath=//input[@type="password"]', process.env.ESPN_PASS);
-        await sleep(1000);
-        await page.screenshot({path: 'config/loginfilled.png'});
-        await loginFrame.click('text=Log In');
+  // Check to see if we need to login manually
+  page.waitForSelector(pathSelector, { timeout: 0 }).then(async () => {
+    page.$(pathSelector).then(async selected => {
+      if (!selected) {
+        return;
       }
-    }
-  } catch (e) {
-    console.log('Could not find stream. Has the event ended?');
-    return await close();
-  }
 
-  totalTries = 1500;
-  currentTry = 0;
+      selected.contentFrame().then(async frame => {
+        if (frame) {
+          await frame.click('text=Log In');
+          await page.waitForSelector('#disneyid-iframe');
+          const loginFrame = await (await page.$('#disneyid-iframe')).contentFrame();
+
+          if (loginFrame) {
+            await sleep(1000);
+            await loginFrame.fill('xpath=//input[@type="email"]', process.env.ESPN_USER);
+            await sleep(1000);
+            await loginFrame.fill('xpath=//input[@type="password"]', process.env.ESPN_PASS);
+            await sleep(1000);
+            await loginFrame.click('text=Log In');
+          }
+        }
+      }).catch(() => null);
+    }).catch(() => null);
+  }).catch(() => null);
+
 
   while (!m3u8 || !authToken) {
     if (currentTry >= totalTries) {
       break;
     }
-    await sleep(10);
+    await sleep(1000);
     currentTry += 1;
   }
 

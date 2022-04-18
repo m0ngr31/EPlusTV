@@ -1,7 +1,10 @@
 import { chromium } from 'playwright';
+import { spawn } from 'child_process';
+import path from 'path';
 import moment from 'moment';
 
 import { db } from './database';
+import { sleep } from './sleep';
 
 const parseCategories = event => {
   const categories = ['Sports'];
@@ -35,8 +38,8 @@ const parseAirings = async events => {
 };
 
 const responseIntercept = async response => {
-  if (response.url().indexOf('watch.graph.api.espn.com/api') > -1) {
-    const { data } = await (response as any).json();
+  if (response.url().startsWith('https://watch.graph.api.espn.com/api?')) {
+    const {data} = await (response as any).json();
     (data && data.airings && data.airings.length) && parseAirings(data.airings);
   }
 };
@@ -50,13 +53,23 @@ const getEvents = async url => {
 
   page.on('response', responseIntercept);
 
-  await page.goto(url, {
-    waitUntil: 'networkidle',
-  });
+  page.goto(url);
 
-  await context.storageState({ path: 'config/state.json' });
-  await context.close();
-  await browser.close();
+  await page.waitForResponse(async response => {
+    if (response.url().startsWith('https://watch.graph.api.espn.com/api?')) {
+      await sleep(1000);
+      return true;
+    }
+
+    return false;
+  }, {timeout: 10000});
+
+  try {
+    await page.close();
+    await context.storageState({ path: 'config/state.json' });
+    await context.close();
+    await browser.close();
+  } catch (e) {}
 };
 
 export const getEventSchedules = async () => {
@@ -70,16 +83,27 @@ export const getEventSchedules = async () => {
   for (const [index, url] of urls.entries()) {
     if (!index) {
       console.log('Looking for live events...');
-      await getEvents(url);
+      try {
+        await getEvents(url);
+      } catch (e) {
+        console.log("Couldn't get live events");
+      }
     } else {
       console.log('Looking for upcoming events...');
 
       for (const [i] of [1, 2, 3].entries()) {
         const date = moment(today).add(i, 'days');
-        await getEvents(`${url}/${date.format('YYYYMMDD')}`)
+
+        try {
+          await getEvents(`${url}/${date.format('YYYYMMDD')}`)
+        } catch (e) {
+          console.log(`Couldn't get events for ${date.format('dddd, MMMM Do YYYY')}`)
+        }
       }
     }
   }
+
+  spawn(path.join(process.cwd(), 'kill_chrome_processes.sh'), []);
 
   console.log('Cleaning up old events');
   const now = new Date().valueOf();
