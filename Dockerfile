@@ -1,20 +1,19 @@
 FROM mcr.microsoft.com/playwright:v1.15.0-focal
 
-RUN \
-  npm install -g npm && \
-  npx playwright install chrome
-
-RUN apt install python3-pip -y && \
-  pip install streamlink
+RUN pip install streamlink
 
 RUN mkdir /app
 WORKDIR /app
 
 COPY . .
 
+RUN npm install -g npm@^7
+
 RUN \
   cd /app && \
   npm ci
+
+RUN npx playwright install chrome
 
 EXPOSE 8000
 
