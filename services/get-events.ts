@@ -37,36 +37,47 @@ const parseAirings = async events => {
   }
 };
 
-const responseIntercept = async response => {
-  if (response.url().startsWith('https://watch.graph.api.espn.com/api?')) {
-    const {data} = await (response as any).json();
-    (data && data.airings && data.airings.length) && parseAirings(data.airings);
-  }
-};
-
 const getEvents = async url => {
   const browser = await chromium.launch({
     channel: 'chrome',
   });
-  const context = await browser.newContext({ storageState: 'config/state.json' });
+  const context = await browser.newContext({storageState: 'config/state.json'});
   const page = await context.newPage();
 
-  page.on('response', responseIntercept);
-
-  page.goto(url);
-
-  await page.waitForResponse(async response => {
+  page.on('response', async response => {
     if (response.url().startsWith('https://watch.graph.api.espn.com/api?')) {
-      await sleep(1000);
-      return true;
+      try {
+        const {data} = await (response as any).json();
+        (data && data.airings && data.airings.length) && await parseAirings(data.airings);
+        hasSucceeded = true;
+      } catch (e) {}
+    }
+  });
+
+  let hasSucceeded = false;
+  let waitTries = 0;
+  let waitTriesMax = 300;
+  let pageTries = 0;
+  let pageTriesMax = 3;
+
+  while (!hasSucceeded && pageTries < pageTriesMax) {
+    waitTries = 0;
+
+    await page.goto(url);
+
+    while (!hasSucceeded && waitTries < waitTriesMax) {
+      await sleep(100);
+      waitTries += 1;
     }
 
-    return false;
-  }, {timeout: 10000});
+    if (!hasSucceeded) {
+      pageTries += 1;
+    }
+  }
 
   try {
     await page.close();
-    await context.storageState({ path: 'config/state.json' });
+    await context.storageState({path: 'config/state.json'});
     await context.close();
     await browser.close();
   } catch (e) {}

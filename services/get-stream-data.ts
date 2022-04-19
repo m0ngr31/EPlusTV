@@ -21,7 +21,7 @@ export const getStreamData = async (eventId: string) => {
   const close = async () => {
     try {
       await page.close();
-      await context.storageState({ path: 'config/state.json' });
+      await context.storageState({path: 'config/state.json'});
       await context.close();
       await browser.close();
     } catch (e) {}
