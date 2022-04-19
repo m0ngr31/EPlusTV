@@ -77,7 +77,7 @@ export const launchChannel = async (channelId: string, appStatus, appUrl) => {
   const channel = parseInt(channelId, 10);
   const playingNow = await db.entries.findOne({channel, end: {$gt: now}, start: {$lt: now}});
 
-  if (playingNow) {
+  if (playingNow && (playingNow as any).id) {
     console.log('There is an active event. Going to start the stream.');
     appStatus.channels[channelId].current = (playingNow as any).id;
     startChannelStream(channelId, appStatus, appUrl);
@@ -99,7 +99,7 @@ export const checkNextStream = async (channelId: string, appStatus, appUrl) => {
   if (entries && entries.length > 0 && now - appStatus.channels[channelId].heartbeat < 30 * 1000) {
     const diff = (entries[0] as any).start - now2;
 
-    console.log('Channel has upcoming event. Set timer to start');
+    console.log('Channel has upcoming event. Setting timer to start');
 
     appStatus.channels[channelId].nextUp = (entries[0] as any).id;
     appStatus.channels[channelId].nextUpTimer = setTimeout(() => delayedStart(channelId, appStatus, appUrl), diff);

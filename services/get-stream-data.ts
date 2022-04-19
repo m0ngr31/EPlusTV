@@ -45,7 +45,7 @@ export const getStreamData = async (eventId: string) => {
     }
   });
 
-  page.goto(`https://www.espn.com/espnplus/player/_/id/${eventId}`);
+  page.goto(`https://www.espn.com/espnplus/player/_/id/${eventId}`).catch(() => null);
 
   // Check to see if we need to login manually
   page.waitForSelector(pathSelector, { timeout: 0 }).then(async () => {

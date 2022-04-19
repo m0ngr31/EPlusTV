@@ -45,7 +45,7 @@ const appStatus: IAppStatus = {
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = async () => {
-  _.forOwn(appStatus.channels, (val, key) => {
+  _.forOwn(appStatus.channels, val => {
     val.pid && kill(val.pid);
   });
 
@@ -144,6 +144,12 @@ app.get('/channels/:id/:part.ts', (req, res) => {
   } else {
     fileStr = `${id}/${part}.ts`;
     filename = path.join(tmpPath, fileStr);
+
+    // Channel heatbeat
+    if (!appStatus.channels[id]) {
+      appStatus.channels[id] = {};
+    }
+    appStatus.channels[id].heartbeat = new Date().valueOf();
   }
 
   if (!fs.existsSync(filename)) {
@@ -181,13 +187,13 @@ process.on('SIGINT', shutDown);
 
 // Cleanup intervals
 setInterval(() => {
-  // Delete old TS files after 60 seconds
+  // Delete old TS files after 120 seconds
   cleanupParts();
 
   // Check for channel heartbeat and kill any streams that aren't being used
   const now = new Date().valueOf();
-  _.forOwn(appStatus.channels, (val, key) => {
-    if (now - val.heartbeat > 60 * 1000) {
+  _.forOwn(appStatus.channels, val => {
+    if (now - val.heartbeat > 120 * 1000) {
       if (val.pid) {
         console.log('Killing unwatched stream with PID: ', val.pid);
         try {
@@ -196,6 +202,7 @@ setInterval(() => {
           val.current = null;
         } catch (e) {}
       }
+
       val.nextUp && val.nextUpTimer && clearTimeout(val.nextUpTimer);
       val.nextUp = null;
       val.nextUpTimer = null;

@@ -63,7 +63,7 @@ const getEvents = async url => {
   while (!hasSucceeded && pageTries < pageTriesMax) {
     waitTries = 0;
 
-    await page.goto(url);
+    page.goto(url).catch(() => null);
 
     while (!hasSucceeded && waitTries < waitTriesMax) {
       await sleep(100);
