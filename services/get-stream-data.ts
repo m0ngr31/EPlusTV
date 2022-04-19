@@ -15,7 +15,7 @@ export const getStreamData = async (eventId: string) => {
 
   let authToken = null;
   let m3u8 = null;
-  let totalTries = 45;
+  let totalTries = 120;
   let currentTry = 0;
 
   const close = async () => {
