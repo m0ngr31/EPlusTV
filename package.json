@@ -17,7 +17,7 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
     "nedb-promises": "^5.0.1",
-    "playwright": "^1.15.0",
+    "playwright": "^1.25.2",
     "rimraf": "^3.0.2",
     "tree-kill": "^1.2.2",
     "xml": "^1.0.1"
