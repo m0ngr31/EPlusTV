@@ -66,7 +66,8 @@ export const getStreamData = async (eventId: string) => {
             await sleep(1000);
             await loginFrame.fill('xpath=//input[@type="password"]', process.env.ESPN_PASS);
             await sleep(1000);
-            await loginFrame.click('text=Log In');
+            await loginFrame.locator('button', { hasText: 'Log In' }).click();
+            await sleep(1000);
           }
         }
       }).catch(() => null);
