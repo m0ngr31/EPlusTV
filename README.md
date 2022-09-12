@@ -4,14 +4,14 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **0.9.5**
+Current version: **0.9.6**
 
 ## About
 This takes ESPN+ and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like Jellyfin or VLC.
 
 #### Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the ESPN+ app currently gives.
-* Currently this software is in a very beta state. It hasn't been fully tested and relies on some lame workarounds to get the data needed to start a stream. There are some questions about how boundies work when a scheduled entry ends or when a new entry starts if it will pick it up automatically.
+* Currently this software is in a very beta state. It hasn't been fully tested and relies on some lame workarounds to get the data needed to start a stream. There are some questions about how boundaries work when a scheduled entry ends or when a new entry starts if it will pick it up automatically.
 * The Mouse might not like it and it could be taken down at any minute. Enjoy it while it lasts. ¯\\_(ツ)_/¯
 
 ## Using
