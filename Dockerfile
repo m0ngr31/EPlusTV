@@ -1,15 +1,17 @@
-FROM mcr.microsoft.com/playwright:v1.15.0-focal
+FROM ubuntu:focal
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN pip install streamlink
+RUN apt update && apt install -y wget curl
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+RUN apt install -y nodejs yarn python3 python3-pip 
+RUN pip3 install streamlink
 
 RUN mkdir /app
 WORKDIR /app
 
 COPY . .
 
-RUN apt-get update && apt-get install wget -y
-
-RUN npm install -g npm@^7
+RUN npm install -g npm
 
 RUN \
   cd /app && \
@@ -21,9 +23,5 @@ EXPOSE 8000
 
 RUN chmod +x stream_channel.sh
 RUN chmod +x kill_chrome_processes.sh
-
-RUN chown pwuser:pwuser /app
-
-USER pwuser
 
 ENTRYPOINT ["npx", "ts-node", "index.ts"]
