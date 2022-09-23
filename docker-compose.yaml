@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ESPN_USER
+      - ESPN_PASS
+    volumes:
+      - /share/espn:/app/config
