@@ -1,11 +1,12 @@
 version: "3.9"
 services:
   web:
-    build: .
+    image: nkm8/eplustv_pi:latest
     ports:
       - "8000:8000"
     environment:
       - ESPN_USER
       - ESPN_PASS
+      - START_CHANNEL
     volumes:
       - /share/espn:/app/config
