@@ -1,3 +1,3 @@
 #!/bin/sh
 
-killall chrome
+pkill chrome

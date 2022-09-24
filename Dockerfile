@@ -1,5 +1,5 @@
 FROM mcr.microsoft.com/playwright:v1.26.0-jammy
-ARG x=y
+
 RUN apt-get update && apt-get install -y wget python3 python3-pip
 
 RUN pip3 install streamlink
