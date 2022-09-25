@@ -1,6 +1,6 @@
-FROM mcr.microsoft.com/playwright:v1.26.0-jammy
+FROM mcr.microsoft.com/playwright:v1.25.0-jammy
 
-RUN apt-get update && apt-get install -y wget psmisc python3 python3-pip
+RUN apt-get update && apt-get install -y wget psmisc python3 python3-pip nano
 
 RUN pip3 install streamlink
 
@@ -15,12 +15,12 @@ RUN \
   cd /app && \
   npm ci
 
-RUN npx playwright install chromium
+RUN npx playwright install firefox
 
 EXPOSE 8000
 
 RUN chmod +x stream_channel.sh
-RUN chmod +x kill_chrome_processes.sh
+RUN chmod +x kill_browser_processes.sh
 
 RUN chown pwuser:pwuser /app
 

@@ -1,22 +1,22 @@
-import express from 'express';
-import fs from 'fs';
-import path from 'path';
-import _ from 'lodash';
-import kill from 'tree-kill';
+import express from "express";
+import fs from "fs";
+import path from "path";
+import _ from "lodash";
+import kill from "tree-kill";
 
-import { generateM3u } from './services/generate-m3u';
-import { cleanupParts } from './services/clean-parts';
-import { slateStream } from './services/stream-slate';
-import { initDirectories, tmpPath } from './services/init-directories';
-import { generateXml } from './services/generate-xmltv';
-import { checkNextStream, launchChannel } from './services/launch-channel';
-import { getEventSchedules } from './services/get-events';
-import { scheduleEntries } from './services/build-schedule';
+import { generateM3u } from "./services/generate-m3u";
+import { cleanupParts } from "./services/clean-parts";
+import { slateStream } from "./services/stream-slate";
+import { initDirectories, tmpPath } from "./services/init-directories";
+import { generateXml } from "./services/generate-xmltv";
+import { checkNextStream, launchChannel } from "./services/launch-channel";
+import { getEventSchedules } from "./services/get-events";
+import { scheduleEntries } from "./services/build-schedule";
 
 const NUM_OF_CHANNELS: number = 100;
 
 if (!process.env.ESPN_USER || !process.env.ESPN_PASS) {
-  console.log('Username and password need to be set!');
+  console.log("Username and password need to be set!");
   process.exit();
 }
 
@@ -35,17 +35,17 @@ interface IChannelStatus {
 
 interface IAppStatus {
   channels: {
-    [string: number]: IChannelStatus
-  }
+    [string: number]: IChannelStatus;
+  };
 }
 
 const appStatus: IAppStatus = {
-  channels: {}
+  channels: {},
 };
 
-const notFound = (_req, res) => res.status(404).send('404 not found');
+const notFound = (_req, res) => res.status(404).send("404 not found");
 const shutDown = async () => {
-  _.forOwn(appStatus.channels, val => {
+  _.forOwn(appStatus.channels, (val) => {
     val.pid && kill(val.pid);
   });
 
@@ -53,18 +53,22 @@ const shutDown = async () => {
 };
 
 const schedule = async () => {
-  console.log('=== Getting events ===');
+  console.log("=== Getting events ===");
   await getEventSchedules();
-  console.log('=== Done getting events ===');
-  console.log('=== Building the schedule ===');
+  console.log("=== Done getting events ===");
+  console.log("=== Building the schedule ===");
   await scheduleEntries(START_CHANNEL);
-  console.log('=== Done building the schedule ===');
+  console.log("=== Done building the schedule ===");
 };
 
 const app = express();
 
-app.get('/channels.m3u', (req, res) => {
-  const m3uFile = generateM3u(NUM_OF_CHANNELS, `${req.protocol}://${req.headers.host}`, START_CHANNEL);
+app.get("/channels.m3u", (req, res) => {
+  const m3uFile = generateM3u(
+    NUM_OF_CHANNELS,
+    `${req.protocol}://${req.headers.host}`,
+    START_CHANNEL
+  );
 
   if (!m3uFile) {
     notFound(req, res);
@@ -72,12 +76,12 @@ app.get('/channels.m3u', (req, res) => {
   }
 
   res.writeHead(200, {
-    'Content-Type': 'application/x-mpegurl',
+    "Content-Type": "application/x-mpegurl",
   });
-  res.end(m3uFile, 'utf-8');
+  res.end(m3uFile, "utf-8");
 });
 
-app.get('/xmltv.xml', async (req, res) => {
+app.get("/xmltv.xml", async (req, res) => {
   const xmlFile = await generateXml(NUM_OF_CHANNELS, START_CHANNEL);
 
   if (!xmlFile) {
@@ -86,13 +90,13 @@ app.get('/xmltv.xml', async (req, res) => {
   }
 
   res.writeHead(200, {
-    'Content-Type': 'application/xml',
+    "Content-Type": "application/xml",
   });
-  res.end(xmlFile, 'utf-8');
+  res.end(xmlFile, "utf-8");
 });
 
-app.get('/channels/:id.m3u8', async (req, res) => {
-  const {id} = req.params;
+app.get("/channels/:id.m3u8", async (req, res) => {
+  const { id } = req.params;
   const fileStr = `${id}/${id}.m3u8`;
   const filename = path.join(tmpPath, fileStr);
 
@@ -105,7 +109,10 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
   if (!fs.existsSync(filename)) {
-    contents = slateStream.getSlate('soon', `${req.protocol}://${req.headers.host}`);
+    contents = slateStream.getSlate(
+      "soon",
+      `${req.protocol}://${req.headers.host}`
+    );
 
     // Start stream
     launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
@@ -125,18 +132,18 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 
   res.writeHead(200, {
-    'Content-Type': 'application/vnd.apple.mpegurl',
-    'Cache-Control': 'no-cache',
+    "Content-Type": "application/vnd.apple.mpegurl",
+    "Cache-Control": "no-cache",
   });
-  res.end(contents, 'utf-8');
+  res.end(contents, "utf-8");
 });
 
-app.get('/channels/:id/:part.ts', (req, res) => {
-  const {id, part} = req.params;
+app.get("/channels/:id/:part.ts", (req, res) => {
+  const { id, part } = req.params;
   let fileStr;
   let filename;
 
-  const isSlate = id === 'starting' || id === 'soon';
+  const isSlate = id === "starting" || id === "soon";
 
   if (isSlate) {
     fileStr = `slate/${id}/${part}.ts`;
@@ -153,15 +160,15 @@ app.get('/channels/:id/:part.ts', (req, res) => {
   }
 
   if (!fs.existsSync(filename)) {
-    console.log('Error opening part: ', filename);
+    console.log("Error opening part: ", filename);
 
     notFound(req, res);
     return;
   }
 
   res.writeHead(200, {
-    'Content-Type': 'video/MP2T',
-    'Cache-Control': 'no-cache',
+    "Content-Type": "video/MP2T",
+    "Cache-Control": "no-cache",
   });
   const stream = fs.createReadStream(filename);
   stream.pipe(res);
@@ -170,20 +177,17 @@ app.get('/channels/:id/:part.ts', (req, res) => {
 // 404 Handler
 app.use(notFound);
 
-
-process.on('SIGTERM', shutDown);
-process.on('SIGINT', shutDown);
-
+process.on("SIGTERM", shutDown);
+process.on("SIGINT", shutDown);
 
 (async () => {
   initDirectories(NUM_OF_CHANNELS, START_CHANNEL);
 
   await schedule();
 
-  console.log('=== Starting Server ===')
-  app.listen(8000, () => console.log('Server started on port 8000'));
+  console.log("=== Starting Server ===");
+  app.listen(8000, () => console.log("Server started on port 8000"));
 })();
-
 
 // Cleanup intervals
 setInterval(() => {
@@ -192,10 +196,10 @@ setInterval(() => {
 
   // Check for channel heartbeat and kill any streams that aren't being used
   const now = new Date().valueOf();
-  _.forOwn(appStatus.channels, val => {
+  _.forOwn(appStatus.channels, (val) => {
     if (now - val.heartbeat > 120 * 1000) {
       if (val.pid) {
-        console.log('Killing unwatched stream with PID: ', val.pid);
+        console.log("Killing unwatched stream with PID: ", val.pid);
         try {
           kill(val.pid);
           val.pid = null;

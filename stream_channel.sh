@@ -1,6 +1,6 @@
 #!/bin/sh
 
-./kill_chrome_processes.sh
+./kill_browser_processes.sh
 
 streamlink \
   --http-header "Authorization=${AUTH_TOKEN}" \
