@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/playwright:v1.26.0-jammy
 
-RUN apt-get update && apt-get install -y wget python3 python3-pip
+RUN apt-get update && apt-get install -y wget psmisc python3 python3-pip
 
 RUN pip3 install streamlink
 
