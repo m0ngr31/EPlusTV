@@ -1,7 +1,5 @@
 #!/bin/sh
 
-./kill_chrome_processes.sh
-
 streamlink \
   --http-header "Authorization=${AUTH_TOKEN}" \
   "hlsvariant://${URL}" \

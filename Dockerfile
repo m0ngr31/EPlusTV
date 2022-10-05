@@ -1,29 +1,25 @@
-FROM mcr.microsoft.com/playwright:v1.15.0-focal
+FROM alpine:3.16.2
 
-RUN pip install streamlink
+RUN echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories
+
+RUN apk update && apk add nodejs npm streamlink@testing ffmpeg
+
+RUN pw="$(head -c 20 /dev/urandom | base64 | head -c 10)"; ( echo "$pw"; echo "$pw" ) | adduser abc
 
 RUN mkdir /app
 WORKDIR /app
 
 COPY . .
 
-RUN apt-get update && apt-get install wget -y
-
-RUN npm install -g npm@^7
-
 RUN \
   cd /app && \
   npm ci
 
-RUN npx playwright install chrome
-
 EXPOSE 8000
 
 RUN chmod +x stream_channel.sh
-RUN chmod +x kill_chrome_processes.sh
+RUN chown abc:abc /app
 
-RUN chown pwuser:pwuser /app
-
-USER pwuser
+USER abc
 
 ENTRYPOINT ["npx", "ts-node", "index.ts"]

@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
-import kill from 'tree-kill';
+import { execSync } from 'child_process';
 
 import { generateM3u } from './services/generate-m3u';
 import { cleanupParts } from './services/clean-parts';
@@ -12,13 +12,10 @@ import { generateXml } from './services/generate-xmltv';
 import { checkNextStream, launchChannel } from './services/launch-channel';
 import { getEventSchedules } from './services/get-events';
 import { scheduleEntries } from './services/build-schedule';
+import { espnHandler } from './services/espn-handler';
+import { killChildren } from './services/kill-processes';
 
 const NUM_OF_CHANNELS: number = 100;
-
-if (!process.env.ESPN_USER || !process.env.ESPN_PASS) {
-  console.log('Username and password need to be set!');
-  process.exit();
-}
 
 let START_CHANNEL = _.toNumber(process.env.START_CHANNEL);
 if (_.isNaN(START_CHANNEL)) {
@@ -44,10 +41,11 @@ const appStatus: IAppStatus = {
 };
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
-const shutDown = async () => {
-  _.forOwn(appStatus.channels, val => {
-    val.pid && kill(val.pid);
-  });
+const shutDown = () => {
+  try {
+    execSync('killall ffmpeg');
+    execSync('killall streamlink');
+  } catch (e) {}
 
   process.exit(0);
 };
@@ -178,6 +176,8 @@ process.on('SIGINT', shutDown);
 (async () => {
   initDirectories(NUM_OF_CHANNELS, START_CHANNEL);
 
+  await espnHandler.initialize();
+  await espnHandler.refreshTokens();
   await schedule();
 
   console.log('=== Starting Server ===')
@@ -197,7 +197,7 @@ setInterval(() => {
       if (val.pid) {
         console.log('Killing unwatched stream with PID: ', val.pid);
         try {
-          kill(val.pid);
+          killChildren(val.pid);
           val.pid = null;
           val.current = null;
         } catch (e) {}
@@ -215,3 +215,8 @@ setInterval(() => {
 setInterval(async () => {
   await schedule();
 }, 1000 * 60 * 60 * 4);
+
+// Check for updated refresh tokens every hour
+setInterval(async () => {
+  await espnHandler.refreshTokens();
+}, 1000 * 60 * 60);

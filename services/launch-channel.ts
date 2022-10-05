@@ -1,15 +1,15 @@
 import { spawn } from 'child_process';
 import _ from 'lodash';
 import fsExtra from 'fs-extra';
-import kill from 'tree-kill';
 import path from 'path';
 import fs from 'fs';
 
 import { db } from './database';
-import { getStreamData } from './get-stream-data';
 import { slateStream } from './stream-slate';
 import { tmpPath } from './init-directories';
 import { sleep } from './sleep';
+import { espnHandler } from './espn-handler';
+import { killChildren } from './kill-processes';
 
 let checkingStream = {};
 
@@ -24,7 +24,7 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
   let authToken;
 
   try {
-    [url, authToken] = await getStreamData(appStatus.channels[channelId].current);
+    [url, authToken] = await espnHandler.getEventData(appStatus.channels[channelId].current);
   } catch (e) {}
 
   checkingStream[channelId] = false;
@@ -55,7 +55,7 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
 const delayedStart = async (channelId: string, appStatus, appUrl) => {
   if (appStatus.channels[channelId].pid) {
     try {
-      appStatus.channels[channelId].pid && kill(appStatus.channels[channelId].pid);
+      appStatus.channels[channelId].pid && killChildren(appStatus.channels[channelId].pid);
       appStatus.channels[channelId].pid = null;
     } catch (e) {}
   }
