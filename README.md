@@ -44,7 +44,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 By default, the easiest way to get running is:
 
 ```bash
-docker run -p 8000:8000 -v /your_config_dir:/app/config  m0ngr31/eplustv
+docker run -p 8000:8000 -v /your_config_dir:/app/config m0ngr31/eplustv
 ```
 
 Once it runs for the first time, check the Docker logs to see what the next steps for authentication are.
