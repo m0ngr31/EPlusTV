@@ -3,6 +3,8 @@ import moment from 'moment';
 import { db } from './database';
 import { espnHandler } from './espn-handler';
 
+const useEspn3 = process.env.USE_ESPN3;
+
 const parseCategories = event => {
   const categories = ['Sports'];
   for (const classifier of [event.category, event.subcategory, event.sport, event.league]){
@@ -38,7 +40,12 @@ export const getEventSchedules = async () => {
   try {
     console.log('Looking for live events...');
     const entries = await espnHandler.getLiveEvents();
-    parseAirings(entries);
+    await parseAirings(entries);
+
+    if (useEspn3) {
+      const espn3Entries = await espnHandler.getLiveEvents(true);
+      await parseAirings(espn3Entries);
+    }
   } catch (e) {
     console.log("Couldn't get live events");
   }
@@ -51,7 +58,12 @@ export const getEventSchedules = async () => {
 
     try {
       const entries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'));
-      parseAirings(entries);
+      await parseAirings(entries);
+
+      if (useEspn3) {
+        const espn3Entries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), true);
+        await parseAirings(espn3Entries);
+      }
     } catch (e) {
       console.log(`Couldn't get events for ${date.format('dddd, MMMM Do YYYY')}`)
     }
