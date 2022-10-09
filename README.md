@@ -31,7 +31,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | Environment Variable | Description | Required? |
 |---|---|---|
 | START_CHANNEL | What the first channel number should be. Keep in mind this generates 100 channels to keep a healthy buffer. | No. If not set, the start channel will default to 1. |
-| USE_ESPN3 | Set if your ISP is an [affiliate for ESPN3](https://www.espn.com/espn3/affList). If not, ESPN3 events will not work. | No |
+| USE_ESPN3 | Set if your ISP is an [affiliate for ESPN3](https://www.espn.com/espn3/affList). If not, ESPN3 events will not work. (This is a beta feature. It doesn't work currently) | No |
 
 
 #### Volumes
