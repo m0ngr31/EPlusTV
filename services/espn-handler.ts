@@ -9,6 +9,8 @@ import jwt_decode from 'jwt-decode';
 import _ from 'lodash';
 import url from 'url';
 
+import { getUserAgent } from './user-agent';
+
 global.WebSocket = ws;
 
 const configPath = path.join(process.cwd(), 'config');
@@ -250,7 +252,7 @@ class EspnHandler {
         headers: {
           Authorization: this.account_token.access_token,
           Accept: 'application/vnd.media-service+json; version=2',
-          'User-Agent': 'User-Agent Mozilla/5.0 (Windows NT 10.0; rv:105.0) Gecko/20100101 Firefox/105.0',
+          'User-Agent': getUserAgent(),
           Origin: 'https://plus.espn.com',
         }
       });

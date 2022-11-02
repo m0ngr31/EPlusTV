@@ -1,9 +1,8 @@
 FROM alpine:3.16.2
 
-RUN echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories
 RUN mkdir -p /etc/udhcpc ; echo 'RESOLV_CONF="no"' >> /etc/udhcpc/udhcpc.conf
 
-RUN apk update && apk add nodejs npm streamlink@testing ffmpeg
+RUN apk update && apk add nodejs npm ffmpeg
 
 RUN pw="$(head -c 20 /dev/urandom | base64 | head -c 10)"; ( echo "$pw"; echo "$pw" ) | adduser abc
 

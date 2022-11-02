@@ -1,8 +1,13 @@
 #!/bin/sh
 
-streamlink \
-  --http-header "Authorization=${AUTH_TOKEN}" \
-  "hlsvariant://${URL}" \
-  --default-stream "720p_alt2,best" \
-  --stdout \
-  | ffmpeg -i pipe:0 -c copy -hls_base_url "${APP_URL}/channels/${CHANNEL}/" -hls_flags append_list+omit_endlist -hls_segment_filename tmp/eplustv/${CHANNEL}/%09d.ts tmp/eplustv/${CHANNEL}/${CHANNEL}.m3u8
+ffmpeg \
+  -user_agent "${USER_AGENT}" \
+  -headers "Authorization: ${AUTH_TOKEN}" \
+  -protocol_whitelist file,http,https,tcp,tls,crypto \
+  -i "${URL}" \
+  -tune zerolatency \
+  -map ${STREAM_PROFILE} \
+  -c copy \
+  -hls_base_url "${APP_URL}/channels/${CHANNEL}/" \
+  -hls_flags append_list+omit_endlist \
+  -hls_segment_filename tmp/eplustv/${CHANNEL}/%09d.ts tmp/eplustv/${CHANNEL}/${CHANNEL}.m3u8

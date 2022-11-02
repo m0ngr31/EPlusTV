@@ -44,7 +44,6 @@ const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => {
   try {
     execSync('killall ffmpeg');
-    execSync('killall streamlink');
   } catch (e) {}
 
   process.exit(0);
@@ -216,7 +215,7 @@ setInterval(async () => {
   await schedule();
 }, 1000 * 60 * 60 * 4);
 
-// Check for updated refresh tokens every hour
+// Check for updated refresh tokens 30 minutes
 setInterval(async () => {
   await espnHandler.refreshTokens();
-}, 1000 * 60 * 60);
+}, 1000 * 60 * 30);
