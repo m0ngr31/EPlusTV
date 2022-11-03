@@ -43,7 +43,7 @@ const appStatus: IAppStatus = {
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => {
   try {
-    execSync('killall ffmpeg');
+    execSync('killall ffmpeg > /dev/null 2>&1');
   } catch (e) {}
 
   process.exit(0);

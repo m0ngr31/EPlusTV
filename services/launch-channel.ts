@@ -10,7 +10,7 @@ import { tmpPath } from './init-directories';
 import { sleep } from './sleep';
 import { espnHandler } from './espn-handler';
 import { killChildren } from './kill-processes';
-import { getUserAgent } from './user-agent';
+import { userAgent } from './user-agent';
 
 const VALID_RESOLUTIONS = [
   '720p60',
@@ -18,7 +18,7 @@ const VALID_RESOLUTIONS = [
   '540p',
 ];
 
-const getStreamProfile = () => {
+const getStreamVideoMap = _.memoize(() => {
   const setProfile = _.includes(VALID_RESOLUTIONS, process.env.STREAM_RESOLUTION) ? process.env.STREAM_RESOLUTION : '720p60';
 
   switch (setProfile) {
@@ -29,7 +29,20 @@ const getStreamProfile = () => {
     default:
       return '0:20?';
   }
-};
+});
+
+const getStreamAudioMap = _.memoize(() => {
+  const setProfile = _.includes(VALID_RESOLUTIONS, process.env.STREAM_RESOLUTION) ? process.env.STREAM_RESOLUTION : '720p60';
+
+  switch (setProfile) {
+    case '720p60':
+      return '0:33?';
+    case '720p':
+      return '0:25?';
+    default:
+      return '0:21?';
+  }
+});
 
 let checkingStream = {};
 
@@ -59,7 +72,7 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
   fs.writeFileSync(path.join(tmpPath, `${channelId}/${channelId}.m3u8`), currentM3u8, 'utf8');
 
   const out = fs.openSync(path.join(tmpPath, `${channelId}-log.txt`), 'a');
-  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl, STREAM_PROFILE: getStreamProfile(), USER_AGENT: getUserAgent()}, detached: true, stdio: ['ignore', out, out]});
+  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl, VIDEO_MAP: getStreamVideoMap(), AUDIO_MAP: getStreamAudioMap(), USER_AGENT: userAgent}, detached: true, stdio: ['ignore', out, out]});
 
   appStatus.channels[channelId].pid = child.pid;
 
