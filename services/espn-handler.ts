@@ -241,8 +241,8 @@ class EspnHandler {
         },
       });
 
-      if (!scenarios.data.airing.source.url || !scenarios.data.airing.source.url.length || scenarios.data.airing.status !== 'LIVE') {
-        console.log('Event status: ', scenarios.data.airing.status);
+      if (!scenarios?.data?.airing?.source?.url.length || scenarios?.data?.airing?.status !== 'LIVE') {
+        console.log('Event status: ', scenarios?.data?.airing?.status);
         throw new Error('No streaming data available');
       }
 
