@@ -17,9 +17,7 @@ RUN \
 
 EXPOSE 8000
 
-COPY entrypoint.sh /usr/bin/entrypoint.sh
-
 RUN chmod +x stream_channel.sh
-RUN chmod +x /usr/bin/entrypoint.sh
+RUN chmod +x entrypoint.sh
 
-ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]

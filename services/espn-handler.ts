@@ -10,10 +10,9 @@ import _ from 'lodash';
 import url from 'url';
 
 import { userAgent } from './user-agent';
+import { configPath } from './init-directories';
 
 global.WebSocket = ws;
-
-const configPath = path.join(process.cwd(), 'config');
 
 const ANDROID_ID = 'ESPN-OTT.GC.ANDTV-PROD';
 

@@ -4,7 +4,7 @@ import fsExtra from 'fs-extra';
 import _ from 'lodash';
 
 export const tmpPath = path.join(process.cwd(), 'tmp/eplustv');
-const configPath = path.join(process.cwd(), 'config');
+export const configPath = path.join(process.cwd(), 'config');
 
 export const initDirectories = (numChannels, startChannel) => {
   if (!fs.existsSync(tmpPath)) {
