@@ -10,5 +10,3 @@ else
 
   exec su-exec abc npm start
 fi
-
-

@@ -38,15 +38,26 @@ const isTokenValid = (token?: string): boolean => {
   }
 };
 
+const canRefreshToken = (token?: ITokens): boolean => {
+  if (!token || !token.id_token || !token.refresh_ttl) return false;
+
+  try {
+    const decoded: IJWToken = jwt_decode(token.id_token);
+    return (decoded.iat + token.refresh_ttl) > (new Date().valueOf() / 1000);
+  } catch (e) {
+    return false;
+  }
+}
+
 const willTokenExpire = (token?: string): boolean => {
   if (!token) return true;
 
   try {
     const decoded: IJWToken = jwt_decode(token);
     // Will the token expire in the next hour?
-    return (new Date().valueOf() / 1000) < (decoded.exp - 3600);
+    return (new Date().valueOf() / 1000) + 3600 > decoded.exp;
   } catch (e) {
-    return false;
+    return true;
   }
 };
 
@@ -91,6 +102,7 @@ const makeApiCall = async (endpoint: IEndpoint, body: any, authToken: string = '
 
 interface IJWToken {
   exp: number;
+  iat: number;
   [key: string]: string | number;
 }
 
@@ -166,27 +178,31 @@ class EspnHandler {
     }
 
     if (!this.tokens || !isTokenValid(this.tokens.id_token)) {
-      await this.startAuthFlow();
+      if (canRefreshToken(this.tokens)) {
+        await this.refreshTokens();
+      } else {
+        await this.startAuthFlow();
+      }
     }
   };
 
   public refreshTokens = async () => {
-    if (this.tokens && this.tokens.access_token && willTokenExpire(this.tokens.access_token)) {
+    if (!isTokenValid(this.tokens.id_token) || willTokenExpire(this.tokens.id_token)) {
       console.log('Refreshing auth token');
       await this.refreshAuth();
     }
 
-    if (this.device_token_exchange && this.device_token_exchange.access_token && willTokenExpire(this.device_token_exchange.access_token)) {
+    if (!this.device_token_exchange || !isTokenValid(this.device_token_exchange.access_token) || willTokenExpire(this.device_token_exchange.access_token)) {
       console.log('Refreshing device token');
       await this.getDeviceTokenExchange(true);
     }
 
-    if (this.device_refresh_token && this.device_refresh_token.access_token && willTokenExpire(this.device_refresh_token.access_token)) {
+    if (!this.device_refresh_token || !isTokenValid(this.device_refresh_token.access_token) || willTokenExpire(this.device_refresh_token.access_token)) {
       console.log('Refreshing device refresh token');
       await this.getDeviceRefreshToken(true);
     }
 
-    if (this.account_token && this.account_token.access_token && willTokenExpire(this.account_token.access_token)) {
+    if (!this.account_token || !isTokenValid(this.account_token.access_token) || willTokenExpire(this.account_token.access_token)) {
       console.log('Refreshing BAM access token');
       await this.getBamAccessToken(true);
     }
