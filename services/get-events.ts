@@ -2,8 +2,17 @@ import moment from 'moment';
 
 import { db } from './database';
 import { espnHandler } from './espn-handler';
-
-const useEspn3 = process.env.USE_ESPN3;
+import {
+  useEspn1,
+  useEspn2,
+  useEspn3,
+  useEspnU,
+  useEspnPlus,
+  useSec,
+  useSecPlus,
+  useAccN,
+  useAccNx,
+} from './networks';
 
 const parseCategories = event => {
   const categories = ['Sports'];
@@ -17,7 +26,7 @@ const parseCategories = event => {
 
 const parseAirings = async events => {
   for (const event of events) {
-    const entryExists = await db.entries.findOne({id: event.id});
+    const entryExists: any = await db.entries.findOne({id: event.id});
 
     if (!entryExists) {
       console.log('Adding event: ', event.name);
@@ -30,21 +39,55 @@ const parseAirings = async events => {
         end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),
         feed: event.feedName,
         image: event.image?.url,
-        categories: parseCategories(event)
+        categories: parseCategories(event),
+        network: event.network?.name,
+        url: event.source?.url,
       });
     }
   }
 };
 
 export const getEventSchedules = async () => {
+  let entries = [];
+
   try {
     console.log('Looking for live events...');
-    const entries = await espnHandler.getLiveEvents();
-    await parseAirings(entries);
 
+    if (useEspnPlus) {
+      const liveEntries = await espnHandler.getLiveEvents();
+      entries = [...entries, ...liveEntries];
+    }
+    if (useEspn1) {
+      const liveEntries = await espnHandler.getLiveEvents('espn1');
+      entries = [...entries, ...liveEntries];
+    }
+    if (useEspn2) {
+      const liveEntries = await espnHandler.getLiveEvents('espn2');
+      entries = [...entries, ...liveEntries];
+    }
     if (useEspn3) {
-      const espn3Entries = await espnHandler.getLiveEvents(true);
-      await parseAirings(espn3Entries);
+      const liveEntries = await espnHandler.getLiveEvents('espn3');
+      entries = [...entries, ...liveEntries];
+    }
+    if (useEspnU) {
+      const liveEntries = await espnHandler.getLiveEvents('espnU');
+      entries = [...entries, ...liveEntries];
+    }
+    if (useSec) {
+      const liveEntries = await espnHandler.getLiveEvents('secn');
+      entries = [...entries, ...liveEntries];
+    }
+    if (useSecPlus) {
+      const liveEntries = await espnHandler.getLiveEvents('secnPlus');
+      entries = [...entries, ...liveEntries];
+    }
+    if (useAccN) {
+      const liveEntries = await espnHandler.getLiveEvents('accn');
+      entries = [...entries, ...liveEntries];
+    }
+    if (useAccNx) {
+      const liveEntries = await espnHandler.getLiveEvents('accnx');
+      entries = [...entries, ...liveEntries];
     }
   } catch (e) {
     console.log("Couldn't get live events");
@@ -57,16 +100,51 @@ export const getEventSchedules = async () => {
     const date = moment(today).add(i, 'days');
 
     try {
-      const entries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'));
-      await parseAirings(entries);
-
+      if (useEspnPlus) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'));
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useEspn1) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn1');
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useEspn2) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn2');
+        entries = [...entries, ...upcomingEntries];
+      }
       if (useEspn3) {
-        const espn3Entries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), true);
-        await parseAirings(espn3Entries);
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn3');
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useEspnU) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espnU');
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useSec) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secn');
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useSecPlus) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secnPlus');
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useAccN) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accn');
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useAccNx) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accnx');
+        entries = [...entries, ...upcomingEntries];
       }
     } catch (e) {
       console.log(`Couldn't get events for ${date.format('dddd, MMMM Do YYYY')}`)
     }
+  }
+
+  try {
+    await parseAirings(entries);
+  } catch (e) {
+    console.log('Could not parse events');
   }
 
   console.log('Cleaning up old events');

@@ -11,10 +11,65 @@ import url from 'url';
 
 import { userAgent } from './user-agent';
 import { configPath } from './init-directories';
+import { useEspnPlus, requiresProvider } from './networks';
 
 global.WebSocket = ws;
 
 const ANDROID_ID = 'ESPN-OTT.GC.ANDTV-PROD';
+
+const ADOBE_KEY = [
+  'g',
+  'B',
+  '8',
+  'H',
+  'Y',
+  'd',
+  'E',
+  'P',
+  'y',
+  'e',
+  'z',
+  'e',
+  'Y',
+  'b',
+  'R',
+  '1',
+].join('');
+
+const ADOBE_PUBLIC_KEY = [
+  'y',
+  'K',
+  'p',
+  's',
+  'H',
+  'Y',
+  'd',
+  '8',
+  'T',
+  'O',
+  'I',
+  'T',
+  'd',
+  'T',
+  'M',
+  'J',
+  'H',
+  'm',
+  'k',
+  'J',
+  'O',
+  'V',
+  'm',
+  'g',
+  'b',
+  'b',
+  '2',
+  'D',
+  'y',
+  'k',
+  'N',
+  'K',
+].join('');
 
 const DISNEY_ROOT_URL = 'https://registerdisney.go.com/jgc/v6/client';
 const API_KEY_URL = '/{id-provider}/api-key?langPref=en-US';
@@ -24,8 +79,42 @@ const REFRESH_AUTH_URL = '/{id-provider}/guest/refresh-auth?langPref=en-US';
 const BAM_API_KEY = 'ZXNwbiZicm93c2VyJjEuMC4w.ptUt7QxsteaRruuPmGZFaJByOoqKvDP2a5YkInHrc7c';
 const BAM_APP_CONFIG = 'https://bam-sdk-configs.bamgrid.com/bam-sdk/v2.0/espn-a9b93989/browser/v3.4/linux/chrome/prod.json';
 
+export const createAdobeAuthHeader = (method: string = 'POST', path: string) => {
+  const now = new Date().valueOf();
+  const nonce = getRandomHex();
+
+  let message = `${method} requestor_id=ESPN, nonce=${nonce}, signature_method=HMAC-SHA1, request_time=${now}, request_uri=${path}`;
+  const signature = crypto.createHmac('sha1', ADOBE_KEY).update(message).digest().toString('base64');
+  message = `${message}, public_key=${ADOBE_PUBLIC_KEY}, signature=${signature}`;
+
+  return message;
+};
+
 const getRandomHex = () => crypto.randomUUID().replace(/-/g, '');
 const urlBuilder = (endpoint: string, provider: string) => `${DISNEY_ROOT_URL}${endpoint}`.replace('{id-provider}', provider);
+
+const isAdobeTokenValid = (token?: IAdobeAuth) => {
+  if (!token) return false;
+
+  try {
+    const parsedExp = parseInt(token.expires, 10);
+    return new Date().valueOf() < new Date(parsedExp).valueOf();
+  } catch (e) {
+    return false;
+  }
+};
+
+const willAdobeTokenExpire = (token?: IAdobeAuth) => {
+  if (!token) return true;
+
+  try {
+    const parsedExp = parseInt(token.expires, 10);
+    // Will the token expire in the next hour?
+    return (new Date().valueOf() + (3600 * 1000)) > new Date(parsedExp).valueOf();
+  } catch (e) {
+    return true;
+  }
+};
 
 const isTokenValid = (token?: string): boolean => {
   if (!token) return false;
@@ -47,7 +136,7 @@ const canRefreshToken = (token?: ITokens): boolean => {
   } catch (e) {
     return false;
   }
-}
+};
 
 const willTokenExpire = (token?: string): boolean => {
   if (!token) return true;
@@ -88,7 +177,7 @@ const makeApiCall = async (endpoint: IEndpoint, body: any, authToken: string = '
     headers['Content-Type'] === 'application/x-www-form-urlencoded' ||
     headers['content-type'] === 'application/x-www-form-urlencoded'
   ) {
-    reqBody = new url.URLSearchParams(reqBody).toString()
+    reqBody = new url.URLSearchParams(reqBody).toString();
   }
 
   if (endpoint.method === 'POST') {
@@ -99,6 +188,45 @@ const makeApiCall = async (endpoint: IEndpoint, body: any, authToken: string = '
     return data;
   }
 };
+
+const getNetworkInfo = (network?: string) => {
+  let networks = 'null';
+  let packages = '["espn_plus"]';
+
+  if (network === 'espn1') {
+    networks = '["e748f3c0-3f7c-3088-a90a-0ccb2588e0ed"]';
+    packages = 'null';
+  } else if (network === 'espn2') {
+    networks = '["017f41a2-ef4f-39d3-9f45-f680b88cd23b"]';
+    packages = 'null';
+  } else if (network === 'espn3') {
+    networks = '["3e99c57a-516c-385d-9c22-2e40aebc7129"]';
+    packages = 'null';
+  } else if (network === 'espnU') {
+    networks = '["500b1f7c-dad5-33f9-907c-87427babe201"]';
+    packages = 'null';
+  } else if (network === 'secn') {
+    networks = '["74459ca3-cf85-381d-b90d-a95ff6e7a207"]';
+    packages = 'null';
+  } else if (network === 'secnPlus') {
+    networks = '["19644d95-cc83-38ed-bdf9-50b9f2e9ebfc"]';
+    packages = 'null';
+  } else if (network === 'accn') {
+    networks = '["76b92674-175c-4ff1-8989-380aa514eb87"]';
+    packages = 'null';
+  } else if (network === 'accnx') {
+    networks = '["9f538e0b-a896-3325-a417-79034e03a248"]';
+    packages = 'null';
+  }
+
+  return [networks, packages];
+};
+
+const authorizedResources: IAuthResources = {};
+
+interface IAuthResources {
+  [key: string]: boolean;
+}
 
 interface IJWToken {
   exp: number;
@@ -158,6 +286,13 @@ export interface ITokens extends IToken {
   id_token: string;
 }
 
+export interface IAdobeAuth {
+  expires: string;
+  mvpd: string;
+  requestor: string;
+  userId: string;
+}
+
 class EspnHandler {
   public tokens?: ITokens;
   public account_token?: IToken;
@@ -165,6 +300,9 @@ class EspnHandler {
   public device_refresh_token?: IToken;
   public device_grant?: IGrant;
   public id_token_grant?: IGrant;
+
+  public adobe_device_id?: string;
+  public adobe_auth?: IAdobeAuth;
 
   private appConfig: IAppConfig;
   private graphQlApiKey: string;
@@ -177,47 +315,50 @@ class EspnHandler {
       await this.getAppConfig();
     }
 
-    if (!this.tokens || !isTokenValid(this.tokens.id_token)) {
+    if ((!this.tokens || !isTokenValid(this.tokens.id_token)) && useEspnPlus) {
       if (canRefreshToken(this.tokens)) {
         await this.refreshTokens();
       } else {
         await this.startAuthFlow();
       }
     }
+
+    if (requiresProvider && !isAdobeTokenValid(this.adobe_auth)) {
+      await this.startProviderAuthFlow();
+    }
   };
 
   public refreshTokens = async () => {
-    if (!isTokenValid(this.tokens.id_token) || willTokenExpire(this.tokens.id_token)) {
+    if ((!isTokenValid(this.tokens.id_token) || willTokenExpire(this.tokens.id_token)) && useEspnPlus) {
       console.log('Refreshing auth token');
       await this.refreshAuth();
     }
 
-    if (!this.device_token_exchange || !isTokenValid(this.device_token_exchange.access_token) || willTokenExpire(this.device_token_exchange.access_token)) {
+    if ((!this.device_token_exchange || !isTokenValid(this.device_token_exchange.access_token) || willTokenExpire(this.device_token_exchange.access_token)) && useEspnPlus) {
       console.log('Refreshing device token');
       await this.getDeviceTokenExchange(true);
     }
 
-    if (!this.device_refresh_token || !isTokenValid(this.device_refresh_token.access_token) || willTokenExpire(this.device_refresh_token.access_token)) {
+    if ((!this.device_refresh_token || !isTokenValid(this.device_refresh_token.access_token) || willTokenExpire(this.device_refresh_token.access_token)) && useEspnPlus) {
       console.log('Refreshing device refresh token');
       await this.getDeviceRefreshToken(true);
     }
 
-    if (!this.account_token || !isTokenValid(this.account_token.access_token) || willTokenExpire(this.account_token.access_token)) {
+    if ((!this.account_token || !isTokenValid(this.account_token.access_token) || willTokenExpire(this.account_token.access_token)) && useEspnPlus) {
       console.log('Refreshing BAM access token');
       await this.getBamAccessToken(true);
     }
+
+    if (requiresProvider && willAdobeTokenExpire(this.adobe_auth)) {
+      console.log('Refreshing TV Provider token');
+      await this.refreshProviderToken();
+    }
   };
 
-  public getLiveEvents = async (useEspn3?: boolean) => {
+  public getLiveEvents = async (network?: string) => {
     await this.getGraphQlApiKey();
 
-    let networks = 'null';
-    let packages = '["espn_plus"]';
-
-    if (useEspn3) {
-      networks = '["3e99c57a-516c-385d-9c22-2e40aebc7129"]';
-      packages = 'null'
-    };
+    const [networks, packages] = getNetworkInfo(network);
 
     const query = 'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
     const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"LIVE","networks":${networks},"packages":${packages},"limit":500}`;
@@ -226,16 +367,10 @@ class EspnHandler {
     return entryData.data.airings;
   };
 
-  public getUpcomingEvents = async (date: string, useEspn3?: boolean) => {
+  public getUpcomingEvents = async (date: string, network?: string) => {
     await this.getGraphQlApiKey();
 
-    let networks = 'null';
-    let packages = '["espn_plus"]';
-
-    if (useEspn3) {
-      networks = '["3e99c57a-516c-385d-9c22-2e40aebc7129"]';
-      packages = 'null'
-    };
+    const [networks, packages] = getNetworkInfo(network);
 
     const query = 'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
     const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"UPCOMING","networks":${networks},"packages":${packages},"day":"${date}","limit":500}`;
@@ -244,9 +379,9 @@ class EspnHandler {
     return entryData.data.airings;
   };
 
-  public getEventData = async (eventId: string): Promise<[string, string]> => {
-    await this.getBamAccessToken();
-    await this.getGraphQlApiKey();
+  public getEventData = async (eventId: string): Promise<[string, string, boolean]> => {
+    useEspnPlus && await this.getBamAccessToken();
+    useEspnPlus && await this.getGraphQlApiKey();
 
     try {
       const {data: scenarios} = await axios.get('https://watch.graph.api.espn.com/api', {
@@ -263,20 +398,74 @@ class EspnHandler {
 
       const scenarioUrl = scenarios.data.airing.source.url.replace('{scenario}', 'browser~ssai');
 
-      const {data} = await axios.get(scenarioUrl, {
-        headers: {
-          Authorization: this.account_token.access_token,
-          Accept: 'application/vnd.media-service+json; version=2',
-          'User-Agent': userAgent,
-          Origin: 'https://plus.espn.com',
-        }
-      });
+      let isEspnPlus = true;
+      let authString = `Authorization: ${this.account_token.access_token}`;
+      let uri: string;
 
-      const uri = data.stream.slide ? data.stream.slide : data.stream.complete;
+      if (scenarios?.data?.airing?.source?.authorizationType === 'SHIELD') {
+        // console.log('Scenario: ', scenarios?.data?.airing);
+        isEspnPlus = false;
+      }
+
+      if (isEspnPlus) {
+        const {data} = await axios.get(scenarioUrl, {
+          headers: {
+            Authorization: this.account_token.access_token,
+            Accept: 'application/vnd.media-service+json; version=2',
+            'User-Agent': userAgent,
+            Origin: 'https://plus.espn.com',
+          }
+        });
+
+        uri = data.stream.slide ? data.stream.slide : data.stream.complete;
+      } else {
+        await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
+
+        const mediaTokenUrl = [
+          'https://',
+          'api.auth.adobe.com',
+          '/api/v1',
+          '/mediatoken',
+          '?requestor=ESPN',
+          `&deviceId=${this.adobe_device_id}`,
+          `&resource=${encodeURI(scenarios?.data?.airing?.mrss)}`
+        ].join('');
+
+        const {data} = await axios.get(mediaTokenUrl, {
+          headers: {
+            Authorization: createAdobeAuthHeader('GET', mediaTokenUrl),
+            'User-Agent': userAgent,
+          }
+        });
+
+        const {serializedToken} = data;
+
+        // Get stream data
+        const authenticatedUrl = [
+          `https://broadband.espn.com/espn3/auth/watchespn/startSession?channel=${scenarios?.data?.airing?.network?.id}&simulcastAiringId=${scenarios?.data?.airing?.simulcastAiringId}`,
+          '&partner=watchespn',
+          '&playbackScenario=HTTP_CLOUD_HIGH',
+          '&platform=chromecast_uplynk',
+          '&v=2.0.0',
+          `&token=${serializedToken}`,
+          '&tokenType=ADOBEPASS',
+          `&resource=${Buffer.from(scenarios?.data?.airing?.mrss, 'utf-8').toString('base64')}`,
+        ].join('');
+
+        const { data: authedData } = await axios.get(authenticatedUrl, {
+          headers: {
+            'User-Agent': userAgent,
+          },
+        });
+
+        uri = authedData?.session?.playbackUrls?.default;
+        authString = `Connection: keep-alive\r\nUser-Agent: '${userAgent}'\r\nCookie: _mediaAuth: ${authedData?.session?.token}`;
+      }
 
       return [
         uri,
-        this.account_token.access_token,
+        authString,
+        isEspnPlus,
       ];
     } catch (e) {
       console.error(e);
@@ -295,6 +484,164 @@ class EspnHandler {
     } catch (e) {
       console.error(e);
       console.log('Could not get auth refresh token');
+    }
+  };
+
+  private authorizeEvent = async (eventId: string, mrss: string): Promise<void> => {
+    if (mrss && authorizedResources[eventId]) {
+      return;
+    }
+
+    const authorizeEventTokenUrl = [
+      'https://',
+      'api.auth.adobe.com',
+      '/api/v1',
+      '/authorize',
+      '?requestor=ESPN',
+      `&deviceId=${this.adobe_device_id}`,
+      `&resource=${encodeURI(mrss)}`
+    ].join('');
+
+    try {
+      await axios.get(authorizeEventTokenUrl, {
+        headers: {
+          Authorization: createAdobeAuthHeader('GET', authorizeEventTokenUrl),
+          'User-Agent': userAgent,
+        }
+      });
+
+      authorizedResources[eventId] = true;
+    } catch (e) {
+      console.error(e);
+      console.log('Could not authorize event. Might be blacked out or not available from your TV provider')
+    }
+  };
+
+  private startProviderAuthFlow = async (): Promise<void> => {
+    const regUrl = [
+      'https://',
+      'api.auth.adobe.com',
+      '/reggie/',
+      'v1/',
+      'ESPN',
+      '/regcode',
+    ].join('');
+
+    if (!this.adobe_device_id) {
+      this.adobe_device_id = getRandomHex();
+      this.save();
+    }
+
+    try {
+      const {data} = await axios.post(regUrl, new url.URLSearchParams({
+        ttl: '1800',
+        deviceId: this.adobe_device_id,
+        deviceType: 'android_tv',
+      }).toString(), {
+        headers: {
+          Authorization: createAdobeAuthHeader('POST', regUrl),
+          'User-Agent': userAgent,
+        }
+      });
+
+      console.log(':: TV Provider Auth ::')
+      console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
+      console.log('Enter code: ', data.code);
+      console.log('App will start when login has completed...')
+
+      return new Promise(async (resolve, reject) => {
+        // Reg code expires at 30 minutes
+        const maxNumOfReqs = 180;
+
+        let numOfReqs = 0;
+
+        const authenticate = async () => {
+          if (numOfReqs < maxNumOfReqs) {
+            const res = await this.authenticateRegCode(data.code);
+            numOfReqs += 1;
+
+            if (res) {
+              clearInterval(regInterval);
+              resolve();
+            }
+          } else {
+            clearInterval(regInterval);
+            reject();
+          }
+        };
+
+        const regInterval = setInterval(() => {
+          authenticate();
+        }, 10 * 1000);
+
+        await authenticate();
+      });
+    } catch (e) {
+      console.error(e);
+      console.log('Could not start the authentication process!');
+    }
+  };
+
+  private authenticateRegCode = async (regcode: string): Promise<boolean> => {
+    const regUrl = [
+      'https://',
+      'api.auth.adobe.com',
+      '/api/v1/',
+      'authenticate/',
+      regcode,
+      '?requestor=ESPN',
+    ].join('');
+
+    try {
+      const {data} = await axios.get(regUrl, {
+        headers: {
+          Authorization: createAdobeAuthHeader('GET', regUrl),
+          'User-Agent': userAgent,
+        }
+      });
+
+      this.adobe_auth = data;
+      this.save();
+
+      return true;
+    } catch (e) {
+      if (e.response?.status !== 404) {
+        console.error(e);
+        console.log('Could not get provider token data!');
+      }
+
+      return false;
+    }
+  };
+
+  private refreshProviderToken = async (): Promise<void> => {
+    if (!this.adobe_device_id) {
+      await this.startProviderAuthFlow();
+      return;
+    }
+
+    const renewUrl = [
+      'https://',
+      'api.auth.adobe.com',
+      '/api/v1/',
+      'tokens/authn',
+      '?requestor=ESPN',
+      `&deviceId=${this.adobe_device_id}`,
+    ].join('');
+
+    try {
+      const { data } = await axios.get(renewUrl, {
+        headers: {
+          Authorization: createAdobeAuthHeader('GET', renewUrl),
+          'User-Agent': userAgent,
+        }
+      });
+
+      this.adobe_auth = data;
+      this.save();
+    } catch (e) {
+      console.error(e);
+      console.log('Could not refresh provider token data!');
     }
   };
 
@@ -343,6 +690,7 @@ class EspnHandler {
             }
           },
           onopen: () => {
+            console.log(':: ESPN+ Auth ::')
             console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
             console.log('Enter code: ', licensePlate.data.pairingCode);
 
@@ -503,6 +851,8 @@ class EspnHandler {
         device_refresh_token,
         id_token_grant,
         account_token,
+        adobe_device_id,
+        adobe_auth,
       } = fsExtra.readJSONSync(path.join(configPath, 'tokens.json'));
 
       this.tokens = tokens;
@@ -511,6 +861,8 @@ class EspnHandler {
       this.device_refresh_token = device_refresh_token;
       this.id_token_grant = id_token_grant;
       this.account_token = account_token;
+      this.adobe_device_id = adobe_device_id;
+      this.adobe_auth = adobe_auth;
     }
   }
 }

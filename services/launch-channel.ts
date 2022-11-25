@@ -18,31 +18,53 @@ const VALID_RESOLUTIONS = [
   '540p',
 ];
 
-const getStreamVideoMap = _.memoize(() => {
+const getStreamVideoMap = (isEspnPlus = true) => {
   const setProfile = _.includes(VALID_RESOLUTIONS, process.env.STREAM_RESOLUTION) ? process.env.STREAM_RESOLUTION : '720p60';
 
-  switch (setProfile) {
-    case '720p60':
-      return '0:32?';
-    case '720p':
-      return '0:24?';
-    default:
-      return '0:20?';
+  if (isEspnPlus) {
+    switch (setProfile) {
+      case '720p60':
+        return '0:32?';
+      case '720p':
+        return '0:24?';
+      default:
+        return '0:20?';
+    }
+  } else {
+    switch (setProfile) {
+      case '720p60':
+        return '0:7?';
+      case '720p':
+        return '0:1?';
+      default:
+        return '0:16?';
+    }
   }
-});
+};
 
-const getStreamAudioMap = _.memoize(() => {
+const getStreamAudioMap = (isEspnPlus = true) => {
   const setProfile = _.includes(VALID_RESOLUTIONS, process.env.STREAM_RESOLUTION) ? process.env.STREAM_RESOLUTION : '720p60';
 
-  switch (setProfile) {
-    case '720p60':
-      return '0:33?';
-    case '720p':
-      return '0:25?';
-    default:
-      return '0:21?';
+  if (isEspnPlus) {
+    switch (setProfile) {
+      case '720p60':
+        return '0:33?';
+      case '720p':
+        return '0:25?';
+      default:
+        return '0:21?';
+    }
+  } else {
+    switch (setProfile) {
+      case '720p60':
+        return '0:6?';
+      case '720p':
+        return '0:0?';
+      default:
+        return '0:15?';
+    }
   }
-});
+};
 
 let checkingStream = {};
 
@@ -55,9 +77,10 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
 
   let url;
   let authToken;
+  let isEspnPlus;
 
   try {
-    [url, authToken] = await espnHandler.getEventData(appStatus.channels[channelId].current);
+    [url, authToken, isEspnPlus] = await espnHandler.getEventData(appStatus.channels[channelId].current);
   } catch (e) {}
 
   checkingStream[channelId] = false;
@@ -72,7 +95,7 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
   fs.writeFileSync(path.join(tmpPath, `${channelId}/${channelId}.m3u8`), currentM3u8, 'utf8');
 
   const out = fs.openSync(path.join(tmpPath, `${channelId}-log.txt`), 'a');
-  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl, VIDEO_MAP: getStreamVideoMap(), AUDIO_MAP: getStreamAudioMap(), USER_AGENT: userAgent}, detached: true, stdio: ['ignore', out, out]});
+  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl, VIDEO_MAP: getStreamVideoMap(isEspnPlus), AUDIO_MAP: getStreamAudioMap(isEspnPlus), USER_AGENT: userAgent}, detached: true, stdio: ['ignore', out, out]});
 
   appStatus.channels[channelId].pid = child.pid;
 

@@ -2,7 +2,7 @@
 
 ffmpeg \
   -user_agent "${USER_AGENT}" \
-  -headers "Authorization: ${AUTH_TOKEN}" \
+  -headers "${AUTH_TOKEN}" \
   -protocol_whitelist http,https,tcp,tls,crypto \
   -rtbufsize 100M \
   -i "${URL}" \
