@@ -2,18 +2,18 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
-import { execSync } from 'child_process';
+import {execSync} from 'child_process';
 
-import { generateM3u } from './services/generate-m3u';
-import { cleanupParts } from './services/clean-parts';
-import { slateStream } from './services/stream-slate';
-import { initDirectories, tmpPath } from './services/init-directories';
-import { generateXml } from './services/generate-xmltv';
-import { checkNextStream, launchChannel } from './services/launch-channel';
-import { getEventSchedules } from './services/get-events';
-import { scheduleEntries } from './services/build-schedule';
-import { espnHandler } from './services/espn-handler';
-import { killChildren } from './services/kill-processes';
+import {generateM3u} from './services/generate-m3u';
+import {cleanupParts} from './services/clean-parts';
+import {slateStream} from './services/stream-slate';
+import {initDirectories, tmpPath} from './services/init-directories';
+import {generateXml} from './services/generate-xmltv';
+import {checkNextStream, launchChannel} from './services/launch-channel';
+import {getEventSchedules} from './services/get-events';
+import {scheduleEntries} from './services/build-schedule';
+import {espnHandler} from './services/espn-handler';
+import {killChildren} from './services/kill-processes';
 
 const NUM_OF_CHANNELS: number = 100;
 

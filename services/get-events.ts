@@ -1,7 +1,7 @@
 import moment from 'moment';
 
-import { db } from './database';
-import { espnHandler } from './espn-handler';
+import {db} from './database';
+import {espnHandler} from './espn-handler';
 import {
   useEspn1,
   useEspn2,

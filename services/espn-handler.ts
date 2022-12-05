@@ -9,9 +9,9 @@ import jwt_decode from 'jwt-decode';
 import _ from 'lodash';
 import url from 'url';
 
-import { userAgent } from './user-agent';
-import { configPath } from './init-directories';
-import { useEspnPlus, requiresProvider } from './networks';
+import {userAgent} from './user-agent';
+import {configPath} from './init-directories';
+import {useEspnPlus, requiresProvider} from './networks';
 
 global.WebSocket = ws;
 
@@ -315,7 +315,7 @@ class EspnHandler {
       await this.getAppConfig();
     }
 
-    if ((!this.tokens || !isTokenValid(this.tokens.id_token)) && useEspnPlus) {
+    if (useEspnPlus && (!this.tokens || !isTokenValid(this.tokens.id_token))) {
       if (canRefreshToken(this.tokens)) {
         await this.refreshTokens();
       } else {
@@ -329,22 +329,22 @@ class EspnHandler {
   };
 
   public refreshTokens = async () => {
-    if ((!isTokenValid(this.tokens.id_token) || willTokenExpire(this.tokens.id_token)) && useEspnPlus) {
+    if (useEspnPlus && (!isTokenValid(this.tokens?.id_token) || willTokenExpire(this.tokens?.id_token))) {
       console.log('Refreshing auth token');
       await this.refreshAuth();
     }
 
-    if ((!this.device_token_exchange || !isTokenValid(this.device_token_exchange.access_token) || willTokenExpire(this.device_token_exchange.access_token)) && useEspnPlus) {
+    if (useEspnPlus && (!this.device_token_exchange || !isTokenValid(this.device_token_exchange.access_token) || willTokenExpire(this.device_token_exchange.access_token))) {
       console.log('Refreshing device token');
       await this.getDeviceTokenExchange(true);
     }
 
-    if ((!this.device_refresh_token || !isTokenValid(this.device_refresh_token.access_token) || willTokenExpire(this.device_refresh_token.access_token)) && useEspnPlus) {
+    if (useEspnPlus && (!this.device_refresh_token || !isTokenValid(this.device_refresh_token.access_token) || willTokenExpire(this.device_refresh_token.access_token))) {
       console.log('Refreshing device refresh token');
       await this.getDeviceRefreshToken(true);
     }
 
-    if ((!this.account_token || !isTokenValid(this.account_token.access_token) || willTokenExpire(this.account_token.access_token)) && useEspnPlus) {
+    if (useEspnPlus && (!this.account_token || !isTokenValid(this.account_token.access_token) || willTokenExpire(this.account_token.access_token))) {
       console.log('Refreshing BAM access token');
       await this.getBamAccessToken(true);
     }
@@ -419,26 +419,35 @@ class EspnHandler {
 
         uri = data.stream.slide ? data.stream.slide : data.stream.complete;
       } else {
-        await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
+        let tokenType = 'DEVICE';
+        let token = this.adobe_device_id;
 
-        const mediaTokenUrl = [
-          'https://',
-          'api.auth.adobe.com',
-          '/api/v1',
-          '/mediatoken',
-          '?requestor=ESPN',
-          `&deviceId=${this.adobe_device_id}`,
-          `&resource=${encodeURI(scenarios?.data?.airing?.mrss)}`
-        ].join('');
+        if (_.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')) {
+          // Try to get the media token, but if it fails, let's just try device authentication
+          try {
+            await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
 
-        const {data} = await axios.get(mediaTokenUrl, {
-          headers: {
-            Authorization: createAdobeAuthHeader('GET', mediaTokenUrl),
-            'User-Agent': userAgent,
-          }
-        });
+            const mediaTokenUrl = [
+              'https://',
+              'api.auth.adobe.com',
+              '/api/v1',
+              '/mediatoken',
+              '?requestor=ESPN',
+              `&deviceId=${this.adobe_device_id}`,
+              `&resource=${encodeURI(scenarios?.data?.airing?.mrss)}`
+            ].join('');
 
-        const {serializedToken} = data;
+            const {data} = await axios.get(mediaTokenUrl, {
+              headers: {
+                Authorization: createAdobeAuthHeader('GET', mediaTokenUrl),
+                'User-Agent': userAgent,
+              }
+            });
+
+            tokenType = 'ADOBEPASS';
+            token = data.serializedToken;
+          } catch (e) {}
+        }
 
         // Get stream data
         const authenticatedUrl = [
@@ -447,12 +456,12 @@ class EspnHandler {
           '&playbackScenario=HTTP_CLOUD_HIGH',
           '&platform=chromecast_uplynk',
           '&v=2.0.0',
-          `&token=${serializedToken}`,
-          '&tokenType=ADOBEPASS',
+          `&token=${token}`,
+          `&tokenType=${tokenType}`,
           `&resource=${Buffer.from(scenarios?.data?.airing?.mrss, 'utf-8').toString('base64')}`,
         ].join('');
 
-        const { data: authedData } = await axios.get(authenticatedUrl, {
+        const {data: authedData} = await axios.get(authenticatedUrl, {
           headers: {
             'User-Agent': userAgent,
           },
@@ -630,7 +639,7 @@ class EspnHandler {
     ].join('');
 
     try {
-      const { data } = await axios.get(renewUrl, {
+      const {data} = await axios.get(renewUrl, {
         headers: {
           Authorization: createAdobeAuthHeader('GET', renewUrl),
           'User-Agent': userAgent,
@@ -726,7 +735,7 @@ class EspnHandler {
   private getGraphQlApiKey = async () => {
     if (!this.graphQlApiKey) {
       try {
-        const { data: espnKeys } = await axios.get('https://a.espncdn.com/connected-devices/app-configurations/espn-js-sdk-web-2.0.config.json');
+        const {data: espnKeys} = await axios.get('https://a.espncdn.com/connected-devices/app-configurations/espn-js-sdk-web-2.0.config.json');
         this.graphQlApiKey = espnKeys.graphqlapi.apiKey;
       } catch (e) {
         console.error(e);

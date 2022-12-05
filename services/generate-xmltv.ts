@@ -2,7 +2,22 @@ import _ from 'lodash';
 import xml from 'xml';
 import moment from 'moment';
 
-import { db } from './database';
+import {db} from './database';
+import {requiresProvider} from './networks';
+
+const formatEntryName = entry => {
+  let entryName = entry.name;
+
+  if (entry.feed) {
+    entryName = `${entryName} (${entry.feed})`;
+  }
+
+  if (requiresProvider) {
+    entryName = `${entryName} - ${entry.network}`;
+  }
+
+  return entryName;
+};
 
 const formatCategories = categories => {
   const tagList = [];
@@ -69,6 +84,8 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
   for (const entry of scheduledEntries) {
     const channelNum = entry.channel;
 
+    const entryName = formatEntryName(entry);
+
     wrap.tv.push({
       programme: [
         {
@@ -85,7 +102,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
                 lang: 'en',
               },
             },
-            entry.name,
+            entryName,
           ],
         },
         {
@@ -95,7 +112,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
                 lang: 'en',
               },
             },
-            entry.name,
+            entryName,
           ]
         },
         {

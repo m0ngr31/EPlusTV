@@ -1,16 +1,16 @@
-import { spawn } from 'child_process';
+import {spawn} from 'child_process';
 import _ from 'lodash';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import fs from 'fs';
 
-import { db } from './database';
-import { slateStream } from './stream-slate';
-import { tmpPath } from './init-directories';
-import { sleep } from './sleep';
-import { espnHandler } from './espn-handler';
-import { killChildren } from './kill-processes';
-import { userAgent } from './user-agent';
+import {db} from './database';
+import {slateStream} from './stream-slate';
+import {tmpPath} from './init-directories';
+import {sleep} from './sleep';
+import {espnHandler} from './espn-handler';
+import {killChildren} from './kill-processes';
+import {userAgent} from './user-agent';
 
 const VALID_RESOLUTIONS = [
   '720p60',

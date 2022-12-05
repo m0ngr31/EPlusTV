@@ -1,4 +1,4 @@
-import { db } from './database';
+import {db} from './database';
 
 export const scheduleEntries = async (START_CHANNEL) => {
   const unscheduledEntries = await db.entries.find({channel: {$exists: false}}).sort({start: 1});
