@@ -2,7 +2,7 @@
 
 cond() {
   if [ "${1}" ] ; then
-    echo "-map \"${1}\""
+    echo "-map ${1}"
   else
     echo ""
   fi
