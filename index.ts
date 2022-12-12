@@ -16,7 +16,7 @@ import {espnHandler} from './services/espn-handler';
 import {killChildren} from './services/kill-processes';
 import {foxHandler} from './services/fox-handler';
 import {getFoxEventSchedules} from './services/get-fox-events';
-import { IAppStatus } from './services/shared-interfaces';
+import {IAppStatus} from './services/shared-interfaces';
 
 const NUM_OF_CHANNELS = 100;
 
@@ -26,7 +26,7 @@ if (_.isNaN(START_CHANNEL)) {
 }
 
 const appStatus: IAppStatus = {
-  channels: {}
+  channels: {},
 };
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
@@ -51,7 +51,11 @@ const schedule = async () => {
 const app = express();
 
 app.get('/channels.m3u', (req, res) => {
-  const m3uFile = generateM3u(NUM_OF_CHANNELS, `${req.protocol}://${req.headers.host}`, START_CHANNEL);
+  const m3uFile = generateM3u(
+    NUM_OF_CHANNELS,
+    `${req.protocol}://${req.headers.host}`,
+    START_CHANNEL,
+  );
 
   if (!m3uFile) {
     notFound(req, res);
@@ -92,7 +96,10 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
   if (!fs.existsSync(filename)) {
-    contents = slateStream.getSlate('soon', `${req.protocol}://${req.headers.host}`);
+    contents = slateStream.getSlate(
+      'soon',
+      `${req.protocol}://${req.headers.host}`,
+    );
 
     // Start stream
     launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
@@ -157,10 +164,8 @@ app.get('/channels/:id/:part.ts', (req, res) => {
 // 404 Handler
 app.use(notFound);
 
-
 process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
-
 
 (async () => {
   initDirectories(NUM_OF_CHANNELS, START_CHANNEL);
@@ -173,10 +178,9 @@ process.on('SIGINT', shutDown);
 
   await schedule();
 
-  console.log('=== Starting Server ===')
+  console.log('=== Starting Server ===');
   app.listen(8000, () => console.log('Server started on port 8000'));
 })();
-
 
 // Cleanup intervals
 setInterval(() => {
