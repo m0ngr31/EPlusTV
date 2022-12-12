@@ -124,6 +124,9 @@ class FoxHandler {
       console.log(
         "You need to authorize Fox Sports again. Unfortunately there isn't a way to renew automatically. Please re-authorize!",
       );
+
+      fsExtra.removeSync(path.join(configPath, 'fox_tokens.json'));
+
       process.exit(1);
     }
   };
