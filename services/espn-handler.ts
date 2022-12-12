@@ -47,6 +47,17 @@ const isTokenValid = (token?: string): boolean => {
   }
 };
 
+const canRefreshToken = (token?: ITokens): boolean => {
+  if (!token || !token.id_token || !token.refresh_ttl) return false;
+
+  try {
+    const decoded: IJWToken = jwt_decode(token.id_token);
+    return decoded.iat + token.refresh_ttl > new Date().valueOf() / 1000;
+  } catch (e) {
+    return false;
+  }
+};
+
 const willTokenExpire = (token?: string): boolean => {
   if (!token) return true;
 
@@ -231,7 +242,11 @@ class EspnHandler {
     }
 
     if (useEspnPlus && (!this.tokens || !isTokenValid(this.tokens.id_token))) {
-      await this.startAuthFlow();
+      if (canRefreshToken(this.tokens)) {
+        await this.refreshTokens();
+      } else {
+        await this.startAuthFlow();
+      }
     }
   };
 
