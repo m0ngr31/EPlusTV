@@ -1,6 +1,9 @@
-const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMnumCharsOPQRSTUVWXYZ0123456789';
+import crypto from 'crypto';
 
-export const generateRandom = (numChars = 8, namespace?: string) => {
+const chars =
+  'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMnumCharsOPQRSTUVWXYZ0123456789';
+
+export const generateRandom = (numChars = 8, namespace?: string): string => {
   let nameSpaceFull = '';
 
   const randomId = Array(numChars)
@@ -15,3 +18,5 @@ export const generateRandom = (numChars = 8, namespace?: string) => {
 
   return `${nameSpaceFull}${randomId}`;
 };
+
+export const getRandomHex = (): string => crypto.randomUUID().replace(/-/g, '');

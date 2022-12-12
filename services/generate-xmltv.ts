@@ -3,7 +3,7 @@ import xml from 'xml';
 import moment from 'moment';
 
 import {db} from './database';
-import {requiresProvider} from './networks';
+import {usesMultiple} from './networks';
 
 const formatEntryName = entry => {
   let entryName = entry.name;
@@ -12,7 +12,7 @@ const formatEntryName = entry => {
     entryName = `${entryName} (${entry.feed})`;
   }
 
-  if (requiresProvider) {
+  if (usesMultiple) {
     entryName = `${entryName} - ${entry.network}`;
   }
 
@@ -21,7 +21,7 @@ const formatEntryName = entry => {
 
 const formatCategories = categories => {
   const tagList = [];
-  for (const category of categories){
+  for (const category of categories) {
     tagList.push({
       category: [
         {
@@ -29,14 +29,17 @@ const formatCategories = categories => {
             lang: 'en',
           },
         },
-        category
-      ]
+        category,
+      ],
     });
   }
   return tagList;
-}
+};
 
-export const generateXml = async (numChannels: number, startChannel: number) => {
+export const generateXml = async (
+  numChannels: number,
+  startChannel: number,
+): Promise<xml> => {
   const wrap: any = {
     tv: [
       {
@@ -64,7 +67,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
               },
             },
             `EPlusTV ${channelNum}`,
-          ]
+          ],
         },
         {
           icon: [
@@ -75,11 +78,13 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
             },
           ],
         },
-      ]
+      ],
     });
   });
 
-  const scheduledEntries: any[] = await db.entries.find({channel: {$exists: true}}).sort({start: 1});
+  const scheduledEntries: any[] = await db.entries
+    .find({channel: {$exists: true}})
+    .sort({start: 1});
 
   for (const entry of scheduledEntries) {
     const channelNum = entry.channel;
@@ -113,7 +118,7 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
               },
             },
             entryName,
-          ]
+          ],
         },
         {
           icon: [
@@ -125,21 +130,15 @@ export const generateXml = async (numChannels: number, startChannel: number) => 
           ],
         },
         {
-          live: [
-            {},
-            '',
-          ],
+          live: [{}, ''],
         },
         {
-          new: [
-            {},
-            '',
-          ],
+          new: [{}, ''],
         },
-        ...formatCategories(entry.categories)
+        ...formatCategories(entry.categories),
       ],
     });
   }
 
   return xml(wrap);
-}
+};

@@ -10,16 +10,23 @@ import {tmpPath} from './init-directories';
 import {sleep} from './sleep';
 import {espnHandler} from './espn-handler';
 import {killChildren} from './kill-processes';
-import {userAgent} from './user-agent';
+import {androidFoxUserAgent, userAgent} from './user-agent';
+import {foxHandler} from './fox-handler';
+import {IAppStatus} from './shared-interfaces';
 
-const VALID_RESOLUTIONS = [
-  '720p60',
-  '720p',
-  '540p',
-];
+const VALID_RESOLUTIONS = ['720p60', '720p', '540p'];
 
-const getStreamVideoMap = (isEspnPlus = true) => {
-  const setProfile = _.includes(VALID_RESOLUTIONS, process.env.STREAM_RESOLUTION) ? process.env.STREAM_RESOLUTION : '720p60';
+const getStreamVideoMap = (network = 'espn', isEspnPlus = true) => {
+  const setProfile = _.includes(
+    VALID_RESOLUTIONS,
+    process.env.STREAM_RESOLUTION,
+  )
+    ? process.env.STREAM_RESOLUTION
+    : '720p60';
+
+  if (network !== 'espn') {
+    return '';
+  }
 
   if (isEspnPlus) {
     switch (setProfile) {
@@ -42,8 +49,17 @@ const getStreamVideoMap = (isEspnPlus = true) => {
   }
 };
 
-const getStreamAudioMap = (isEspnPlus = true) => {
-  const setProfile = _.includes(VALID_RESOLUTIONS, process.env.STREAM_RESOLUTION) ? process.env.STREAM_RESOLUTION : '720p60';
+const getStreamAudioMap = (network = 'espn', isEspnPlus = true) => {
+  const setProfile = _.includes(
+    VALID_RESOLUTIONS,
+    process.env.STREAM_RESOLUTION,
+  )
+    ? process.env.STREAM_RESOLUTION
+    : '720p60';
+
+  if (network !== 'espn') {
+    return '';
+  }
 
   if (isEspnPlus) {
     switch (setProfile) {
@@ -66,9 +82,13 @@ const getStreamAudioMap = (isEspnPlus = true) => {
   }
 };
 
-let checkingStream = {};
+const checkingStream = {};
 
-const startChannelStream = async (channelId: string, appStatus, appUrl) => {
+const startChannelStream = async (
+  channelId: string,
+  appStatus: IAppStatus,
+  appUrl,
+) => {
   if (appStatus.channels[channelId].pid || checkingStream[channelId]) {
     return;
   }
@@ -78,10 +98,30 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
   let url;
   let authToken;
   let isEspnPlus;
+  let uA = userAgent;
 
-  try {
-    [url, authToken, isEspnPlus] = await espnHandler.getEventData(appStatus.channels[channelId].current);
-  } catch (e) {}
+  const playingNow: any = await db.entries.findOne({
+    id: appStatus.channels[channelId].current,
+  });
+
+  if (!playingNow) {
+    return;
+  }
+
+  if (playingNow.from !== 'foxsports') {
+    try {
+      [url, authToken, isEspnPlus] = await espnHandler.getEventData(
+        appStatus.channels[channelId].current,
+      );
+    } catch (e) {}
+  } else {
+    uA = androidFoxUserAgent;
+    try {
+      [url, authToken] = await foxHandler.getEventData(
+        appStatus.channels[channelId].current,
+      );
+    } catch (e) {}
+  }
 
   checkingStream[channelId] = false;
 
@@ -92,10 +132,26 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
 
   const currentM3u8 = slateStream.getSlate('soon', appUrl);
 
-  fs.writeFileSync(path.join(tmpPath, `${channelId}/${channelId}.m3u8`), currentM3u8, 'utf8');
+  fs.writeFileSync(
+    path.join(tmpPath, `${channelId}/${channelId}.m3u8`),
+    currentM3u8,
+    'utf8',
+  );
 
   const out = fs.openSync(path.join(tmpPath, `${channelId}-log.txt`), 'a');
-  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {env: {CHANNEL: channelId, URL: url, AUTH_TOKEN: authToken, APP_URL: appUrl, VIDEO_MAP: getStreamVideoMap(isEspnPlus), AUDIO_MAP: getStreamAudioMap(isEspnPlus), USER_AGENT: userAgent}, detached: true, stdio: ['ignore', out, out]});
+  const child = spawn(path.join(process.cwd(), 'stream_channel.sh'), [], {
+    detached: true,
+    env: {
+      APP_URL: appUrl,
+      AUDIO_MAP: getStreamAudioMap(playingNow.from, isEspnPlus),
+      AUTH_TOKEN: _.trim(authToken),
+      CHANNEL: channelId,
+      URL: url,
+      USER_AGENT: uA,
+      VIDEO_MAP: getStreamVideoMap(playingNow.from, isEspnPlus),
+    },
+    stdio: ['ignore', out, out],
+  });
 
   appStatus.channels[channelId].pid = child.pid;
 
@@ -108,10 +164,15 @@ const startChannelStream = async (channelId: string, appStatus, appUrl) => {
   });
 };
 
-const delayedStart = async (channelId: string, appStatus, appUrl) => {
+const delayedStart = async (
+  channelId: string,
+  appStatus,
+  appUrl: string,
+): Promise<void> => {
   if (appStatus.channels[channelId].pid) {
     try {
-      appStatus.channels[channelId].pid && killChildren(appStatus.channels[channelId].pid);
+      appStatus.channels[channelId].pid &&
+        killChildren(appStatus.channels[channelId].pid);
       appStatus.channels[channelId].pid = null;
     } catch (e) {}
   }
@@ -122,16 +183,24 @@ const delayedStart = async (channelId: string, appStatus, appUrl) => {
   appStatus.channels[channelId].nextUpTimer = null;
 
   startChannelStream(channelId, appStatus, appUrl);
-}
+};
 
-export const launchChannel = async (channelId: string, appStatus, appUrl) => {
+export const launchChannel = async (
+  channelId: string,
+  appStatus: IAppStatus,
+  appUrl: string,
+): Promise<void> => {
   if (appStatus.channels[channelId].pid || checkingStream[channelId]) {
     return;
   }
 
   const now = new Date().valueOf();
   const channel = parseInt(channelId, 10);
-  const playingNow = await db.entries.findOne({channel, end: {$gt: now}, start: {$lt: now}});
+  const playingNow = await db.entries.findOne({
+    channel,
+    end: {$gt: now},
+    start: {$lt: now},
+  });
 
   if (playingNow && (playingNow as any).id) {
     console.log('There is an active event. Going to start the stream.');
@@ -140,7 +209,11 @@ export const launchChannel = async (channelId: string, appStatus, appUrl) => {
   }
 };
 
-export const checkNextStream = async (channelId: string, appStatus, appUrl) => {
+export const checkNextStream = async (
+  channelId: string,
+  appStatus: IAppStatus,
+  appUrl: string,
+): Promise<void> => {
   const now = new Date().valueOf();
 
   if (appStatus.channels[channelId].nextUp) {
@@ -148,16 +221,25 @@ export const checkNextStream = async (channelId: string, appStatus, appUrl) => {
   }
 
   const channel = parseInt(channelId, 10);
-  const entries = await db.entries.find({channel, start: {$gt: now}}).sort({start: 1});
+  const entries = await db.entries
+    .find({channel, start: {$gt: now}})
+    .sort({start: 1});
 
   const now2 = new Date().valueOf();
 
-  if (entries && entries.length > 0 && now - appStatus.channels[channelId].heartbeat < 30 * 1000) {
+  if (
+    entries &&
+    entries.length > 0 &&
+    now - appStatus.channels[channelId].heartbeat < 30 * 1000
+  ) {
     const diff = (entries[0] as any).start - now2;
 
     console.log('Channel has upcoming event. Setting timer to start');
 
     appStatus.channels[channelId].nextUp = (entries[0] as any).id;
-    appStatus.channels[channelId].nextUpTimer = setTimeout(() => delayedStart(channelId, appStatus, appUrl), diff);
+    appStatus.channels[channelId].nextUpTimer = setTimeout(
+      () => delayedStart(channelId, appStatus, appUrl),
+      diff,
+    );
   }
 };

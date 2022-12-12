@@ -6,6 +6,21 @@ export const useSec = process.env.SEC;
 export const useSecPlus = process.env.SECPLUS;
 export const useAccN = process.env.ACCN;
 export const useAccNx = process.env.ACCNX;
-export const useEspnPlus = process.env.ESPNPLUS?.toLowerCase() === 'false' ? false : true;
+export const useEspnPlus =
+  process.env.ESPNPLUS?.toLowerCase() === 'false' ? false : true;
 
-export const requiresProvider = useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useAccNx;
+export const useFoxSports = process.env.FOXSPORTS;
+
+export const requiresProvider =
+  useEspn1 ||
+  useEspn2 ||
+  useEspn3 ||
+  useEspnU ||
+  useSec ||
+  useSecPlus ||
+  useAccN ||
+  useAccNx;
+
+export const usesMultiple =
+  (useFoxSports && (requiresProvider || useEspnPlus)) ||
+  (requiresProvider && useEspnPlus);

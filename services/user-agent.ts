@@ -8,5 +8,9 @@ const userAgents = [
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36',
 ];
 
+export const androidFoxUserAgent =
+  'foxsports-androidtv/3.42.1 (Linux;Android 9.0.0;SHIELD Android TV) ExoPlayerLib/2.12.1';
+
 // Will generate one random User Agent for the session
-export const userAgent = (() => userAgents[Math.floor(Math.random() * userAgents.length)])();
+export const userAgent = (() =>
+  userAgents[Math.floor(Math.random() * userAgents.length)])();

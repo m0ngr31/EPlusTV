@@ -6,7 +6,10 @@ import _ from 'lodash';
 export const tmpPath = path.join(process.cwd(), 'tmp/eplustv');
 export const configPath = path.join(process.cwd(), 'config');
 
-export const initDirectories = (numChannels, startChannel) => {
+export const initDirectories = (
+  numChannels: number,
+  startChannel: number,
+): void => {
   if (!fs.existsSync(tmpPath)) {
     fs.mkdirSync(tmpPath, {recursive: true});
   }
@@ -30,4 +33,3 @@ export const initDirectories = (numChannels, startChannel) => {
     fs.writeFileSync(path.join(configPath, 'schedule.db'), '');
   }
 };
-

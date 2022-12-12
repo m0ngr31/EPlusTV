@@ -10,30 +10,19 @@ import {slateStream} from './services/stream-slate';
 import {initDirectories, tmpPath} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {checkNextStream, launchChannel} from './services/launch-channel';
-import {getEventSchedules} from './services/get-events';
+import {getEventSchedules} from './services/get-espn-events';
 import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {killChildren} from './services/kill-processes';
+import {foxHandler} from './services/fox-handler';
+import {getFoxEventSchedules} from './services/get-fox-events';
+import { IAppStatus } from './services/shared-interfaces';
 
-const NUM_OF_CHANNELS: number = 100;
+const NUM_OF_CHANNELS = 100;
 
 let START_CHANNEL = _.toNumber(process.env.START_CHANNEL);
 if (_.isNaN(START_CHANNEL)) {
   START_CHANNEL = 1;
-}
-
-interface IChannelStatus {
-  heartbeat: number;
-  pid?: any;
-  current?: string;
-  nextUp?: string;
-  nextUpTimer?: any;
-}
-
-interface IAppStatus {
-  channels: {
-    [string: number]: IChannelStatus
-  }
 }
 
 const appStatus: IAppStatus = {
@@ -52,6 +41,7 @@ const shutDown = () => {
 const schedule = async () => {
   console.log('=== Getting events ===');
   await getEventSchedules();
+  await getFoxEventSchedules();
   console.log('=== Done getting events ===');
   console.log('=== Building the schedule ===');
   await scheduleEntries(START_CHANNEL);
@@ -122,8 +112,8 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 
   res.writeHead(200, {
-    'Content-Type': 'application/vnd.apple.mpegurl',
     'Cache-Control': 'no-cache',
+    'Content-Type': 'application/vnd.apple.mpegurl',
   });
   res.end(contents, 'utf-8');
 });
@@ -157,8 +147,8 @@ app.get('/channels/:id/:part.ts', (req, res) => {
   }
 
   res.writeHead(200, {
-    'Content-Type': 'video/MP2T',
     'Cache-Control': 'no-cache',
+    'Content-Type': 'video/MP2T',
   });
   const stream = fs.createReadStream(filename);
   stream.pipe(res);
@@ -177,6 +167,10 @@ process.on('SIGINT', shutDown);
 
   await espnHandler.initialize();
   await espnHandler.refreshTokens();
+
+  await foxHandler.initialize();
+  await foxHandler.refreshTokens();
+
   await schedule();
 
   console.log('=== Starting Server ===')
@@ -218,4 +212,5 @@ setInterval(async () => {
 // Check for updated refresh tokens 30 minutes
 setInterval(async () => {
   await espnHandler.refreshTokens();
+  await foxHandler.refreshTokens();
 }, 1000 * 60 * 30);
