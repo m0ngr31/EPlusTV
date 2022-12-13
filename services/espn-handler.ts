@@ -364,7 +364,7 @@ class EspnHandler {
       );
 
       let isEspnPlus = true;
-      let authString = `Authorization: ${this.account_token.access_token}`;
+      let authString = '';
       let uri: string;
 
       if (scenarios?.data?.airing?.source?.authorizationType === 'SHIELD') {
@@ -383,6 +383,7 @@ class EspnHandler {
         });
 
         uri = data.stream.slide ? data.stream.slide : data.stream.complete;
+        authString = `Authorization: ${this.account_token.access_token}`;
       } else {
         let tokenType = 'DEVICE';
         let token = this.adobe_device_id;

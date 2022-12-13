@@ -216,7 +216,10 @@ export const checkNextStream = async (
 ): Promise<void> => {
   const now = new Date().valueOf();
 
-  if (appStatus.channels[channelId].nextUp) {
+  if (
+    appStatus.channels[channelId].nextUp ||
+    appStatus.channels[channelId].nextUpTimer
+  ) {
     return;
   }
 
