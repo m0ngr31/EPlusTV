@@ -142,6 +142,9 @@ const getNetworkInfo = (network?: string) => {
   } else if (network === 'accnx') {
     networks = '["9f538e0b-a896-3325-a417-79034e03a248"]';
     packages = 'null';
+  } else if (network === 'longhorn') {
+    networks = '["5c1fd0f3-1022-3bc4-8af9-f785847baaf9"]';
+    packages = 'null';
   }
 
   return [networks, packages];

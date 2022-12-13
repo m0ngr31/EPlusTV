@@ -6,6 +6,7 @@ export const useSec = process.env.SEC;
 export const useSecPlus = process.env.SECPLUS;
 export const useAccN = process.env.ACCN;
 export const useAccNx = process.env.ACCNX;
+export const useLonghorn = process.env.LONGHORN;
 export const useEspnPlus =
   process.env.ESPNPLUS?.toLowerCase() === 'false' ? false : true;
 
@@ -19,6 +20,7 @@ export const requiresProvider =
   useSec ||
   useSecPlus ||
   useAccN ||
+  useLonghorn ||
   useAccNx;
 
 export const usesMultiple =

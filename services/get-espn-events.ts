@@ -12,6 +12,7 @@ import {
   useSecPlus,
   useAccN,
   useAccNx,
+  useLonghorn,
 } from './networks';
 
 const parseCategories = event => {
@@ -97,6 +98,10 @@ export const getEventSchedules = async (): Promise<void> => {
       const liveEntries = await espnHandler.getLiveEvents('accnx');
       entries = [...entries, ...liveEntries];
     }
+    if (useLonghorn) {
+      const liveEntries = await espnHandler.getLiveEvents('longhorn');
+      entries = [...entries, ...liveEntries];
+    }
   } catch (e) {
     console.log("Couldn't get live events");
   }
@@ -167,6 +172,13 @@ export const getEventSchedules = async (): Promise<void> => {
         const upcomingEntries = await espnHandler.getUpcomingEvents(
           date.format('YYYY-MM-DD'),
           'accnx',
+        );
+        entries = [...entries, ...upcomingEntries];
+      }
+      if (useLonghorn) {
+        const upcomingEntries = await espnHandler.getUpcomingEvents(
+          date.format('YYYY-MM-DD'),
+          'longhorn',
         );
         entries = [...entries, ...upcomingEntries];
       }

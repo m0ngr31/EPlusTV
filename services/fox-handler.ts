@@ -11,7 +11,19 @@ import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './generate-random';
 import moment from 'moment';
 
+const getMaxRes = _.memoize(() => {
+  switch (process.env.FOXSPORTS_MAX_RESOLUTION) {
+    case 'UHD/SDR':
+      return 'UHD/SDR';
+    case 'UHD/HDR':
+      return 'UHD/HDR';
+    default:
+      return '720p';
+  }
+});
+
 const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS;
+const maxRes = getMaxRes();
 
 interface IAppConfig {
   api: {
@@ -47,6 +59,7 @@ export interface IFoxEvent {
   genres: string[];
   name: string;
   longDescription: string;
+  seriesType: string;
   startDate: string;
   endDate: string;
   network: string;
@@ -72,8 +85,6 @@ interface IFoxEventsData {
 
 const FOX_APP_CONFIG =
   'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
-
-const WORKING_CDNS = ['limelight'];
 
 // Will the token expire in the next hour?
 const willPrelimTokenExpire = (token: IAdobePrelimAuthToken): boolean =>
@@ -137,7 +148,7 @@ class FoxHandler {
     const now = new Date();
 
     const dateRange = `${now.toISOString()}..${
-      moment(now).add(12, 'hours').toISOString
+      moment(now).add(1, 'day').toISOString
     }`;
 
     try {
@@ -171,6 +182,8 @@ class FoxHandler {
             } else if (allowReplays && m.airingType !== 'live') {
               events.push(m);
             }
+          } else if (m.seriesType === 'sportingEvent') {
+            events.push(m);
           }
         });
       });
@@ -181,52 +194,35 @@ class FoxHandler {
 
   public getEventData = async (eventId: string): Promise<[string, string]> => {
     try {
-      let dataUrl;
-      let cdnAttempt = 0;
-
-      do {
-        if (cdnAttempt > 15) {
-          throw new Error(
-            'Could not get stream data. Event might be upcoming, ended, or in blackout...',
-          );
-        }
-
-        const {data} = await axios.post(
-          this.appConfig.api.content.watch,
-          {
-            deviceHeight: 2160,
-            deviceWidth: 3840,
-            maxRes: '720p',
-            os: 'Android',
-            osv: '9.0.0',
-            streamId: eventId,
-            streamType: 'live',
+      const {data} = await axios.post(
+        this.appConfig.api.content.watch,
+        {
+          deviceHeight: 2160,
+          deviceWidth: 3840,
+          maxRes,
+          os: 'Android',
+          osv: '11.0.0',
+          streamId: eventId,
+          streamType: 'live',
+        },
+        {
+          headers: {
+            'User-Agent': androidFoxUserAgent,
+            authorization: this.adobe_auth.accessToken,
+            'x-api-key': this.appConfig.api.key,
           },
-          {
-            headers: {
-              'User-Agent': androidFoxUserAgent,
-              authorization: this.adobe_auth.accessToken,
-              'x-api-key': this.appConfig.api.key,
-            },
-          },
+        },
+      );
+
+      // console.log('CDN: ', data.trackingData.properties.CDN);
+
+      if (!data.url) {
+        throw new Error(
+          'Could not get stream data. Event might be upcoming, ended, or in blackout...',
         );
+      }
 
-        if (!data.url) {
-          throw new Error(
-            'Could not get stream data. Event might be upcoming, ended, or in blackout...',
-          );
-        }
-
-        if (
-          _.some(WORKING_CDNS, cdn => cdn === data.trackingData.properties.CDN)
-        ) {
-          dataUrl = data.url;
-        } else {
-          cdnAttempt += 1;
-        }
-      } while (!dataUrl);
-
-      const {data: streamData} = await axios.get(dataUrl, {
+      const {data: streamData} = await axios.get(data.url, {
         headers: {
           'User-Agent': androidFoxUserAgent,
           'x-api-key': this.appConfig.api.key,
