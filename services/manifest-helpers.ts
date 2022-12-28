@@ -1,28 +1,10 @@
 import axios from 'axios';
 import {Chunklist, Playlist, RenditionSortOrder} from 'dynamic-hls-proxy';
 import _ from 'lodash';
-import path from 'path';
-import fs from 'fs';
 
-import {generateRandom, flipObject} from './shared-helpers';
-import {tmpPath} from './init-directories';
 import {userAgent} from './user-agent';
 import {IHeaders} from './shared-interfaces';
-
-interface IKeyMap {
-  [key: string]: string;
-}
-
-interface ISegmentData {
-  uri: string;
-  standalone?: boolean;
-  timestamp: number;
-  promise?: Promise<void>;
-}
-
-interface ISegmentMap {
-  [key: string]: ISegmentData;
-}
+import {cacheLayer} from './cache-layer';
 
 const isRelativeUrl = (url: string): boolean =>
   url.startsWith('http') ? false : true;
@@ -57,17 +39,33 @@ const getResolutionRanges = _.memoize((): [number, number] => {
   }
 });
 
+const reTarget = /#EXT-X-TARGETDURATION:([0-9]+)/;
+
+const getTargetDuration = (chunklist: string): number => {
+  let targetDuration = 2;
+
+  const tester = reTarget.exec(chunklist);
+
+  if (tester && tester[1]) {
+    targetDuration = Math.floor(parseInt(tester[1], 10) / 2);
+
+    if (!_.isNumber(targetDuration)) {
+      targetDuration = 2;
+    }
+  }
+
+  return targetDuration;
+};
+
 export class ChunklistHandler {
+  public m3u8: string;
+
   private baseUrl: string;
   private baseManifestUrl: string;
   private headers: IHeaders;
   private channel: string;
 
-  private segmentMap: ISegmentMap = {};
-  private keyMap: IKeyMap = {};
-
   private interval: NodeJS.Timer;
-  private mapInterval: NodeJS.Timer;
 
   constructor(
     manifestUrl: string,
@@ -91,82 +89,19 @@ export class ChunklistHandler {
       this.baseManifestUrl = cleanUrl(createBaseUrl(fullChunkUrl));
 
       this.proxyChunklist(fullChunkUrl);
-
-      this.interval = setInterval(
-        () => this.proxyChunklist(fullChunkUrl),
-        1000,
-      );
-      this.mapInterval = setInterval(() => this.cleanMaps(), 30 * 1000);
     })();
   }
 
-  public async getSegment(segmentId: string): Promise<void> {
-    const filePath = path.join(tmpPath, `${this.channel}/${segmentId}.ts`);
-
-    const segment = this.segmentMap[`${segmentId}.ts`];
-
-    if (!segment) {
-      console.log('Could not find mapped segment: ', segmentId);
-      return;
-    }
-
-    const segmentName = segment.uri;
-    const segmentUrl = segment.standalone
-      ? segment.uri
-      : `${this.baseManifestUrl}${segmentName}`;
-
-    if (!fs.existsSync(filePath) && !segment.promise) {
-      this.segmentMap[`${segmentId}.ts`].promise = this.getChunklistFile(
-        segmentUrl,
-        filePath,
-      );
-      await this.segmentMap[`${segmentId}.ts`].promise;
-    }
-  }
-
-  public async getKey(keyId: string): Promise<void> {
-    if (!this.keyMap[keyId]) {
-      console.log('Could not find mapped key: ', keyId);
-      return;
-    }
-
-    const filePath = path.join(tmpPath, `${this.channel}/${keyId}.key`);
-
-    if (!fs.existsSync(filePath)) {
-      await this.getChunklistFile(this.keyMap[keyId], filePath);
+  public async getSegmentOrKey(segmentId: string): Promise<ArrayBuffer> {
+    try {
+      return cacheLayer.getDataFromSegment(segmentId, this.headers);
+    } catch (e) {
+      console.error(e);
     }
   }
 
   public stop(): void {
     this.interval && clearInterval(this.interval);
-    this.mapInterval && clearInterval(this.mapInterval);
-  }
-
-  private async getChunklistFile(url: string, filePath: string): Promise<void> {
-    try {
-      const {data} = await axios.get(url, {
-        headers: {
-          'User-Agent': userAgent,
-          ...this.headers,
-        },
-        responseType: 'arraybuffer',
-      });
-
-      fs.writeFileSync(filePath, data);
-    } catch (e) {
-      console.error(e);
-      console.log('Could not download file: ', url);
-    }
-  }
-
-  private cleanMaps(): void {
-    const now = new Date().valueOf();
-
-    _.forOwn(this.segmentMap, (val, key) => {
-      if (now - val.timestamp > 180 * 1000) {
-        delete this.segmentMap[key];
-      }
-    });
   }
 
   private async getChunklist(
@@ -211,50 +146,41 @@ export class ChunklistHandler {
         },
       });
 
+      if (!this.interval) {
+        this.interval = setInterval(
+          () => this.proxyChunklist(chunkListUrl),
+          getTargetDuration(chunkList) * 1000,
+        );
+      }
+
       let updatedChunkList = chunkList;
-      const keys: string[] = [];
+      const keys = new Set<string>();
       const chunks = Chunklist.loadFromString(chunkList);
 
       chunks.segments.forEach(segment => {
-        let segmentName = `${generateRandom(8, 'segment')}.ts`;
-
-        if (segment.segment.uri.endsWith('.ts')) {
-          segmentName = segment.segment.uri.substring(
-            segment.segment.uri.lastIndexOf('/') + 1,
-          );
-        }
-
-        const segmentData: ISegmentData = {
-          timestamp: new Date().valueOf(),
-          uri: segment.segment.uri,
-        };
-
-        if (segment.segment.uri.indexOf('://') !== -1) {
-          segmentData.standalone = true;
-        }
-
-        this.segmentMap[segmentName] = segmentData;
+        const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
+          ? `${this.baseManifestUrl}${segment.segment.uri}`
+          : segment.segment.uri;
+        const segmentName = cacheLayer.getSegmentFromUrl(
+          fullSegmentUrl,
+          `${this.channel}-segment`,
+        );
 
         updatedChunkList = updatedChunkList.replace(
           segment.segment.uri,
-          `${this.channel}/${segmentName}`,
+          `${this.channel}/${segmentName}.ts`,
         );
 
         if (segment.segment.key) {
-          keys.push(segment.segment.key.uri);
+          keys.add(segment.segment.key.uri);
         }
       });
 
-      _.uniq(keys).forEach(key => {
-        let keyName = `${generateRandom(8, 'key')}`;
-
-        const flippedMap = flipObject(this.keyMap);
-
-        if (!flippedMap[key]) {
-          this.keyMap[keyName] = key;
-        } else {
-          keyName = flippedMap[key];
-        }
+      keys.forEach(key => {
+        const keyName = cacheLayer.getSegmentFromUrl(
+          key,
+          `${this.channel}-key`,
+        );
 
         while (updatedChunkList.indexOf(key) > -1) {
           updatedChunkList = updatedChunkList.replace(
@@ -264,10 +190,7 @@ export class ChunklistHandler {
         }
       });
 
-      fs.writeFileSync(
-        path.join(tmpPath, `${this.channel}/${this.channel}.m3u8`),
-        updatedChunkList,
-      );
+      process.nextTick(() => (this.m3u8 = updatedChunkList));
     } catch (e) {
       console.error(e);
       console.log('Could not parse chunklist properly!');

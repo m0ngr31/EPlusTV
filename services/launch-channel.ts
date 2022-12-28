@@ -101,7 +101,9 @@ export const launchChannel = async (
   });
 
   if (playingNow && (playingNow as any).id) {
-    console.log('There is an active event. Going to start the stream.');
+    console.log(
+      `Channel #${channelId} has an active event. Going to start the stream.`,
+    );
     appStatus.channels[channelId].current = (playingNow as any).id;
     startChannelStream(channelId, appStatus, appUrl);
   }
@@ -135,7 +137,9 @@ export const checkNextStream = async (
   ) {
     const diff = (entries[0] as any).start - now2;
 
-    console.log('Channel has upcoming event. Setting timer to start');
+    console.log(
+      `Channel #${channelId} has upcoming event. Setting timer to start`,
+    );
 
     appStatus.channels[channelId].nextUp = (entries[0] as any).id;
     appStatus.channels[channelId].nextUpTimer = setTimeout(

@@ -4,9 +4,8 @@ import path from 'path';
 import _ from 'lodash';
 
 import {generateM3u} from './services/generate-m3u';
-import {cleanupParts} from './services/clean-parts';
 import {slateStream} from './services/stream-slate';
-import {initDirectories, tmpPath} from './services/init-directories';
+import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {checkNextStream, launchChannel} from './services/launch-channel';
 import {getEventSchedules} from './services/get-espn-events';
@@ -80,13 +79,6 @@ app.get('/xmltv.xml', async (req, res) => {
 
 app.get('/channels/:id.m3u8', async (req, res) => {
   const {id} = req.params;
-  const fileStr = `${id}/${id}.m3u8`;
-  const filename = path.join(tmpPath, fileStr);
-
-  res.writeHead(200, {
-    'Cache-Control': 'no-cache',
-    'Content-Type': 'application/vnd.apple.mpegurl',
-  });
 
   let contents = null;
 
@@ -96,7 +88,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   }
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
-  if (!fs.existsSync(filename)) {
+  if (!appStatus.channels[id].player?.m3u8) {
     contents = slateStream.getSlate(
       'soon',
       `${req.protocol}://${req.headers.host}`,
@@ -104,32 +96,40 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
     // Start stream
     launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
-
-    res.end(contents, 'utf-8');
   } else {
-    fs.createReadStream(filename).pipe(res);
+    contents = appStatus.channels[id].player?.m3u8;
   }
+
+  res.writeHead(200, {
+    'Cache-Control': 'no-cache',
+    'Content-Type': 'application/vnd.apple.mpegurl',
+  });
+  res.end(contents, 'utf-8');
 
   checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 });
 
 app.get('/channels/:id/:part.key', async (req, res) => {
   const {id, part} = req.params;
-  const fileStr = `${id}/${part}.key`;
-  const filename = path.join(tmpPath, fileStr);
+  let contents;
 
-  if (!fs.existsSync(filename)) {
-    await appStatus.channels[id].player.getKey(part);
+  try {
+    contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+  } catch (e) {
+    notFound(req, res);
+    return;
   }
 
-  const fileData = fs.statSync(filename);
+  if (!contents) {
+    notFound(req, res);
+    return;
+  }
 
   res.writeHead(200, {
     'Cache-Control': 'no-cache',
-    'Content-Length': fileData.size,
     'Content-Type': 'application/octet-stream',
   });
-  fs.createReadStream(filename).pipe(res);
+  res.end(contents, 'utf-8');
 });
 
 app.get('/channels/:id/:part.ts', async (req, res) => {
@@ -137,24 +137,25 @@ app.get('/channels/:id/:part.ts', async (req, res) => {
   let fileStr;
   let filename;
 
+  let contents;
+
   const isSlate = id === 'starting' || id === 'soon';
 
   if (isSlate) {
-    fileStr = `slate/${id}/${part.replace(/[0-9]+-/, '')}.ts`;
+    fileStr = `slate/${id}/${part}.ts`;
     filename = path.join(process.cwd(), fileStr);
-  } else {
-    fileStr = `${id}/${part}.ts`;
-    filename = path.join(tmpPath, fileStr);
 
-    if (appStatus.channels[id]) {
-      await appStatus.channels[id].player.getSegment(part);
-      appStatus.channels[id].heartbeat = new Date().valueOf();
+    contents = fs.readFileSync(filename);
+  } else {
+    try {
+      contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+    } catch (e) {
+      notFound(req, res);
+      return;
     }
   }
 
-  if (!fs.existsSync(filename)) {
-    console.log('Error opening segment: ', filename);
-
+  if (!contents) {
     notFound(req, res);
     return;
   }
@@ -163,7 +164,7 @@ app.get('/channels/:id/:part.ts', async (req, res) => {
     'Cache-Control': 'no-cache',
     'Content-Type': 'video/MP2T',
   });
-  fs.createReadStream(filename).pipe(res);
+  res.end(contents, 'utf-8');
 });
 
 // 404 Handler
@@ -173,7 +174,7 @@ process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
 
 (async () => {
-  initDirectories(NUM_OF_CHANNELS, START_CHANNEL);
+  initDirectories();
 
   await espnHandler.initialize();
   await espnHandler.refreshTokens();
@@ -193,9 +194,6 @@ process.on('SIGINT', shutDown);
 
 // Cleanup intervals
 setInterval(() => {
-  // Delete old TS files after 120 seconds
-  cleanupParts();
-
   // Check for channel heartbeat and kill any streams that aren't being used
   const now = new Date().valueOf();
   _.forOwn(appStatus.channels, (val, key) => {
