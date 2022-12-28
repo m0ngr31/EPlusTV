@@ -17,9 +17,64 @@ import {
   willAdobeTokenExpire,
   createAdobeAuthHeader,
 } from './adobe-helpers';
-import {getRandomHex} from './generate-random';
+import {getRandomHex} from './shared-helpers';
+import {IHeaders} from './shared-interfaces';
 
 global.WebSocket = ws;
+
+const ADOBE_KEY = [
+  'g',
+  'B',
+  '8',
+  'H',
+  'Y',
+  'd',
+  'E',
+  'P',
+  'y',
+  'e',
+  'z',
+  'e',
+  'Y',
+  'b',
+  'R',
+  '1',
+].join('');
+
+const ADOBE_PUBLIC_KEY = [
+  'y',
+  'K',
+  'p',
+  's',
+  'H',
+  'Y',
+  'd',
+  '8',
+  'T',
+  'O',
+  'I',
+  'T',
+  'd',
+  'T',
+  'M',
+  'J',
+  'H',
+  'm',
+  'k',
+  'J',
+  'O',
+  'V',
+  'm',
+  'g',
+  'b',
+  'b',
+  '2',
+  'D',
+  'y',
+  'k',
+  'N',
+  'K',
+].join('');
 
 const ANDROID_ID = 'ESPN-OTT.GC.ANDTV-PROD';
 
@@ -335,7 +390,7 @@ class EspnHandler {
 
   public getEventData = async (
     eventId: string,
-  ): Promise<[string, string, boolean]> => {
+  ): Promise<[string, IHeaders]> => {
     useEspnPlus && (await this.getBamAccessToken());
     useEspnPlus && (await this.getGraphQlApiKey());
 
@@ -364,7 +419,7 @@ class EspnHandler {
       );
 
       let isEspnPlus = true;
-      let authString = '';
+      let headers: IHeaders = {};
       let uri: string;
 
       if (scenarios?.data?.airing?.source?.authorizationType === 'SHIELD') {
@@ -383,7 +438,9 @@ class EspnHandler {
         });
 
         uri = data.stream.slide ? data.stream.slide : data.stream.complete;
-        authString = `Authorization: ${this.account_token.access_token}`;
+        headers = {
+          Authorization: this.account_token.access_token,
+        };
       } else {
         let tokenType = 'DEVICE';
         let token = this.adobe_device_id;
@@ -410,7 +467,12 @@ class EspnHandler {
 
             const {data} = await axios.get(mediaTokenUrl, {
               headers: {
-                Authorization: createAdobeAuthHeader('GET', mediaTokenUrl),
+                Authorization: createAdobeAuthHeader(
+                  'GET',
+                  mediaTokenUrl,
+                  ADOBE_KEY,
+                  ADOBE_PUBLIC_KEY,
+                ),
                 'User-Agent': userAgent,
               },
             });
@@ -442,10 +504,14 @@ class EspnHandler {
         });
 
         uri = authedData?.session?.playbackUrls?.default;
-        authString = `Connection: keep-alive\r\nUser-Agent: '${userAgent}'\r\nCookie: _mediaAuth: ${authedData?.session?.token}`;
+        headers = {
+          Connection: 'keep-alive',
+          Cookie: `_mediaAuth: ${authedData?.session?.token}`,
+          'User-Agent': userAgent,
+        };
       }
 
-      return [uri, authString, isEspnPlus];
+      return [uri, headers];
     } catch (e) {
       console.error(e);
       console.log(
@@ -492,7 +558,12 @@ class EspnHandler {
     try {
       await axios.get(authorizeEventTokenUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader('GET', authorizeEventTokenUrl),
+          Authorization: createAdobeAuthHeader(
+            'GET',
+            authorizeEventTokenUrl,
+            ADOBE_KEY,
+            ADOBE_PUBLIC_KEY,
+          ),
           'User-Agent': userAgent,
         },
       });
@@ -531,7 +602,12 @@ class EspnHandler {
         }).toString(),
         {
           headers: {
-            Authorization: createAdobeAuthHeader('POST', regUrl),
+            Authorization: createAdobeAuthHeader(
+              'POST',
+              regUrl,
+              ADOBE_KEY,
+              ADOBE_PUBLIC_KEY,
+            ),
             'User-Agent': userAgent,
           },
         },
@@ -590,7 +666,12 @@ class EspnHandler {
     try {
       const {data} = await axios.get(regUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader('GET', regUrl),
+          Authorization: createAdobeAuthHeader(
+            'GET',
+            regUrl,
+            ADOBE_KEY,
+            ADOBE_PUBLIC_KEY,
+          ),
           'User-Agent': userAgent,
         },
       });
@@ -627,7 +708,12 @@ class EspnHandler {
     try {
       const {data} = await axios.get(renewUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader('GET', renewUrl),
+          Authorization: createAdobeAuthHeader(
+            'GET',
+            renewUrl,
+            ADOBE_KEY,
+            ADOBE_PUBLIC_KEY,
+          ),
           'User-Agent': userAgent,
         },
       });

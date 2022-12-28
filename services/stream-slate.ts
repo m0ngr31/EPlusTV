@@ -1,37 +1,66 @@
 import _ from 'lodash';
+import moment from 'moment';
+
+import { sleep } from './shared-helpers';
+
+const all_segments = [
+  {
+    file: '000000000',
+    inf: '2.502500',
+  },
+  {
+    file: '000000001',
+    inf: '2.502500',
+  },
+  {
+    file: '000000002',
+    inf: '1.251256',
+  },
+  {
+    file: '000000003',
+    inf: '2.502500',
+  },
+  {
+    file: '000000004',
+    inf: '1.251244',
+  },
+  {
+    file: '000000005',
+    inf: '1.001067',
+  },
+];
+
+const getTimeOffset = (segment: number): number => {
+  let offset = 0;
+
+  for (let a = 0; a < segment; a++) {
+    offset += parseFloat(all_segments[a].inf);
+  }
+
+  return offset;
+}
+
+const getTotalDuration = _.memoize(() => _.reduce(all_segments, (sum, segment) => sum + parseFloat(segment.inf), 0));
 
 class SlateStream {
   private currentSequence = 0;
   private currentSegment = 0;
-  private segments = [
-    {
-      file: '000000000.ts',
-      inf: '2.502500',
-    },
-    {
-      file: '000000001.ts',
-      inf: '2.502500',
-    },
-    {
-      file: '000000002.ts',
-      inf: '1.251256',
-    },
-    {
-      file: '000000003.ts',
-      inf: '2.502500',
-    },
-    {
-      file: '000000004.ts',
-      inf: '1.251244',
-    },
-    {
-      file: '000000005.ts',
-      inf: '1.001067',
-    },
-  ];
 
   constructor() {
-    setInterval(() => this.increment(), 2 * 1000);
+    (async () => {
+      let currentIndex = 0;
+
+      while (currentIndex < all_segments.length) {
+        await sleep(parseFloat(all_segments[currentIndex].inf) * 1000);
+        this.increment();
+
+        if (currentIndex < 5) {
+          currentIndex += 1;
+        } else {
+          currentIndex = 0;
+        }
+      }
+    })();
   }
 
   public getSlate(slate: string, uri) {
@@ -62,34 +91,38 @@ class SlateStream {
   private getSegments() {
     switch (this.currentSegment) {
       case 0:
-        return _.take(this.segments, 5);
+        return all_segments;
       case 1:
-        return _.takeRight(this.segments, 5);
+        return [..._.takeRight(all_segments, 5), ..._.take(all_segments, 1)];
       case 2:
-        return [..._.takeRight(this.segments, 4), ..._.take(this.segments, 1)];
+        return [..._.takeRight(all_segments, 4), ..._.take(all_segments, 2)];
       case 3:
-        return [..._.takeRight(this.segments, 3), ..._.take(this.segments, 2)];
+        return [..._.takeRight(all_segments, 3), ..._.take(all_segments, 3)];
       case 4:
-        return [..._.takeRight(this.segments, 2), ..._.take(this.segments, 3)];
+        return [..._.takeRight(all_segments, 2), ..._.take(all_segments, 4)];
       case 5:
-        return [..._.takeRight(this.segments, 1), ..._.take(this.segments, 4)];
+        return [..._.takeRight(all_segments, 1), ..._.take(all_segments, 5)];
     }
   }
 
   private writeHeader() {
     return `#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-MEDIA-SEQUENCE:${this.currentSequence}`;
+#EXT-X-TARGETDURATION:3
+#EXT-X-PLAYLIST-TYPE:EVENT
+#EXT-X-VERSION:7
+#EXT-X-START:TIME-OFFSET=${getTimeOffset(this.currentSegment)},PRECISE=YES
+#EXT-X-MEDIA-SEQUENCE:${this.currentSequence}
+#EXT-X-DATERANGE:PLANNED-DURATION=${getTotalDuration()},${moment().toISOString()}`;
   }
 
   private writeSegments(segments, slate, uri) {
     let body = '';
 
-    _.forEach(segments, segment => {
-      body = `${body}\n#EXTINF:${segment.inf},\n${uri}/channels/${slate}/${segment.file}`;
+    _.forEach(segments, (segment) => {
+      body = `${body}\n#EXT-X-DISCONTINUITY\n#EXTINF:${segment.inf},\n${uri}/channels/${slate}/${segment.file}.ts`;
     });
 
-    return body;
+    return `${body}\n`;
   }
 }
 

@@ -109,7 +109,7 @@ export const getEventSchedules = async (): Promise<void> => {
   const today = new Date();
 
   console.log('Looking for upcoming events...');
-  for (const [i] of [0, 1, 2, 3].entries()) {
+  for (const [i] of [0, 1, 2].entries()) {
     const date = moment(today).add(i, 'days');
 
     try {
@@ -194,7 +194,4 @@ export const getEventSchedules = async (): Promise<void> => {
   } catch (e) {
     console.log('Could not parse events');
   }
-
-  const now = new Date().valueOf();
-  await db.entries.remove({end: {$lt: now}}, {multi: true});
 };

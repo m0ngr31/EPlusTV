@@ -1,4 +1,4 @@
-FROM m0ngr31/ffmpeg-hls-discontinuity:latest
+FROM alpine:3.16.2
 
 RUN mkdir -p /etc/udhcpc ; echo 'RESOLV_CONF="no"' >> /etc/udhcpc/udhcpc.conf
 
@@ -17,7 +17,6 @@ RUN \
 
 EXPOSE 8000
 
-RUN chmod +x stream_channel.sh
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]

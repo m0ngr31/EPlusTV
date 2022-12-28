@@ -57,7 +57,4 @@ export const getFoxEventSchedules = async (): Promise<void> => {
     console.error(e);
     console.log('Could not parse FOX Sports events');
   }
-
-  const now = new Date().valueOf();
-  await db.entries.remove({end: {$lt: now}}, {multi: true});
 };
