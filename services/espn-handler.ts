@@ -462,7 +462,7 @@ class EspnHandler {
               '/mediatoken',
               '?requestor=ESPN',
               `&deviceId=${this.adobe_device_id}`,
-              `&resource=${encodeURI(scenarios?.data?.airing?.mrss)}`,
+              `&resource=${encodeURIComponent(scenarios?.data?.airing?.mrss)}`,
             ].join('');
 
             const {data} = await axios.get(mediaTokenUrl, {
@@ -552,7 +552,7 @@ class EspnHandler {
       '/authorize',
       '?requestor=ESPN',
       `&deviceId=${this.adobe_device_id}`,
-      `&resource=${encodeURI(mrss)}`,
+      `&resource=${encodeURIComponent(mrss)}`,
     ].join('');
 
     try {

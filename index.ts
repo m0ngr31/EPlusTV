@@ -86,6 +86,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   if (!appStatus.channels[id]) {
     appStatus.channels[id] = {};
   }
+
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
   if (!appStatus.channels[id].player?.m3u8) {
@@ -202,8 +203,10 @@ setInterval(() => {
     }
 
     if (now - val.heartbeat > 120 * 1000) {
-      val.player && val.player.stop();
-      console.log('Killing unwatched channel: ', key);
+      if (val.player) {
+        console.log('Killing unwatched channel: ', key);
+        val.player.stop();
+      }
       val.current = null;
       val.player = null;
       val.nextUp && val.nextUpTimer && clearTimeout(val.nextUpTimer);

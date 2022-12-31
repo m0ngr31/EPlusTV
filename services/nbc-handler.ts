@@ -198,9 +198,9 @@ class NbcHandler {
         'api.auth.adobe.com',
         '/api/v1',
         '/mediatoken',
-        '?requestor=ESPN',
+        '?requestor=nbcsports',
         `&deviceId=${this.adobe_device_id}`,
-        `&resource=${encodeURI(RESOURCE_ID)}`,
+        `&resource=${encodeURIComponent(RESOURCE_ID)}`,
       ].join('');
 
       const {data} = await axios.get(mediaTokenUrl, {
@@ -210,6 +210,7 @@ class NbcHandler {
             mediaTokenUrl,
             ADOBE_KEY,
             ADOBE_PUBLIC_KEY,
+            'nbcsports',
           ),
           'User-Agent': userAgent,
         },
@@ -280,9 +281,9 @@ class NbcHandler {
       'api.auth.adobe.com',
       '/api/v1',
       '/authorize',
-      '?requestor=ESPN',
+      '?requestor=nbcsports',
       `&deviceId=${this.adobe_device_id}`,
-      `&resource=${encodeURI(RESOURCE_ID)}`,
+      `&resource=${encodeURIComponent(RESOURCE_ID)}`,
     ].join('');
 
     try {
@@ -293,6 +294,7 @@ class NbcHandler {
             authorizeEventTokenUrl,
             ADOBE_KEY,
             ADOBE_PUBLIC_KEY,
+            'nbcsports',
           ),
           'User-Agent': userAgent,
         },
@@ -342,6 +344,7 @@ class NbcHandler {
               regUrl,
               ADOBE_KEY,
               ADOBE_PUBLIC_KEY,
+              'nbcsports',
             ),
             'User-Agent': userAgent,
           },
@@ -407,6 +410,7 @@ class NbcHandler {
             regUrl,
             ADOBE_KEY,
             ADOBE_PUBLIC_KEY,
+            'nbcsports',
           ),
           'User-Agent': userAgent,
         },
@@ -449,6 +453,7 @@ class NbcHandler {
             renewUrl,
             ADOBE_KEY,
             ADOBE_PUBLIC_KEY,
+            'nbcsports',
           ),
           'User-Agent': userAgent,
         },

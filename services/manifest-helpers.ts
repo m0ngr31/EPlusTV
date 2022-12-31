@@ -5,6 +5,7 @@ import _ from 'lodash';
 import {userAgent} from './user-agent';
 import {IHeaders} from './shared-interfaces';
 import {cacheLayer} from './cache-layer';
+import {slateStream} from './stream-slate';
 
 const isRelativeUrl = (url: string): boolean =>
   url.startsWith('http') ? false : true;
@@ -40,16 +41,20 @@ const getResolutionRanges = _.memoize((): [number, number] => {
 });
 
 const reTarget = /#EXT-X-TARGETDURATION:([0-9]+)/;
+const reSequence = /#EXT-X-MEDIA-SEQUENCE:([0-9]+)/;
+const reVersion = /#EXT-X-VERSION:([0-9]+)/;
 
-const getTargetDuration = (chunklist: string): number => {
+const getTargetDuration = (chunklist: string, divide = true): number => {
   let targetDuration = 2;
 
   const tester = reTarget.exec(chunklist);
 
   if (tester && tester[1]) {
-    targetDuration = Math.floor(parseInt(tester[1], 10) / 2);
+    targetDuration = divide
+      ? Math.floor(parseInt(tester[1], 10) / 2)
+      : parseInt(tester[1], 10);
 
-    if (!_.isNumber(targetDuration)) {
+    if (!_.isNumber(targetDuration) || _.isNaN(targetDuration)) {
       targetDuration = 2;
     }
   }
@@ -57,13 +62,117 @@ const getTargetDuration = (chunklist: string): number => {
   return targetDuration;
 };
 
+const getVersion = (chunklist: string): number => {
+  let version = 3;
+
+  const tester = reVersion.exec(chunklist);
+
+  if (tester && tester[1]) {
+    version = parseInt(tester[1], 10);
+
+    if (!_.isNumber(version) || _.isNaN(version)) {
+      version = 3;
+    }
+  }
+
+  return version;
+};
+
+const getSequence = (chunklist: string): number => {
+  let sequence = 0;
+
+  const tester = reSequence.exec(chunklist);
+
+  if (tester && tester[1]) {
+    sequence = parseInt(tester[1], 10);
+
+    if (!_.isNumber(sequence) || _.isNaN(sequence)) {
+      sequence = 3;
+    }
+  }
+
+  return sequence;
+};
+
+const sortedVal = (str: string): number => {
+  if (str.startsWith('#EXTM3U')) {
+    return 0;
+  } else if (str.startsWith('#EXT-X-VERSION')) {
+    return 1;
+  } else if (str.startsWith('#EXT-X-TARGETDURATION')) {
+    return 2;
+  } else if (str.startsWith('#EXT-X-MEDIA-SEQUENCE')) {
+    return 3;
+  }
+
+  return 4;
+};
+
+/** We want the following order:
+#EXTM3U
+#EXT-X-VERSION
+#EXT-X-TARGETDURATION
+#EXT-X-MEDIA-SEQUENCE
+*/
+const sortChunklist = (a: string, b: string): number =>
+  sortedVal(a) - sortedVal(b);
+
+export const combineSlatePlaylist = (
+  slate: string,
+  playlist: string,
+): string => {
+  const splicedSlate = slate
+    .split('\n')
+    .splice(4)
+    .filter(line => line && line !== '#EXT-X-DISCONTINUITY');
+  // splicedSlate.splice(1, 0, '#EXT-X-DISCONTINUITY');
+  let playlistArr: string[] = playlist.split('\n');
+
+  const highestTargetDuration = Math.max(
+    getTargetDuration(slate, false),
+    getTargetDuration(playlist, false),
+  );
+  const highestVersion = Math.max(getVersion(slate), getVersion(playlist));
+  const highestSequence =
+    Math.max(getSequence(slate), getSequence(playlist)) + 1;
+
+  playlistArr.sort(sortChunklist);
+
+  playlistArr = playlistArr.map(line => {
+    if (line.startsWith('#EXT-X-TARGETDURATION')) {
+      line = `#EXT-X-TARGETDURATION:${highestTargetDuration}`;
+    } else if (line.startsWith('#EXT-X-VERSION')) {
+      line = `#EXT-X-VERSION:${highestVersion}`;
+    } else if (line.startsWith('#EXT-X-MEDIA-SEQUENCE')) {
+      line = `#EXT-X-MEDIA-SEQUENCE:${highestSequence}`;
+    }
+
+    return line;
+  });
+
+  const injectAt = _.findIndex(playlistArr, line =>
+    line.startsWith('#EXT-X-MEDIA-SEQUENCE'),
+  );
+
+  if (injectAt < 0) {
+    return playlist;
+  }
+
+  playlistArr.splice(injectAt, 0, ...splicedSlate, '#EXT-X-DISCONTINUITY');
+
+  return playlistArr.join('\n');
+};
+
 export class ChunklistHandler {
   public m3u8: string;
 
+  private appUrl: string;
   private baseUrl: string;
   private baseManifestUrl: string;
   private headers: IHeaders;
   private channel: string;
+
+  private lastSequence: number;
 
   private interval: NodeJS.Timer;
 
@@ -76,6 +185,7 @@ export class ChunklistHandler {
     this.headers = headers;
     this.channel = channel;
 
+    this.appUrl = appUrl;
     this.baseUrl = `${appUrl}/channels/${channel}/`;
 
     (async () => {
@@ -146,13 +256,6 @@ export class ChunklistHandler {
         },
       });
 
-      if (!this.interval) {
-        this.interval = setInterval(
-          () => this.proxyChunklist(chunkListUrl),
-          getTargetDuration(chunkList) * 1000,
-        );
-      }
-
       let updatedChunkList = chunkList;
       const keys = new Set<string>();
       const chunks = Chunklist.loadFromString(chunkList);
@@ -189,6 +292,23 @@ export class ChunklistHandler {
           );
         }
       });
+
+      if (!this.interval) {
+        // Setup interval to refresh chunklist
+        this.interval = setInterval(
+          () => this.proxyChunklist(chunkListUrl),
+          getTargetDuration(chunkList) * 1000,
+        );
+
+        // Merge playlist with slate
+        const slate = slateStream.getSlate('soon', this.appUrl);
+
+        updatedChunkList = combineSlatePlaylist(slate, updatedChunkList);
+        this.lastSequence =
+          Math.max(getSequence(slate), getSequence(updatedChunkList)) + 1;
+      } else {
+        this.lastSequence += 1;
+      }
 
       process.nextTick(() => (this.m3u8 = updatedChunkList));
     } catch (e) {

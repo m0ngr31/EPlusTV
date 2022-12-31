@@ -1,7 +1,6 @@
 import _ from 'lodash';
-import moment from 'moment';
 
-import { sleep } from './shared-helpers';
+import {sleep} from './shared-helpers';
 
 const all_segments = [
   {
@@ -29,18 +28,6 @@ const all_segments = [
     inf: '1.001067',
   },
 ];
-
-const getTimeOffset = (segment: number): number => {
-  let offset = 0;
-
-  for (let a = 0; a < segment; a++) {
-    offset += parseFloat(all_segments[a].inf);
-  }
-
-  return offset;
-}
-
-const getTotalDuration = _.memoize(() => _.reduce(all_segments, (sum, segment) => sum + parseFloat(segment.inf), 0));
 
 class SlateStream {
   private currentSequence = 0;
@@ -108,17 +95,14 @@ class SlateStream {
   private writeHeader() {
     return `#EXTM3U
 #EXT-X-TARGETDURATION:3
-#EXT-X-PLAYLIST-TYPE:EVENT
-#EXT-X-VERSION:7
-#EXT-X-START:TIME-OFFSET=${getTimeOffset(this.currentSegment)},PRECISE=YES
-#EXT-X-MEDIA-SEQUENCE:${this.currentSequence}
-#EXT-X-DATERANGE:PLANNED-DURATION=${getTotalDuration()},${moment().toISOString()}`;
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:${this.currentSequence}`;
   }
 
   private writeSegments(segments, slate, uri) {
     let body = '';
 
-    _.forEach(segments, (segment) => {
+    _.forEach(segments, segment => {
       body = `${body}\n#EXT-X-DISCONTINUITY\n#EXTINF:${segment.inf},\n${uri}/channels/${slate}/${segment.file}.ts`;
     });
 

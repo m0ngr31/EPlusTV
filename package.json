@@ -39,7 +39,7 @@
     "typescript": "^4.4.3"
   },
   "lint-staged": {
-    "!(*slate).ts": [
+    "!(slate/**).ts": [
       "prettier --write",
       "eslint --fix --format stylish"
     ]
