@@ -7,7 +7,11 @@ import _ from 'lodash';
 import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './init-directories';
 import {useFoxSports} from './networks';
-import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
+import {
+  createAdobeAuthHeader,
+  IAdobeAuthFox,
+  isAdobeFoxTokenValid,
+} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 import moment from 'moment';
 import {IHeaders} from './shared-interfaces';
@@ -25,6 +29,60 @@ const getMaxRes = _.memoize(() => {
 
 const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS;
 const maxRes = getMaxRes();
+
+const ADOBE_KEY = [
+  'g',
+  'B',
+  '8',
+  'H',
+  'Y',
+  'd',
+  'E',
+  'P',
+  'y',
+  'e',
+  'z',
+  'e',
+  'Y',
+  'b',
+  'R',
+  '1',
+].join('');
+
+const ADOBE_PUBLIC_KEY = [
+  'y',
+  'K',
+  'p',
+  's',
+  'H',
+  'Y',
+  'd',
+  '8',
+  'T',
+  'O',
+  'I',
+  'T',
+  'd',
+  'T',
+  'M',
+  'J',
+  'H',
+  'm',
+  'k',
+  'J',
+  'O',
+  'V',
+  'm',
+  'g',
+  'b',
+  'b',
+  '2',
+  'D',
+  'y',
+  'k',
+  'N',
+  'K',
+].join('');
 
 interface IAppConfig {
   api: {
@@ -155,8 +213,7 @@ class FoxHandler {
     // if (willAuthTokenExpire(this.adobe_auth)) {
     if (true) {
       console.log('Updating FOX Sports auth code');
-      await this.getPrelimToken();
-      await this.authenticateRegCode();
+      await this.refreshProviderToken();
     }
   };
 
@@ -410,12 +467,51 @@ class FoxHandler {
     } catch (e) {
       if (e.response?.status !== 404) {
         console.error(e);
-        console.log('Could not get provider token data for Fox Sports!');
+
+        if (e.response?.status === 410) {
+          console.log('Adobe AuthN token has expired for FOX Sports');
+        } else {
+          console.log('Could not get provider token data for Fox Sports!');
+        }
       }
 
       return false;
     }
   };
+
+  private async refreshProviderToken() {
+    const renewUrl = [
+      'https://',
+      'api.auth.adobe.com',
+      '/api/v1/',
+      'tokens/authn',
+      '?requestor=fbc-fox',
+      `&deviceId=${this.adobe_device_id}`,
+    ].join('');
+
+    try {
+      const res = await axios.get(renewUrl, {
+        headers: {
+          Authorization: createAdobeAuthHeader(
+            'GET',
+            renewUrl,
+            ADOBE_KEY,
+            ADOBE_PUBLIC_KEY,
+            'fbc-fox',
+          ),
+          'User-Agent': userAgent,
+        },
+      });
+
+      console.log(res);
+
+      // this.adobe_auth = data;
+      // this.save();
+    } catch (e) {
+      console.error(e);
+      console.log('Could not refresh provider token data!');
+    }
+  }
 
   private save = () => {
     fsExtra.writeJSONSync(
