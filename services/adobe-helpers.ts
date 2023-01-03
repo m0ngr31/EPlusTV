@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-import {getRandomHex} from './generate-random';
+import {getRandomHex} from './shared-helpers';
 
 export interface IAdobeAuth {
   expires: string;
@@ -13,76 +13,26 @@ export interface IAdobeAuthFox {
   accessToken: string;
   tokenExpiration: number;
   mvpd: string;
+  authn_expire: number;
 }
-
-const ADOBE_KEY = [
-  'g',
-  'B',
-  '8',
-  'H',
-  'Y',
-  'd',
-  'E',
-  'P',
-  'y',
-  'e',
-  'z',
-  'e',
-  'Y',
-  'b',
-  'R',
-  '1',
-].join('');
-
-const ADOBE_PUBLIC_KEY = [
-  'y',
-  'K',
-  'p',
-  's',
-  'H',
-  'Y',
-  'd',
-  '8',
-  'T',
-  'O',
-  'I',
-  'T',
-  'd',
-  'T',
-  'M',
-  'J',
-  'H',
-  'm',
-  'k',
-  'J',
-  'O',
-  'V',
-  'm',
-  'g',
-  'b',
-  'b',
-  '2',
-  'D',
-  'y',
-  'k',
-  'N',
-  'K',
-].join('');
 
 export const createAdobeAuthHeader = (
   method = 'POST',
   path: string,
+  privateKey: string,
+  publicKey: string,
+  requestor = 'ESPN',
 ): string => {
   const now = new Date().valueOf();
   const nonce = getRandomHex();
 
-  let message = `${method} requestor_id=ESPN, nonce=${nonce}, signature_method=HMAC-SHA1, request_time=${now}, request_uri=${path}`;
+  let message = `${method} requestor_id=${requestor}, nonce=${nonce}, signature_method=HMAC-SHA1, request_time=${now}, request_uri=${path}`;
   const signature = crypto
-    .createHmac('sha1', ADOBE_KEY)
+    .createHmac('sha1', privateKey)
     .update(message)
     .digest()
     .toString('base64');
-  message = `${message}, public_key=${ADOBE_PUBLIC_KEY}, signature=${signature}`;
+  message = `${message}, public_key=${publicKey}, signature=${signature}`;
 
   return message;
 };

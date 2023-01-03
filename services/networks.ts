@@ -12,6 +12,8 @@ export const useEspnPlus =
 
 export const useFoxSports = process.env.FOXSPORTS;
 
+export const useNbcSports = process.env.NBCSPORTS;
+
 export const requiresProvider =
   useEspn1 ||
   useEspn2 ||
@@ -24,5 +26,5 @@ export const requiresProvider =
   useAccNx;
 
 export const usesMultiple =
-  (useFoxSports && (requiresProvider || useEspnPlus)) ||
+  ((useFoxSports || useNbcSports) && (requiresProvider || useEspnPlus)) ||
   (requiresProvider && useEspnPlus);

@@ -2,21 +2,21 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
-import {execSync} from 'child_process';
 
 import {generateM3u} from './services/generate-m3u';
-import {cleanupParts} from './services/clean-parts';
 import {slateStream} from './services/stream-slate';
-import {initDirectories, tmpPath} from './services/init-directories';
+import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {checkNextStream, launchChannel} from './services/launch-channel';
 import {getEventSchedules} from './services/get-espn-events';
 import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
-import {killChildren} from './services/kill-processes';
 import {foxHandler} from './services/fox-handler';
 import {getFoxEventSchedules} from './services/get-fox-events';
 import {IAppStatus} from './services/shared-interfaces';
+import {nbcHandler} from './services/nbc-handler';
+import {getNbcEventSchedules} from './services/get-nbc-events';
+import {cleanEntries} from './services/shared-helpers';
 
 const NUM_OF_CHANNELS = 100;
 
@@ -30,18 +30,13 @@ const appStatus: IAppStatus = {
 };
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
-const shutDown = () => {
-  try {
-    execSync('killall ffmpeg > /dev/null 2>&1');
-  } catch (e) {}
-
-  process.exit(0);
-};
+const shutDown = () => process.exit(0);
 
 const schedule = async () => {
   console.log('=== Getting events ===');
   await getEventSchedules();
   await getFoxEventSchedules();
+  await getNbcEventSchedules();
   console.log('=== Done getting events ===');
   console.log('=== Building the schedule ===');
   await scheduleEntries(START_CHANNEL);
@@ -84,8 +79,6 @@ app.get('/xmltv.xml', async (req, res) => {
 
 app.get('/channels/:id.m3u8', async (req, res) => {
   const {id} = req.params;
-  const fileStr = `${id}/${id}.m3u8`;
-  const filename = path.join(tmpPath, fileStr);
 
   let contents = null;
 
@@ -93,9 +86,10 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   if (!appStatus.channels[id]) {
     appStatus.channels[id] = {};
   }
+
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
-  if (!fs.existsSync(filename)) {
+  if (!appStatus.channels[id].player?.m3u8) {
     contents = slateStream.getSlate(
       'soon',
       `${req.protocol}://${req.headers.host}`,
@@ -103,52 +97,66 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
     // Start stream
     launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
+  } else {
+    contents = appStatus.channels[id].player?.m3u8;
   }
-
-  if (!contents) {
-    try {
-      contents = fs.readFileSync(filename);
-    } catch (e) {
-      console.log(`There was an error reading Channel #${id}'s m3u8...`);
-
-      notFound(req, res);
-      return;
-    }
-  }
-
-  checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 
   res.writeHead(200, {
     'Cache-Control': 'no-cache',
     'Content-Type': 'application/vnd.apple.mpegurl',
   });
   res.end(contents, 'utf-8');
+
+  checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
 });
 
-app.get('/channels/:id/:part.ts', (req, res) => {
+app.get('/channels/:id/:part.key', async (req, res) => {
+  const {id, part} = req.params;
+  let contents;
+
+  try {
+    contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+  } catch (e) {
+    notFound(req, res);
+    return;
+  }
+
+  if (!contents) {
+    notFound(req, res);
+    return;
+  }
+
+  res.writeHead(200, {
+    'Cache-Control': 'no-cache',
+    'Content-Type': 'application/octet-stream',
+  });
+  res.end(contents, 'utf-8');
+});
+
+app.get('/channels/:id/:part.ts', async (req, res) => {
   const {id, part} = req.params;
   let fileStr;
   let filename;
+
+  let contents;
 
   const isSlate = id === 'starting' || id === 'soon';
 
   if (isSlate) {
     fileStr = `slate/${id}/${part}.ts`;
     filename = path.join(process.cwd(), fileStr);
-  } else {
-    fileStr = `${id}/${part}.ts`;
-    filename = path.join(tmpPath, fileStr);
 
-    // Channel heatbeat
-    if (!appStatus.channels[id]) {
-      appStatus.channels[id] = {};
+    contents = fs.readFileSync(filename);
+  } else {
+    try {
+      contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+    } catch (e) {
+      notFound(req, res);
+      return;
     }
-    appStatus.channels[id].heartbeat = new Date().valueOf();
   }
 
-  if (!fs.existsSync(filename)) {
-    console.log('Error opening part: ', filename);
-
+  if (!contents) {
     notFound(req, res);
     return;
   }
@@ -157,8 +165,7 @@ app.get('/channels/:id/:part.ts', (req, res) => {
     'Cache-Control': 'no-cache',
     'Content-Type': 'video/MP2T',
   });
-  const stream = fs.createReadStream(filename);
-  stream.pipe(res);
+  res.end(contents, 'utf-8');
 });
 
 // 404 Handler
@@ -168,7 +175,7 @@ process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
 
 (async () => {
-  initDirectories(NUM_OF_CHANNELS, START_CHANNEL);
+  initDirectories();
 
   await espnHandler.initialize();
   await espnHandler.refreshTokens();
@@ -176,6 +183,10 @@ process.on('SIGINT', shutDown);
   await foxHandler.initialize();
   await foxHandler.refreshTokens();
 
+  await nbcHandler.initialize();
+  await nbcHandler.refreshTokens();
+
+  await cleanEntries();
   await schedule();
 
   console.log('=== Starting Server ===');
@@ -184,22 +195,20 @@ process.on('SIGINT', shutDown);
 
 // Cleanup intervals
 setInterval(() => {
-  // Delete old TS files after 120 seconds
-  cleanupParts();
-
   // Check for channel heartbeat and kill any streams that aren't being used
   const now = new Date().valueOf();
-  _.forOwn(appStatus.channels, val => {
-    if (now - val.heartbeat > 120 * 1000) {
-      if (val.pid) {
-        console.log('Killing unwatched stream with PID: ', val.pid);
-        try {
-          killChildren(val.pid);
-          val.pid = null;
-          val.current = null;
-        } catch (e) {}
-      }
+  _.forOwn(appStatus.channels, (val, key) => {
+    if (!val.heartbeat) {
+      return;
+    }
 
+    if (now - val.heartbeat > 120 * 1000) {
+      if (val.player) {
+        console.log('Killing unwatched channel: ', key);
+        val.player.stop();
+      }
+      val.current = null;
+      val.player = null;
       val.nextUp && val.nextUpTimer && clearTimeout(val.nextUpTimer);
       val.nextUp = null;
       val.nextUpTimer = null;
@@ -217,4 +226,5 @@ setInterval(async () => {
 setInterval(async () => {
   await espnHandler.refreshTokens();
   await foxHandler.refreshTokens();
+  await nbcHandler.refreshTokens();
 }, 1000 * 60 * 30);
