@@ -152,8 +152,8 @@ const FOX_APP_CONFIG =
 // Will tokens expire in the next hour?
 const willPrelimTokenExpire = (token: IAdobePrelimAuthToken): boolean =>
   new Date().valueOf() + 3600 * 1000 > token.exp;
-// const willAuthTokenExpire = (token: IAdobeAuthFox): boolean =>
-//   new Date().valueOf() + 3600 * 1000 > token.authn_expire;
+const willAuthTokenExpire = (token: IAdobeAuthFox): boolean =>
+  new Date().valueOf() + 3600 * 1000 > token.authn_expire;
 
 const getEventNetwork = (event: IFoxEvent): string => {
   if (event.contentSKUResolved && event.contentSKUResolved[0]) {
@@ -204,14 +204,19 @@ class FoxHandler {
       return;
     }
 
+    if (!isAdobeFoxTokenValid(this.adobe_auth)) {
+      console.log('FOX Sports token has expired. Please login again');
+      process.exit(1);
+    }
+
     if (willPrelimTokenExpire(this.adobe_prelim_auth_token)) {
       // It has been 2 years, time to get a new code
       console.log('Updating FOX Sports prelim token');
       await this.getPrelimToken();
     }
 
-    // if (willAuthTokenExpire(this.adobe_auth)) {
-    if (true) {
+    if (willAuthTokenExpire(this.adobe_auth)) {
+      // This currently doesn't work...
       console.log('Updating FOX Sports auth code');
       await this.refreshProviderToken();
     }
@@ -490,7 +495,7 @@ class FoxHandler {
     ].join('');
 
     try {
-      const res = await axios.get(renewUrl, {
+      const {data} = await axios.get(renewUrl, {
         headers: {
           Authorization: createAdobeAuthHeader(
             'GET',
@@ -503,10 +508,8 @@ class FoxHandler {
         },
       });
 
-      console.log(res);
-
-      // this.adobe_auth = data;
-      // this.save();
+      this.adobe_auth.authn_expire = data.expires;
+      this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh provider token data!');
