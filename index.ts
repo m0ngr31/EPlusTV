@@ -4,7 +4,7 @@ import path from 'path';
 import _ from 'lodash';
 
 import {generateM3u} from './services/generate-m3u';
-import {slateStream} from './services/stream-slate';
+import {getSlate} from './services/stream-slate';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {checkNextStream, launchChannel} from './services/launch-channel';
@@ -28,6 +28,8 @@ if (_.isNaN(START_CHANNEL)) {
 const appStatus: IAppStatus = {
   channels: {},
 };
+
+const SLATE_FILE = path.join(process.cwd(), 'slate/static/000000000.ts');
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => process.exit(0);
@@ -89,14 +91,13 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
+  const uri = `${req.protocol}://${req.headers.host}`;
+
   if (!appStatus.channels[id].player?.m3u8) {
-    contents = slateStream.getSlate(
-      'soon',
-      `${req.protocol}://${req.headers.host}`,
-    );
+    contents = getSlate(uri);
 
     // Start stream
-    launchChannel(id, appStatus, `${req.protocol}://${req.headers.host}`);
+    launchChannel(id, appStatus, uri);
   } else {
     contents = appStatus.channels[id].player?.m3u8;
   }
@@ -135,18 +136,12 @@ app.get('/channels/:id/:part.key', async (req, res) => {
 
 app.get('/channels/:id/:part.ts', async (req, res) => {
   const {id, part} = req.params;
-  let fileStr;
-  let filename;
-
   let contents;
 
-  const isSlate = id === 'starting' || id === 'soon';
+  const isSlate = id === 'slate';
 
   if (isSlate) {
-    fileStr = `slate/${id}/${part}.ts`;
-    filename = path.join(process.cwd(), fileStr);
-
-    contents = fs.readFileSync(filename);
+    contents = fs.readFileSync(SLATE_FILE);
   } else {
     try {
       contents = await appStatus.channels[id].player.getSegmentOrKey(part);
