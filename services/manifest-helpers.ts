@@ -78,13 +78,12 @@ const getSequence = (chunklist: string): number => {
 
 export class ChunklistHandler {
   public m3u8: string;
+  public interval: NodeJS.Timer;
 
   private baseUrl: string;
   private baseManifestUrl: string;
   private headers: IHeaders;
   private channel: string;
-
-  private interval: NodeJS.Timer;
 
   constructor(
     manifestUrl: string,
@@ -170,20 +169,20 @@ export class ChunklistHandler {
       const chunks = Chunklist.loadFromString(chunkList);
 
       chunks.segments.forEach(segment => {
-        const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
-          ? `${this.baseManifestUrl}${segment.segment.uri}`
-          : segment.segment.uri;
-        const segmentName = cacheLayer.getSegmentFromUrl(
-          fullSegmentUrl,
-          `${this.channel}-segment`,
-        );
+        if (segment.segment.key?.uri) {
+          const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
+            ? `${this.baseManifestUrl}${segment.segment.uri}`
+            : segment.segment.uri;
+          const segmentName = cacheLayer.getSegmentFromUrl(
+            fullSegmentUrl,
+            `${this.channel}-segment`,
+          );
 
-        updatedChunkList = updatedChunkList.replace(
-          segment.segment.uri,
-          `${this.channel}/${segmentName}.ts`,
-        );
+          updatedChunkList = updatedChunkList.replace(
+            segment.segment.uri,
+            `${this.channel}/${segmentName}.ts`,
+          );
 
-        if (segment.segment.key) {
           keys.add(segment.segment.key.uri);
         }
       });

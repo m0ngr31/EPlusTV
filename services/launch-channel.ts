@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 import {db} from './database';
 import {espnHandler} from './espn-handler';
 import {foxHandler} from './fox-handler';
@@ -83,68 +85,76 @@ const delayedStart = async (
   startChannelStream(channelId, appStatus, appUrl);
 };
 
-export const launchChannel = async (
-  channelId: string,
-  appStatus: IAppStatus,
-  appUrl: string,
-): Promise<void> => {
-  if (appStatus.channels[channelId].player || checkingStream[channelId]) {
-    return;
-  }
+export const launchChannel = _.throttle(
+  async (
+    channelId: string,
+    appStatus: IAppStatus,
+    appUrl: string,
+  ): Promise<void> => {
+    if (appStatus.channels[channelId].player || checkingStream[channelId]) {
+      return;
+    }
 
-  const now = new Date().valueOf();
-  const channel = parseInt(channelId, 10);
-  const playingNow = await db.entries.findOne({
-    channel,
-    end: {$gt: now},
-    start: {$lt: now},
-  });
+    const now = new Date().valueOf();
+    const channel = parseInt(channelId, 10);
+    const playingNow = await db.entries.findOne({
+      channel,
+      end: {$gt: now},
+      start: {$lt: now},
+    });
 
-  if (playingNow && (playingNow as any).id) {
-    console.log(
-      `Channel #${channelId} has an active event. Going to start the stream.`,
-    );
-    appStatus.channels[channelId].current = (playingNow as any).id;
-    startChannelStream(channelId, appStatus, appUrl);
-  }
-};
+    if (playingNow && (playingNow as any).id) {
+      console.log(
+        `Channel #${channelId} has an active event. Going to start the stream.`,
+      );
+      appStatus.channels[channelId].current = (playingNow as any).id;
+      startChannelStream(channelId, appStatus, appUrl);
+    }
+  },
+  500,
+  {leading: true, trailing: false},
+);
 
-export const checkNextStream = async (
-  channelId: string,
-  appStatus: IAppStatus,
-  appUrl: string,
-): Promise<void> => {
-  const now = new Date().valueOf();
+export const checkNextStream = _.throttle(
+  async (
+    channelId: string,
+    appStatus: IAppStatus,
+    appUrl: string,
+  ): Promise<void> => {
+    const now = new Date().valueOf();
 
-  if (
-    appStatus.channels[channelId].nextUp ||
-    appStatus.channels[channelId].nextUpTimer
-  ) {
-    return;
-  }
+    if (
+      appStatus.channels[channelId].nextUp ||
+      appStatus.channels[channelId].nextUpTimer
+    ) {
+      return;
+    }
 
-  const channel = parseInt(channelId, 10);
-  const entries = await db.entries
-    .find({channel, start: {$gt: now}})
-    .sort({start: 1});
+    const channel = parseInt(channelId, 10);
+    const entries = await db.entries
+      .find({channel, start: {$gt: now}})
+      .sort({start: 1});
 
-  const now2 = new Date().valueOf();
+    const now2 = new Date().valueOf();
 
-  if (
-    entries &&
-    entries.length > 0 &&
-    now - appStatus.channels[channelId].heartbeat < 30 * 1000
-  ) {
-    const diff = (entries[0] as any).start - now2;
+    if (
+      entries &&
+      entries.length > 0 &&
+      now - appStatus.channels[channelId].heartbeat < 30 * 1000
+    ) {
+      const diff = (entries[0] as any).start - now2;
 
-    console.log(
-      `Channel #${channelId} has upcoming event. Setting timer to start`,
-    );
+      console.log(
+        `Channel #${channelId} has upcoming event. Setting timer to start`,
+      );
 
-    appStatus.channels[channelId].nextUp = (entries[0] as any).id;
-    appStatus.channels[channelId].nextUpTimer = setTimeout(
-      () => delayedStart(channelId, appStatus, appUrl),
-      diff,
-    );
-  }
-};
+      appStatus.channels[channelId].nextUp = (entries[0] as any).id;
+      appStatus.channels[channelId].nextUpTimer = setTimeout(
+        () => delayedStart(channelId, appStatus, appUrl),
+        diff,
+      );
+    }
+  },
+  500,
+  {leading: true, trailing: false},
+);

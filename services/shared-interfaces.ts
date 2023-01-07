@@ -4,7 +4,15 @@ interface IChannelStatus {
   current?: string;
   nextUp?: string;
   nextUpTimer?: any;
-  player?: any;
+  player?: IManifestPlayer;
+}
+
+interface IManifestPlayer {
+  m3u8?: string;
+  interval?: NodeJS.Timer;
+
+  getSegmentOrKey(segmentId: string): Promise<void>;
+  stop(): void;
 }
 
 export interface IHeaders {

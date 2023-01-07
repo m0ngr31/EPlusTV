@@ -18,7 +18,9 @@ import {nbcHandler} from './services/nbc-handler';
 import {getNbcEventSchedules} from './services/get-nbc-events';
 import {cleanEntries} from './services/shared-helpers';
 
-const NUM_OF_CHANNELS = 100;
+import {version} from './package.json';
+
+const NUM_OF_CHANNELS = 150;
 
 let START_CHANNEL = _.toNumber(process.env.START_CHANNEL);
 if (_.isNaN(START_CHANNEL)) {
@@ -170,6 +172,7 @@ process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
 
 (async () => {
+  console.log(`=== EPlusTV v${version} starting... ===`);
   initDirectories();
 
   await espnHandler.initialize();
