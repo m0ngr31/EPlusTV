@@ -3,17 +3,14 @@ import _ from 'lodash';
 import {db} from './database';
 import {espnHandler} from './espn-handler';
 import {foxHandler} from './fox-handler';
-import {IAppStatus, IHeaders} from './shared-interfaces';
+import {IHeaders} from './shared-interfaces';
 import {ChunklistHandler} from './manifest-helpers';
 import {nbcHandler} from './nbc-handler';
+import {appStatus} from './app-status';
 
 const checkingStream = {};
 
-const startChannelStream = async (
-  channelId: string,
-  appStatus: IAppStatus,
-  appUrl,
-) => {
+const startChannelStream = async (channelId: string, appUrl) => {
   if (appStatus.channels[channelId].player || checkingStream[channelId]) {
     return;
   }
@@ -56,17 +53,20 @@ const startChannelStream = async (
     return;
   }
 
-  appStatus.channels[channelId].player = new ChunklistHandler(
-    url,
-    headers,
-    appUrl,
-    channelId,
-  );
+  try {
+    appStatus.channels[channelId].player = new ChunklistHandler(
+      url,
+      headers,
+      appUrl,
+      channelId,
+    );
+  } catch (e) {
+    appStatus.channels[channelId].player = undefined;
+  }
 };
 
 const delayedStart = async (
   channelId: string,
-  appStatus,
   appUrl: string,
 ): Promise<void> => {
   if (appStatus.channels[channelId].player) {
@@ -82,15 +82,11 @@ const delayedStart = async (
   appStatus.channels[channelId].nextUp = null;
   appStatus.channels[channelId].nextUpTimer = null;
 
-  startChannelStream(channelId, appStatus, appUrl);
+  startChannelStream(channelId, appUrl);
 };
 
 export const launchChannel = _.throttle(
-  async (
-    channelId: string,
-    appStatus: IAppStatus,
-    appUrl: string,
-  ): Promise<void> => {
+  async (channelId: string, appUrl: string): Promise<void> => {
     if (appStatus.channels[channelId].player || checkingStream[channelId]) {
       return;
     }
@@ -108,7 +104,7 @@ export const launchChannel = _.throttle(
         `Channel #${channelId} has an active event. Going to start the stream.`,
       );
       appStatus.channels[channelId].current = (playingNow as any).id;
-      startChannelStream(channelId, appStatus, appUrl);
+      startChannelStream(channelId, appUrl);
     }
   },
   500,
@@ -116,11 +112,7 @@ export const launchChannel = _.throttle(
 );
 
 export const checkNextStream = _.throttle(
-  async (
-    channelId: string,
-    appStatus: IAppStatus,
-    appUrl: string,
-  ): Promise<void> => {
+  async (channelId: string, appUrl: string): Promise<void> => {
     const now = new Date().valueOf();
 
     if (
@@ -150,7 +142,7 @@ export const checkNextStream = _.throttle(
 
       appStatus.channels[channelId].nextUp = (entries[0] as any).id;
       appStatus.channels[channelId].nextUpTimer = setTimeout(
-        () => delayedStart(channelId, appStatus, appUrl),
+        () => delayedStart(channelId, appUrl),
         diff,
       );
     }

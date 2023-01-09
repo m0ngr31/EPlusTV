@@ -5,9 +5,10 @@ import _ from 'lodash';
 import {userAgent} from './user-agent';
 import {IHeaders} from './shared-interfaces';
 import {cacheLayer} from './cache-layer';
+import {appStatus} from './app-status';
 
-const isRelativeUrl = (url: string): boolean =>
-  url.startsWith('http') ? false : true;
+const isRelativeUrl = (url?: string): boolean =>
+  url?.startsWith('http') ? false : true;
 const cleanUrl = (url: string): string =>
   url.replace(/(\[.*\])/gm, '').replace(/(?<!:)\/\//gm, '/');
 const createBaseUrl = (url: string): string => {
@@ -99,6 +100,10 @@ export class ChunklistHandler {
     (async () => {
       const chunkListUrl = await this.getChunklist(manifestUrl, this.headers);
 
+      if (!chunkListUrl) {
+        throw new Error('Could not create player instance');
+      }
+
       const fullChunkUrl = cleanUrl(
         isRelativeUrl(chunkListUrl)
           ? `${createBaseUrl(manifestUrl)}/${chunkListUrl}`
@@ -111,6 +116,10 @@ export class ChunklistHandler {
   }
 
   public async getSegmentOrKey(segmentId: string): Promise<ArrayBuffer> {
+    if (appStatus.channels[this.channel]?.playingSlate) {
+      appStatus.channels[this.channel].playingSlate = false;
+    }
+
     try {
       return cacheLayer.getDataFromSegment(segmentId, this.headers);
     } catch (e) {
@@ -203,7 +212,7 @@ export class ChunklistHandler {
 
       let splitChunklist: string[] = updatedChunkList.split('\n');
 
-      const currentSequence = getSequence(updatedChunkList) + 3;
+      const currentSequence = getSequence(updatedChunkList) + 6;
 
       if (!this.interval) {
         // Setup interval to refresh chunklist
