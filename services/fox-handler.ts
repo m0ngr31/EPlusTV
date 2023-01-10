@@ -7,11 +7,7 @@ import _ from 'lodash';
 import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './init-directories';
 import {useFoxSports} from './networks';
-import {
-  createAdobeAuthHeader,
-  IAdobeAuthFox,
-  isAdobeFoxTokenValid,
-} from './adobe-helpers';
+import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 import moment from 'moment';
 import {IHeaders} from './shared-interfaces';
@@ -29,60 +25,6 @@ const getMaxRes = _.memoize(() => {
 
 const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS;
 const maxRes = getMaxRes();
-
-const ADOBE_KEY = [
-  'g',
-  'B',
-  '8',
-  'H',
-  'Y',
-  'd',
-  'E',
-  'P',
-  'y',
-  'e',
-  'z',
-  'e',
-  'Y',
-  'b',
-  'R',
-  '1',
-].join('');
-
-const ADOBE_PUBLIC_KEY = [
-  'y',
-  'K',
-  'p',
-  's',
-  'H',
-  'Y',
-  'd',
-  '8',
-  'T',
-  'O',
-  'I',
-  'T',
-  'd',
-  'T',
-  'M',
-  'J',
-  'H',
-  'm',
-  'k',
-  'J',
-  'O',
-  'V',
-  'm',
-  'g',
-  'b',
-  'b',
-  '2',
-  'D',
-  'y',
-  'k',
-  'N',
-  'K',
-].join('');
 
 interface IAppConfig {
   api: {
@@ -105,8 +47,11 @@ interface IAppConfig {
 }
 
 interface IAdobePrelimAuthToken {
-  token: string;
-  exp: number;
+  accessToken: string;
+  tokenExpiration: number;
+  viewerId: string;
+  deviceId: string;
+  profileId: string;
 }
 
 export interface IFoxEvent {
@@ -146,12 +91,11 @@ interface IFoxEventsData {
   };
 }
 
-const FOX_APP_CONFIG =
-  'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
+const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
 
 // Will tokens expire in the next hour?
 const willPrelimTokenExpire = (token: IAdobePrelimAuthToken): boolean =>
-  new Date().valueOf() + 3600 * 1000 > token.exp;
+  new Date().valueOf() + 3600 * 1000 > token.tokenExpiration;
 const willAuthTokenExpire = (token: IAdobeAuthFox): boolean =>
   new Date().valueOf() + 3600 * 1000 > token.tokenExpiration;
 
@@ -188,7 +132,7 @@ class FoxHandler {
       await this.getAppConfig();
     }
 
-    if (!this.adobe_prelim_auth_token) {
+    if (!this.adobe_prelim_auth_token || !this.adobe_prelim_auth_token?.accessToken) {
       await this.getPrelimToken();
     }
 
@@ -199,7 +143,6 @@ class FoxHandler {
     if (willAuthTokenExpire(this.adobe_auth)) {
       console.log('Updating FOX Sports auth code');
       await this.authenticateRegCode();
-      await this.refreshProviderToken();
     }
 
     await this.getEntitlements();
@@ -208,11 +151,6 @@ class FoxHandler {
   public refreshTokens = async () => {
     if (!useFoxSports) {
       return;
-    }
-
-    if (!isAdobeFoxTokenValid(this.adobe_auth)) {
-      console.log('FOX Sports token has expired. Please login again');
-      process.exit(1);
     }
 
     if (willPrelimTokenExpire(this.adobe_prelim_auth_token)) {
@@ -224,7 +162,6 @@ class FoxHandler {
     if (willAuthTokenExpire(this.adobe_auth)) {
       console.log('Updating FOX Sports auth code');
       await this.authenticateRegCode();
-      await this.refreshProviderToken();
     }
   };
 
@@ -233,19 +170,15 @@ class FoxHandler {
 
     const now = new Date();
 
-    const dateRange = `${now.toISOString()}..${
-      moment(now).add(2, 'days').toISOString
-    }`;
+    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').toISOString}`;
 
     try {
       const {data} = await axios.get<IFoxEventsData>(
-        encodeURI(
-          `https://api3.fox.com/v2.0/screens/live?dateRange=${dateRange}`,
-        ),
+        encodeURI(`https://api3.fox.com/v2.0/screens/live?dateRange=${dateRange}`),
         {
           headers: {
             'User-Agent': userAgent,
-            authorization: `Bearer ${this.adobe_prelim_auth_token.token}`,
+            authorization: `Bearer ${this.adobe_prelim_auth_token.accessToken}`,
             'x-api-key': this.appConfig.api.key,
           },
         },
@@ -254,10 +187,7 @@ class FoxHandler {
       _.forEach(data.panels.member, member => {
         _.forEach(member.items.member, m => {
           if (
-            _.some(
-              this.entitlements,
-              network => network === getEventNetwork(m),
-            ) &&
+            _.some(this.entitlements, network => network === getEventNetwork(m)) &&
             !m.audioOnly &&
             m.startDate &&
             m.endDate &&
@@ -278,9 +208,7 @@ class FoxHandler {
     return events;
   };
 
-  public getEventData = async (
-    eventId: string,
-  ): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
     try {
       const {data} = await axios.post(
         this.appConfig.api.content.watch,
@@ -305,9 +233,7 @@ class FoxHandler {
       // console.log('CDN: ', data.trackingData.properties.CDN);
 
       if (!data.url) {
-        throw new Error(
-          'Could not get stream data. Event might be upcoming, ended, or in blackout...',
-        );
+        throw new Error('Could not get stream data. Event might be upcoming, ended, or in blackout...');
       }
 
       const {data: streamData} = await axios.get(data.url, {
@@ -318,9 +244,7 @@ class FoxHandler {
       });
 
       if (!streamData.playURL) {
-        throw new Error(
-          'Could not get stream data. Event might be upcoming, ended, or in blackout...',
-        );
+        throw new Error('Could not get stream data. Event might be upcoming, ended, or in blackout...');
       }
 
       return [
@@ -372,27 +296,21 @@ class FoxHandler {
 
   private getPrelimToken = async (): Promise<void> => {
     try {
-      const {data} = await axios.post(
+      const {data} = await axios.post<IAdobePrelimAuthToken>(
         this.appConfig.api.profile.login,
         {
           deviceId: this.adobe_device_id,
-          email: '',
-          facebookToken: '',
-          googleToken: '',
-          password: '',
         },
         {
           headers: {
             'User-Agent': androidFoxUserAgent,
             'x-api-key': this.appConfig.api.key,
+            'x-signature-enabled': true,
           },
         },
       );
 
-      this.adobe_prelim_auth_token = {
-        exp: data.tokenExpiration,
-        token: data.accessToken,
-      };
+      this.adobe_prelim_auth_token = data;
       this.save();
     } catch (e) {
       console.error(e);
@@ -412,16 +330,14 @@ class FoxHandler {
         {
           headers: {
             'User-Agent': androidFoxUserAgent,
-            authorization: `Bearer ${this.adobe_prelim_auth_token.token}`,
+            authorization: `Bearer ${this.adobe_prelim_auth_token.accessToken}`,
             'x-api-key': this.appConfig.api.key,
           },
         },
       );
 
       console.log('== TV Provider Auth ==');
-      console.log(
-        'Please open a browser window and go to: https://go.foxsports.com',
-      );
+      console.log('Please open a browser window and go to: https://go.foxsports.com');
       console.log('Enter code: ', data.code);
       console.log('App will continue when login has completed...');
 
@@ -458,27 +374,22 @@ class FoxHandler {
     }
   };
 
-  private authenticateRegCode = async (
-    showAuthnError = true,
-  ): Promise<boolean> => {
+  private authenticateRegCode = async (showAuthnError = true): Promise<boolean> => {
     try {
-      const {data} = await axios.get(
-        `${this.appConfig.api.auth.checkadobeauthn}?device_id=${this.adobe_device_id}`,
-        {
-          headers: {
-            'User-Agent': androidFoxUserAgent,
-            authorization: `Bearer ${this.adobe_prelim_auth_token.token}`,
-            'x-api-key': this.appConfig.api.key,
-          },
+      const {data} = await axios.get(`${this.appConfig.api.auth.checkadobeauthn}?device_id=${this.adobe_device_id}`, {
+        headers: {
+          'User-Agent': androidFoxUserAgent,
+          authorization: !this.adobe_auth?.accessToken
+            ? `Bearer ${this.adobe_prelim_auth_token.accessToken}`
+            : this.adobe_auth.accessToken,
+          'x-api-key': this.appConfig.api.key,
+          'x-signature-enabled': true,
         },
-      );
+      });
 
       this.adobe_auth = {
         ...data,
-        tokenExpiration: Math.min(
-          parseInt(moment().add(1, 'day').format('x'), 10),
-          data.tokenExpiration,
-        ),
+        tokenExpiration: Math.min(parseInt(moment().add(1, 'day').format('x'), 10), data.tokenExpiration),
       };
       this.save();
 
@@ -500,50 +411,17 @@ class FoxHandler {
     }
   };
 
-  private async refreshProviderToken() {
-    const renewUrl = [
-      'https://',
-      'api.auth.adobe.com',
-      '/api/v1/',
-      'tokens/authn',
-      '?requestor=fbc-fox',
-      `&deviceId=${this.adobe_device_id}`,
-    ].join('');
-
-    try {
-      const {data} = await axios.get(renewUrl, {
-        headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            renewUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-            'fbc-fox',
-          ),
-          'User-Agent': userAgent,
-        },
-      });
-
-      this.adobe_auth.authn_expire = parseInt(data.expires, 10);
-      this.save();
-    } catch (e) {
-      console.error(e);
-      console.log('Could not refresh provider token data!');
-    }
-  }
-
   private save = () => {
-    fsExtra.writeJSONSync(
-      path.join(configPath, 'fox_tokens.json'),
-      _.omit(this, 'appConfig', 'entitlements'),
-      {spaces: 2},
-    );
+    fsExtra.writeJSONSync(path.join(configPath, 'fox_tokens.json'), _.omit(this, 'appConfig', 'entitlements'), {
+      spaces: 2,
+    });
   };
 
   private load = () => {
     if (fs.existsSync(path.join(configPath, 'fox_tokens.json'))) {
-      const {adobe_device_id, adobe_auth, adobe_prelim_auth_token} =
-        fsExtra.readJSONSync(path.join(configPath, 'fox_tokens.json'));
+      const {adobe_device_id, adobe_auth, adobe_prelim_auth_token} = fsExtra.readJSONSync(
+        path.join(configPath, 'fox_tokens.json'),
+      );
 
       this.adobe_device_id = adobe_device_id;
       this.adobe_auth = adobe_auth;

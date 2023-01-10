@@ -17,12 +17,7 @@ import {
 
 const parseCategories = event => {
   const categories = ['Sports'];
-  for (const classifier of [
-    event.category,
-    event.subcategory,
-    event.sport,
-    event.league,
-  ]) {
+  for (const classifier of [event.category, event.subcategory, event.sport, event.league]) {
     if (classifier !== null && classifier.name !== null) {
       categories.push(classifier.name);
     }
@@ -40,15 +35,13 @@ const parseAirings = async events => {
       await db.entries.insert({
         categories: parseCategories(event),
         duration: event.duration,
-        end: moment(event.startDateTime)
-          .add(event.duration, 'seconds')
-          .valueOf(),
+        end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),
         feed: event.feedName,
         from: 'espn',
         id: event.id,
         image: event.image?.url,
         name: event.name,
-        network: event.network?.name,
+        network: event.network?.name || 'ESPN+',
         start: new Date(event.startDateTime).valueOf(),
         url: event.source?.url,
       });
@@ -114,78 +107,47 @@ export const getEventSchedules = async (): Promise<void> => {
 
     try {
       if (useEspnPlus) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'));
         entries = [...entries, ...upcomingEntries];
       }
       if (useEspn1) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'espn1',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn1');
         entries = [...entries, ...upcomingEntries];
       }
       if (useEspn2) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'espn2',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn2');
         entries = [...entries, ...upcomingEntries];
       }
       if (useEspn3) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'espn3',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn3');
         entries = [...entries, ...upcomingEntries];
       }
       if (useEspnU) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'espnU',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espnU');
         entries = [...entries, ...upcomingEntries];
       }
       if (useSec) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'secn',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secn');
         entries = [...entries, ...upcomingEntries];
       }
       if (useSecPlus) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'secnPlus',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secnPlus');
         entries = [...entries, ...upcomingEntries];
       }
       if (useAccN) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'accn',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accn');
         entries = [...entries, ...upcomingEntries];
       }
       if (useAccNx) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'accnx',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accnx');
         entries = [...entries, ...upcomingEntries];
       }
       if (useLonghorn) {
-        const upcomingEntries = await espnHandler.getUpcomingEvents(
-          date.format('YYYY-MM-DD'),
-          'longhorn',
-        );
+        const upcomingEntries = await espnHandler.getUpcomingEvents(date.format('YYYY-MM-DD'), 'longhorn');
         entries = [...entries, ...upcomingEntries];
       }
     } catch (e) {
-      console.log(
-        `Couldn't get events for ${date.format('dddd, MMMM Do YYYY')}`,
-      );
+      console.log(`Couldn't get events for ${date.format('dddd, MMMM Do YYYY')}`);
     }
   }
 

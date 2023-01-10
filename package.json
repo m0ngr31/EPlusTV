@@ -1,6 +1,6 @@
 {
   "name": "eplustv",
-  "version": "2.0.0-beta15",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "rm -rf dist; tsc"
   },
   "keywords": [],
-  "author": "Joe Ipson",
+  "author": "Joe Ipson <joe@ipson.me>",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.27.2",

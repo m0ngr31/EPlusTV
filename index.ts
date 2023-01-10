@@ -29,6 +29,7 @@ const schedule = async () => {
   await getFoxEventSchedules();
   await getNbcEventSchedules();
   console.log('=== Done getting events ===');
+  await cleanEntries();
   console.log('=== Building the schedule ===');
   await scheduleEntries();
   console.log('=== Done building the schedule ===');
@@ -181,7 +182,6 @@ process.on('SIGINT', shutDown);
   await nbcHandler.initialize();
   await nbcHandler.refreshTokens();
 
-  await cleanEntries();
   await schedule();
 
   console.log('=== Starting Server ===');
