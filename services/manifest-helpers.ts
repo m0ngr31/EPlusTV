@@ -82,26 +82,26 @@ export class ChunklistHandler {
   private channel: string;
   private sequenceDelta: number;
 
-  constructor(manifestUrl: string, headers: IHeaders, appUrl: string, channel: string) {
+  constructor(headers: IHeaders, appUrl: string, channel: string) {
     this.headers = headers;
     this.channel = channel;
 
     this.baseUrl = `${appUrl}/channels/${channel}/`;
+  }
 
-    (async () => {
-      const chunkListUrl = await this.getChunklist(manifestUrl, this.headers);
+  public async init(manifestUrl: string): Promise<void> {
+    const chunkListUrl = await this.getChunklist(manifestUrl, this.headers);
 
-      if (!chunkListUrl) {
-        throw new Error('Could not create player instance');
-      }
+    if (!chunkListUrl) {
+      throw new Error('Could not create player instance');
+    }
 
-      const fullChunkUrl = cleanUrl(
-        isRelativeUrl(chunkListUrl) ? `${createBaseUrl(manifestUrl)}/${chunkListUrl}` : chunkListUrl,
-      );
-      this.baseManifestUrl = cleanUrl(createBaseUrl(fullChunkUrl));
+    const fullChunkUrl = cleanUrl(
+      isRelativeUrl(chunkListUrl) ? `${createBaseUrl(manifestUrl)}/${chunkListUrl}` : chunkListUrl,
+    );
+    this.baseManifestUrl = cleanUrl(createBaseUrl(fullChunkUrl));
 
-      this.proxyChunklist(fullChunkUrl);
-    })();
+    await this.proxyChunklist(fullChunkUrl);
   }
 
   public async getSegmentOrKey(segmentId: string): Promise<ArrayBuffer> {
@@ -115,6 +115,7 @@ export class ChunklistHandler {
 
   public stop(): void {
     this.interval && clearInterval(this.interval);
+    this.m3u8 = undefined;
   }
 
   private async getChunklist(manifestUrl: string, headers: IHeaders): Promise<string> {
@@ -214,7 +215,7 @@ export class ChunklistHandler {
         });
       }
 
-      process.nextTick(() => (this.m3u8 = splitChunklist.join('\n')));
+      this.m3u8 = splitChunklist.join('\n');
     } catch (e) {
       console.error(e);
       console.log('Could not parse chunklist properly!');

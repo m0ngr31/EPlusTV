@@ -2,14 +2,13 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.0.0-beta15**
+Current version: **2.0.0**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, and NBC Sports programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org), [Channels](https://getchannels.com), or [xTeVe](https://github.com/xteve-project/xTeVe).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the ESPN, FOX Sports, and NBC Sports apps currently provide.
-* There are some questions about how boundaries work when a scheduled entry ends or when a new entry starts if it will pick it up automatically.
 * The Mouse might not like it and it could be taken down at any minute. Enjoy it while it lasts. ¯\\_(ツ)_/¯
 
 # Using

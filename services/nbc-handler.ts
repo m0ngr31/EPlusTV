@@ -11,6 +11,7 @@ import {configPath} from './init-directories';
 import {useNbcSports} from './networks';
 import {createAdobeAuthHeader, IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
+import {IEntry, IHeaders} from './shared-interfaces';
 
 interface IAppConfig {
   channelChanger: {
@@ -164,7 +165,7 @@ class NbcHandler {
     return entries;
   };
 
-  public getEventData = async (event: any): Promise<[string, any]> => {
+  public getEventData = async (event: IEntry): Promise<[string, IHeaders]> => {
     let url: string;
 
     try {

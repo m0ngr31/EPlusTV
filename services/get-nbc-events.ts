@@ -3,6 +3,7 @@ import moment from 'moment';
 import {nbcHandler, INbcEntry} from './nbc-handler';
 import {useNbcSports} from './networks';
 import {db} from './database';
+import {IEntry} from './shared-interfaces';
 
 const parseCategories = (event: INbcEntry) => {
   const categories = ['Sports', event.sportName];
@@ -32,7 +33,7 @@ const parseUrl = (event: INbcEntry): string => {
 
 const parseAirings = async (events: INbcEntry[]) => {
   for (const event of events) {
-    const entryExists: any = await db.entries.findOne({id: event.pid});
+    const entryExists = await db.entries.findOne<IEntry>({id: event.pid});
 
     if (!entryExists) {
       const start = parseStart(event.start);
@@ -46,18 +47,18 @@ const parseAirings = async (events: INbcEntry[]) => {
       }
 
       // Don't mess with DRM stuff for right now
-      if (
-        event.videoSources &&
-        event.videoSources[0] &&
-        (event.videoSources[0].drmType || event.videoSources[0].drmAssetId)
-      ) {
-        console.log(`${event.title} has DRM!`);
-        continue;
-      }
+      // if (
+      //   event.videoSources &&
+      //   event.videoSources[0] &&
+      //   (event.videoSources[0].drmType || event.videoSources[0].drmAssetId)
+      // ) {
+      //   console.log(`${event.title} has DRM!`);
+      //   continue;
+      // }
 
       console.log('Adding event: ', event.title);
 
-      await db.entries.insert({
+      await db.entries.insert<IEntry>({
         categories: parseCategories(event),
         duration: parseDuration(event),
         end,

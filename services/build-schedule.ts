@@ -1,14 +1,15 @@
 import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {db} from './database';
+import {IChannel, IEntry} from './shared-interfaces';
 
 export const scheduleEntries = async (): Promise<void> => {
-  const unscheduledEntries = await db.entries.find({channel: {$exists: false}}).sort({start: 1});
+  const unscheduledEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
   unscheduledEntries &&
     unscheduledEntries.length &&
     console.log(`There are ${unscheduledEntries.length} unscheduled entries`);
 
   for (const entry of unscheduledEntries) {
-    const availableChannels = await db.schedule.find({endsAt: {$lt: (entry as any).start}}).sort({channel: 1});
+    const availableChannels = await db.schedule.find<IChannel>({endsAt: {$lt: entry.start}}).sort({channel: 1});
 
     if (!availableChannels || !availableChannels.length) {
       const channelNums = await db.schedule.count({});
@@ -21,17 +22,17 @@ export const scheduleEntries = async (): Promise<void> => {
 
       console.log('Creating a new channel: ', newChannelNum);
 
-      await db.schedule.insert({
+      await db.schedule.insert<IChannel>({
         channel: newChannelNum,
-        endsAt: (entry as any).end,
+        endsAt: entry.end,
       });
 
-      console.log(`Assigning ${(entry as any).name} to Channel #${newChannelNum}`);
-      await db.entries.update({_id: entry._id}, {$set: {channel: newChannelNum}});
+      console.log(`Assigning ${entry.name} to Channel #${newChannelNum}`);
+      await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: newChannelNum}});
     } else {
-      await db.schedule.update({_id: availableChannels[0]._id}, {$set: {endsAt: (entry as any).end}});
-      console.log(`Assigning ${(entry as any).name} to Channel #${(availableChannels[0] as any).channel}`);
-      await db.entries.update({_id: entry._id}, {$set: {channel: (availableChannels[0] as any).channel}});
+      await db.schedule.update<IChannel>({_id: availableChannels[0]._id}, {$set: {endsAt: entry.end}});
+      console.log(`Assigning ${entry.name} to Channel #${availableChannels[0].channel}`);
+      await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: availableChannels[0].channel}});
     }
   }
 };

@@ -5,6 +5,7 @@ import moment from 'moment';
 import {db} from './database';
 import {usesMultiple} from './networks';
 import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
+import {IEntry} from './shared-interfaces';
 
 const formatEntryName = entry => {
   let entryName = entry.name;
@@ -80,7 +81,7 @@ export const generateXml = async (): Promise<xml> => {
     });
   });
 
-  const scheduledEntries: any[] = await db.entries.find({channel: {$exists: true}}).sort({start: 1});
+  const scheduledEntries = await db.entries.find<IEntry>({channel: {$exists: true}}).sort({start: 1});
 
   for (const entry of scheduledEntries) {
     const channelNum = entry.channel;

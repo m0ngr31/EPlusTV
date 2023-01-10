@@ -14,6 +14,7 @@ import {
   useAccNx,
   useLonghorn,
 } from './networks';
+import {IEntry} from './shared-interfaces';
 
 const parseCategories = event => {
   const categories = ['Sports'];
@@ -27,12 +28,12 @@ const parseCategories = event => {
 
 const parseAirings = async events => {
   for (const event of events) {
-    const entryExists: any = await db.entries.findOne({id: event.id});
+    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
       console.log('Adding event: ', event.name);
 
-      await db.entries.insert({
+      await db.entries.insert<IEntry>({
         categories: parseCategories(event),
         duration: event.duration,
         end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),

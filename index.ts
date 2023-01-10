@@ -7,7 +7,7 @@ import {generateM3u} from './services/generate-m3u';
 import {getSlate, USE_SLATE} from './services/stream-slate';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
-import {checkNextStream, launchChannel} from './services/launch-channel';
+import {launchChannel} from './services/launch-channel';
 import {getEventSchedules} from './services/get-espn-events';
 import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
@@ -15,7 +15,7 @@ import {foxHandler} from './services/fox-handler';
 import {getFoxEventSchedules} from './services/get-fox-events';
 import {nbcHandler} from './services/nbc-handler';
 import {getNbcEventSchedules} from './services/get-nbc-events';
-import {cleanEntries, sleep} from './services/shared-helpers';
+import {cleanEntries} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 
 import {version} from './package.json';
@@ -89,14 +89,23 @@ app.get('/channels/:id.m3u8', async (req, res) => {
       contents = appStatus.channels[id].player?.m3u8;
     }
   } else {
-    while (!appStatus.channels[id].player?.m3u8) {
-      // Start stream
-      launchChannel(id, uri);
-      // Keep sleeping until the stream starts
-      await sleep(250);
+    if (!appStatus.channels[id].player?.m3u8) {
+      try {
+        await launchChannel(id, uri);
+      } catch (e) {}
     }
 
-    contents = appStatus.channels[id].player?.m3u8;
+    try {
+      contents = appStatus.channels[id].player?.m3u8;
+    } catch (e) {}
+
+    if (!contents) {
+      console.log(
+        `Could not get a playlist for channel #${id}. Please make sure there is an event scheduled and you have access to it.`,
+      );
+      notFound(req, res);
+      return;
+    }
   }
 
   res.writeHead(200, {
@@ -104,8 +113,6 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     'Content-Type': 'application/vnd.apple.mpegurl',
   });
   res.end(contents, 'utf-8');
-
-  checkNextStream(id, `${req.protocol}://${req.headers.host}`);
 });
 
 app.get('/channels/:id/:part.key', async (req, res) => {
@@ -204,9 +211,6 @@ setInterval(() => {
       }
       val.current = null;
       val.player = null;
-      val.nextUp && val.nextUpTimer && clearTimeout(val.nextUpTimer);
-      val.nextUp = null;
-      val.nextUpTimer = null;
       val.heartbeat = null;
     }
   });

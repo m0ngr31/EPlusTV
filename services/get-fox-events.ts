@@ -3,6 +3,7 @@ import moment from 'moment';
 import {db} from './database';
 import {foxHandler, IFoxEvent} from './fox-handler';
 import {useFoxSports} from './networks';
+import {IEntry} from './shared-interfaces';
 
 const parseCategories = (event: IFoxEvent) => {
   const categories = ['Sports'];
@@ -16,12 +17,12 @@ const parseCategories = (event: IFoxEvent) => {
 
 const parseAirings = async (events: IFoxEvent[]) => {
   for (const event of events) {
-    const entryExists: any = await db.entries.findOne({id: event.id});
+    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
       console.log('Adding event: ', event.name);
 
-      await db.entries.insert({
+      await db.entries.insert<IEntry>({
         categories: parseCategories(event),
         duration: moment(event.endDate).diff(moment(event.startDate), 'seconds'),
         end: new Date(event.endDate).valueOf(),
