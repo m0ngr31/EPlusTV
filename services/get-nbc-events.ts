@@ -6,7 +6,7 @@ import {db} from './database';
 import {IEntry} from './shared-interfaces';
 
 const parseCategories = (event: INbcEntry) => {
-  const categories = ['Sports', event.sportName];
+  const categories = ['Sports', 'NBC Sports', event.sportName];
 
   return [...new Set(categories)];
 };

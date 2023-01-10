@@ -6,7 +6,7 @@ import {useFoxSports} from './networks';
 import {IEntry} from './shared-interfaces';
 
 const parseCategories = (event: IFoxEvent) => {
-  const categories = ['Sports'];
+  const categories = ['Sports', 'FOX Sports'];
   for (const classifier of [...(event.categoryTags || []), ...(event.genres || [])]) {
     if (classifier !== null) {
       categories.push(classifier);

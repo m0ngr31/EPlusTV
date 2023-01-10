@@ -17,7 +17,7 @@ import {
 import {IEntry} from './shared-interfaces';
 
 const parseCategories = event => {
-  const categories = ['Sports'];
+  const categories = ['Sports', 'ESPN'];
   for (const classifier of [event.category, event.subcategory, event.sport, event.league]) {
     if (classifier !== null && classifier.name !== null) {
       categories.push(classifier.name);
