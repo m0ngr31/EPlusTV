@@ -27,11 +27,7 @@ export const createAdobeAuthHeader = (
   const nonce = getRandomHex();
 
   let message = `${method} requestor_id=${requestor}, nonce=${nonce}, signature_method=HMAC-SHA1, request_time=${now}, request_uri=${path}`;
-  const signature = crypto
-    .createHmac('sha1', privateKey)
-    .update(message)
-    .digest()
-    .toString('base64');
+  const signature = crypto.createHmac('sha1', privateKey).update(message).digest().toString('base64');
   message = `${message}, public_key=${publicKey}, signature=${signature}`;
 
   return message;

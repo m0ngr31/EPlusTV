@@ -30,9 +30,7 @@ const startChannelStream = async (channelId: string, appUrl) => {
 
   if (playingNow.from === 'foxsports') {
     try {
-      [url, headers] = await foxHandler.getEventData(
-        appStatus.channels[channelId].current,
-      );
+      [url, headers] = await foxHandler.getEventData(appStatus.channels[channelId].current);
     } catch (e) {}
   } else if (playingNow.from === 'nbcsports') {
     try {
@@ -40,9 +38,7 @@ const startChannelStream = async (channelId: string, appUrl) => {
     } catch (e) {}
   } else {
     try {
-      [url, headers] = await espnHandler.getEventData(
-        appStatus.channels[channelId].current,
-      );
+      [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);
     } catch (e) {}
   }
 
@@ -54,25 +50,16 @@ const startChannelStream = async (channelId: string, appUrl) => {
   }
 
   try {
-    appStatus.channels[channelId].player = new ChunklistHandler(
-      url,
-      headers,
-      appUrl,
-      channelId,
-    );
+    appStatus.channels[channelId].player = new ChunklistHandler(url, headers, appUrl, channelId);
   } catch (e) {
     appStatus.channels[channelId].player = undefined;
   }
 };
 
-const delayedStart = async (
-  channelId: string,
-  appUrl: string,
-): Promise<void> => {
+const delayedStart = async (channelId: string, appUrl: string): Promise<void> => {
   if (appStatus.channels[channelId].player) {
     try {
-      appStatus.channels[channelId].player &&
-        appStatus.channels[channelId].player.stop();
+      appStatus.channels[channelId].player && appStatus.channels[channelId].player.stop();
       appStatus.channels[channelId].player = null;
     } catch (e) {}
   }
@@ -100,9 +87,7 @@ export const launchChannel = _.throttle(
     });
 
     if (playingNow && (playingNow as any).id) {
-      console.log(
-        `Channel #${channelId} has an active event. Going to start the stream.`,
-      );
+      console.log(`Channel #${channelId} has an active event. Going to start the stream.`);
       appStatus.channels[channelId].current = (playingNow as any).id;
       startChannelStream(channelId, appUrl);
     }
@@ -115,36 +100,22 @@ export const checkNextStream = _.throttle(
   async (channelId: string, appUrl: string): Promise<void> => {
     const now = new Date().valueOf();
 
-    if (
-      appStatus.channels[channelId].nextUp ||
-      appStatus.channels[channelId].nextUpTimer
-    ) {
+    if (appStatus.channels[channelId].nextUp || appStatus.channels[channelId].nextUpTimer) {
       return;
     }
 
     const channel = parseInt(channelId, 10);
-    const entries = await db.entries
-      .find({channel, start: {$gt: now}})
-      .sort({start: 1});
+    const entries = await db.entries.find({channel, start: {$gt: now}}).sort({start: 1});
 
     const now2 = new Date().valueOf();
 
-    if (
-      entries &&
-      entries.length > 0 &&
-      now - appStatus.channels[channelId].heartbeat < 30 * 1000
-    ) {
+    if (entries && entries.length > 0 && now - appStatus.channels[channelId].heartbeat < 30 * 1000) {
       const diff = (entries[0] as any).start - now2;
 
-      console.log(
-        `Channel #${channelId} has upcoming event. Setting timer to start`,
-      );
+      console.log(`Channel #${channelId} has upcoming event. Setting timer to start`);
 
       appStatus.channels[channelId].nextUp = (entries[0] as any).id;
-      appStatus.channels[channelId].nextUpTimer = setTimeout(
-        () => delayedStart(channelId, appUrl),
-        diff,
-      );
+      appStatus.channels[channelId].nextUpTimer = setTimeout(() => delayedStart(channelId, appUrl), diff);
     }
   },
   500,

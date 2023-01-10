@@ -6,10 +6,7 @@ import {useFoxSports} from './networks';
 
 const parseCategories = (event: IFoxEvent) => {
   const categories = ['Sports'];
-  for (const classifier of [
-    ...(event.categoryTags || []),
-    ...(event.genres || []),
-  ]) {
+  for (const classifier of [...(event.categoryTags || []), ...(event.genres || [])]) {
     if (classifier !== null) {
       categories.push(classifier);
     }
@@ -26,10 +23,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
 
       await db.entries.insert({
         categories: parseCategories(event),
-        duration: moment(event.endDate).diff(
-          moment(event.startDate),
-          'seconds',
-        ),
+        duration: moment(event.endDate).diff(moment(event.startDate), 'seconds'),
         end: new Date(event.endDate).valueOf(),
         from: 'foxsports',
         id: event.id,

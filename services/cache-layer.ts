@@ -27,10 +27,7 @@ class CacheLayer {
     return randomId;
   }
 
-  public async getDataFromSegment(
-    segment: string,
-    headers: IHeaders,
-  ): Promise<ArrayBuffer> {
+  public async getDataFromSegment(segment: string, headers: IHeaders): Promise<ArrayBuffer> {
     const url = this.keyMap.get(segment);
 
     if (!url) {

@@ -3,8 +3,7 @@ import {db} from './database';
 
 import {IStringObj} from './shared-interfaces';
 
-const chars =
-  'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMnumCharsOPQRSTUVWXYZ0123456789';
+const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMnumCharsOPQRSTUVWXYZ0123456789';
 
 export const flipObject = (obj: IStringObj): IStringObj => {
   const ret: IStringObj = {};
@@ -16,8 +15,7 @@ export const flipObject = (obj: IStringObj): IStringObj => {
   return ret;
 };
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms));
+export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 export const generateRandom = (numChars = 8, namespace?: string): string => {
   let nameSpaceFull = '';

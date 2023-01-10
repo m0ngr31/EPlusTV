@@ -80,9 +80,7 @@ export const generateXml = async (): Promise<xml> => {
     });
   });
 
-  const scheduledEntries: any[] = await db.entries
-    .find({channel: {$exists: true}})
-    .sort({start: 1});
+  const scheduledEntries: any[] = await db.entries.find({channel: {$exists: true}}).sort({start: 1});
 
   for (const entry of scheduledEntries) {
     const channelNum = entry.channel;

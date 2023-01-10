@@ -8,10 +8,8 @@ import {cacheLayer} from './cache-layer';
 import {USE_SLATE} from './stream-slate';
 import {appStatus} from './app-status';
 
-const isRelativeUrl = (url?: string): boolean =>
-  url?.startsWith('http') ? false : true;
-const cleanUrl = (url: string): string =>
-  url.replace(/(\[.*\])/gm, '').replace(/(?<!:)\/\//gm, '/');
+const isRelativeUrl = (url?: string): boolean => (url?.startsWith('http') ? false : true);
+const cleanUrl = (url: string): string => url.replace(/(\[.*\])/gm, '').replace(/(?<!:)\/\//gm, '/');
 const createBaseUrl = (url: string): string => {
   const cleaned = url.replace(/\.m3u8.*$/, '');
   return cleaned.substring(0, cleaned.lastIndexOf('/') + 1);
@@ -20,9 +18,7 @@ const createBaseUrl = (url: string): string => {
 const VALID_RESOLUTIONS = ['UHD/HDR', 'UHD/SDR', '1080p', '720p', '540p'];
 
 const getMaxRes = _.memoize((): string =>
-  _.includes(VALID_RESOLUTIONS, process.env.MAX_RESOLUTION)
-    ? process.env.MAX_RESOLUTION
-    : 'UHD/SDR',
+  _.includes(VALID_RESOLUTIONS, process.env.MAX_RESOLUTION) ? process.env.MAX_RESOLUTION : 'UHD/SDR',
 );
 
 const getResolutionRanges = _.memoize((): [number, number] => {
@@ -50,9 +46,7 @@ const getTargetDuration = (chunklist: string, divide = true): number => {
   const tester = reTarget.exec(chunklist);
 
   if (tester && tester[1]) {
-    targetDuration = divide
-      ? Math.floor(parseInt(tester[1], 10) / 2)
-      : parseInt(tester[1], 10);
+    targetDuration = divide ? Math.floor(parseInt(tester[1], 10) / 2) : parseInt(tester[1], 10);
 
     if (!_.isNumber(targetDuration) || _.isNaN(targetDuration)) {
       targetDuration = 2;
@@ -88,12 +82,7 @@ export class ChunklistHandler {
   private channel: string;
   private sequenceDelta: number;
 
-  constructor(
-    manifestUrl: string,
-    headers: IHeaders,
-    appUrl: string,
-    channel: string,
-  ) {
+  constructor(manifestUrl: string, headers: IHeaders, appUrl: string, channel: string) {
     this.headers = headers;
     this.channel = channel;
 
@@ -107,9 +96,7 @@ export class ChunklistHandler {
       }
 
       const fullChunkUrl = cleanUrl(
-        isRelativeUrl(chunkListUrl)
-          ? `${createBaseUrl(manifestUrl)}/${chunkListUrl}`
-          : chunkListUrl,
+        isRelativeUrl(chunkListUrl) ? `${createBaseUrl(manifestUrl)}/${chunkListUrl}` : chunkListUrl,
       );
       this.baseManifestUrl = cleanUrl(createBaseUrl(fullChunkUrl));
 
@@ -130,10 +117,7 @@ export class ChunklistHandler {
     this.interval && clearInterval(this.interval);
   }
 
-  private async getChunklist(
-    manifestUrl: string,
-    headers: IHeaders,
-  ): Promise<string> {
+  private async getChunklist(manifestUrl: string, headers: IHeaders): Promise<string> {
     const [hMin, hMax] = getResolutionRanges();
 
     try {
@@ -149,11 +133,7 @@ export class ChunklistHandler {
       playlist.setResolutionRange(hMin, hMax);
 
       playlist
-        .sortByBandwidth(
-          getMaxRes() === '540p'
-            ? RenditionSortOrder.nonHdFirst
-            : RenditionSortOrder.bestFirst,
-        )
+        .sortByBandwidth(getMaxRes() === '540p' ? RenditionSortOrder.nonHdFirst : RenditionSortOrder.bestFirst)
         .setLimit(1);
 
       return playlist.getVideoRenditionUrl(0);
@@ -181,46 +161,29 @@ export class ChunklistHandler {
           const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
             ? `${this.baseManifestUrl}${segment.segment.uri}`
             : segment.segment.uri;
-          const segmentName = cacheLayer.getSegmentFromUrl(
-            fullSegmentUrl,
-            `${this.channel}-segment`,
-          );
+          const segmentName = cacheLayer.getSegmentFromUrl(fullSegmentUrl, `${this.channel}-segment`);
 
-          updatedChunkList = updatedChunkList.replace(
-            segment.segment.uri,
-            `${this.channel}/${segmentName}.ts`,
-          );
+          updatedChunkList = updatedChunkList.replace(segment.segment.uri, `${this.channel}/${segmentName}.ts`);
 
           keys.add(segment.segment.key.uri);
         }
       });
 
       keys.forEach(key => {
-        const keyName = cacheLayer.getSegmentFromUrl(
-          key,
-          `${this.channel}-key`,
-        );
+        const keyName = cacheLayer.getSegmentFromUrl(key, `${this.channel}-key`);
 
         while (updatedChunkList.indexOf(key) > -1) {
-          updatedChunkList = updatedChunkList.replace(
-            key,
-            `${this.baseUrl}${keyName}.key`,
-          );
+          updatedChunkList = updatedChunkList.replace(key, `${this.baseUrl}${keyName}.key`);
         }
       });
 
       let splitChunklist: string[] = updatedChunkList.split('\n');
 
-      const currentSequence = _.isNumber(this.sequenceDelta)
-        ? getSequence(updatedChunkList) + this.sequenceDelta
-        : 6;
+      const currentSequence = _.isNumber(this.sequenceDelta) ? getSequence(updatedChunkList) + this.sequenceDelta : 6;
 
       if (!this.interval) {
         // Setup interval to refresh chunklist
-        this.interval = setInterval(
-          () => this.proxyChunklist(chunkListUrl),
-          getTargetDuration(chunkList) * 1000,
-        );
+        this.interval = setInterval(() => this.proxyChunklist(chunkListUrl), getTargetDuration(chunkList) * 1000);
 
         if (USE_SLATE) {
           this.sequenceDelta = 6 - getSequence(updatedChunkList);

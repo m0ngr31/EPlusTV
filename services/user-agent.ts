@@ -10,9 +10,7 @@ const userAgents = [
 export const androidFoxUserAgent =
   'foxsports-androidtv/3.42.1 (Linux;Android 9.0.0;SHIELD Android TV) ExoPlayerLib/2.12.1';
 
-export const androidNbcUserAgent =
-  'Adobe Primetime/1.4 Dalvik/2.1.0 (Linux; U; Android 6.0.1; Hub Build/MHC19J)';
+export const androidNbcUserAgent = 'Adobe Primetime/1.4 Dalvik/2.1.0 (Linux; U; Android 6.0.1; Hub Build/MHC19J)';
 
 // Will generate one random User Agent for the session
-export const userAgent = (() =>
-  userAgents[Math.floor(Math.random() * userAgents.length)])();
+export const userAgent = (() => userAgents[Math.floor(Math.random() * userAgents.length)])();

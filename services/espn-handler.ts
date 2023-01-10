@@ -11,35 +11,13 @@ import url from 'url';
 import {userAgent} from './user-agent';
 import {configPath} from './init-directories';
 import {useEspnPlus, requiresProvider} from './networks';
-import {
-  IAdobeAuth,
-  isAdobeTokenValid,
-  willAdobeTokenExpire,
-  createAdobeAuthHeader,
-} from './adobe-helpers';
+import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 import {IHeaders} from './shared-interfaces';
 
 global.WebSocket = ws;
 
-const ADOBE_KEY = [
-  'g',
-  'B',
-  '8',
-  'H',
-  'Y',
-  'd',
-  'E',
-  'P',
-  'y',
-  'e',
-  'z',
-  'e',
-  'Y',
-  'b',
-  'R',
-  '1',
-].join('');
+const ADOBE_KEY = ['g', 'B', '8', 'H', 'Y', 'd', 'E', 'P', 'y', 'e', 'z', 'e', 'Y', 'b', 'R', '1'].join('');
 
 const ADOBE_PUBLIC_KEY = [
   'y',
@@ -83,8 +61,7 @@ const API_KEY_URL = '/{id-provider}/api-key?langPref=en-US';
 const LICENSE_PLATE_URL = '/{id-provider}/license-plate';
 const REFRESH_AUTH_URL = '/{id-provider}/guest/refresh-auth?langPref=en-US';
 
-const BAM_API_KEY =
-  'ZXNwbiZicm93c2VyJjEuMC4w.ptUt7QxsteaRruuPmGZFaJByOoqKvDP2a5YkInHrc7c';
+const BAM_API_KEY = 'ZXNwbiZicm93c2VyJjEuMC4w.ptUt7QxsteaRruuPmGZFaJByOoqKvDP2a5YkInHrc7c';
 const BAM_APP_CONFIG =
   'https://bam-sdk-configs.bamgrid.com/bam-sdk/v2.0/espn-a9b93989/browser/v3.4/linux/chrome/prod.json';
 
@@ -125,10 +102,8 @@ const willTokenExpire = (token?: string): boolean => {
   }
 };
 
-const isAccessTokenValid = (token?: IToken) =>
-  isTokenValid(token?.access_token);
-const isRefreshTokenValid = (token?: IToken) =>
-  isTokenValid(token?.refresh_token);
+const isAccessTokenValid = (token?: IToken) => isTokenValid(token?.access_token);
+const isRefreshTokenValid = (token?: IToken) => isTokenValid(token?.refresh_token);
 
 const getApiKey = async (provider: string) => {
   try {
@@ -141,9 +116,7 @@ const getApiKey = async (provider: string) => {
 };
 
 const fixHeaderKey = (headerVal: string, authToken = '') =>
-  headerVal
-    .replace('{apiKey}', BAM_API_KEY)
-    .replace('{accessToken}', authToken);
+  headerVal.replace('{apiKey}', BAM_API_KEY).replace('{accessToken}', authToken);
 
 const makeApiCall = async (endpoint: IEndpoint, body: any, authToken = '') => {
   const headers = {};
@@ -309,11 +282,7 @@ class EspnHandler {
   };
 
   public refreshTokens = async () => {
-    if (
-      useEspnPlus &&
-      (!isTokenValid(this.tokens?.id_token) ||
-        willTokenExpire(this.tokens?.id_token))
-    ) {
+    if (useEspnPlus && (!isTokenValid(this.tokens?.id_token) || willTokenExpire(this.tokens?.id_token))) {
       console.log('Refreshing auth token');
       await this.refreshAuth();
     }
@@ -388,35 +357,24 @@ class EspnHandler {
     return entryData.data.airings;
   };
 
-  public getEventData = async (
-    eventId: string,
-  ): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
     useEspnPlus && (await this.getBamAccessToken());
     useEspnPlus && (await this.getGraphQlApiKey());
 
     try {
-      const {data: scenarios} = await axios.get(
-        'https://watch.graph.api.espn.com/api',
-        {
-          params: {
-            apiKey: this.graphQlApiKey,
-            query: `{airing(id:"${eventId}",countryCode:"us",deviceType:SETTOP,tz:"Z") {id name description mrss:adobeRSS authTypes requiresLinearPlayback status:type startDateTime endDateTime duration source(authorization: SHIELD) { url authorizationType hasEspnId3Heartbeats hasNielsenWatermarks hasPassThroughAds commercialReplacement startSessionUrl } network { id type name adobeResource } image { url } sport { name code uid } league { name uid } program { code categoryCode isStudio } seekInSeconds simulcastAiringId airingId tracking { nielsenCrossId1 trackingId } eventId packages { name } language tier feedName brands { id name type }}}`,
-          },
+      const {data: scenarios} = await axios.get('https://watch.graph.api.espn.com/api', {
+        params: {
+          apiKey: this.graphQlApiKey,
+          query: `{airing(id:"${eventId}",countryCode:"us",deviceType:SETTOP,tz:"Z") {id name description mrss:adobeRSS authTypes requiresLinearPlayback status:type startDateTime endDateTime duration source(authorization: SHIELD) { url authorizationType hasEspnId3Heartbeats hasNielsenWatermarks hasPassThroughAds commercialReplacement startSessionUrl } network { id type name adobeResource } image { url } sport { name code uid } league { name uid } program { code categoryCode isStudio } seekInSeconds simulcastAiringId airingId tracking { nielsenCrossId1 trackingId } eventId packages { name } language tier feedName brands { id name type }}}`,
         },
-      );
+      });
 
-      if (
-        !scenarios?.data?.airing?.source?.url.length ||
-        scenarios?.data?.airing?.status !== 'LIVE'
-      ) {
+      if (!scenarios?.data?.airing?.source?.url.length || scenarios?.data?.airing?.status !== 'LIVE') {
         console.log('Event status: ', scenarios?.data?.airing?.status);
         throw new Error('No streaming data available');
       }
 
-      const scenarioUrl = scenarios.data.airing.source.url.replace(
-        '{scenario}',
-        'browser~ssai',
-      );
+      const scenarioUrl = scenarios.data.airing.source.url.replace('{scenario}', 'browser~ssai');
 
       let isEspnPlus = true;
       let headers: IHeaders = {};
@@ -445,12 +403,7 @@ class EspnHandler {
         let tokenType = 'DEVICE';
         let token = this.adobe_device_id;
 
-        if (
-          _.some(
-            scenarios?.data?.airing?.authTypes,
-            (authType: string) => authType.toLowerCase() === 'mvpd',
-          )
-        ) {
+        if (_.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')) {
           // Try to get the media token, but if it fails, let's just try device authentication
           try {
             await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
@@ -467,12 +420,7 @@ class EspnHandler {
 
             const {data} = await axios.get(mediaTokenUrl, {
               headers: {
-                Authorization: createAdobeAuthHeader(
-                  'GET',
-                  mediaTokenUrl,
-                  ADOBE_KEY,
-                  ADOBE_PUBLIC_KEY,
-                ),
+                Authorization: createAdobeAuthHeader('GET', mediaTokenUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
                 'User-Agent': userAgent,
               },
             });
@@ -491,10 +439,7 @@ class EspnHandler {
           '&v=2.0.0',
           `&token=${token}`,
           `&tokenType=${tokenType}`,
-          `&resource=${Buffer.from(
-            scenarios?.data?.airing?.mrss,
-            'utf-8',
-          ).toString('base64')}`,
+          `&resource=${Buffer.from(scenarios?.data?.airing?.mrss, 'utf-8').toString('base64')}`,
         ].join('');
 
         const {data: authedData} = await axios.get(authenticatedUrl, {
@@ -514,20 +459,15 @@ class EspnHandler {
       return [uri, headers];
     } catch (e) {
       console.error(e);
-      console.log(
-        'Could not get stream data. Event might be upcoming, ended, or in blackout...',
-      );
+      console.log('Could not get stream data. Event might be upcoming, ended, or in blackout...');
     }
   };
 
   public refreshAuth = async (): Promise<void> => {
     try {
-      const {data: refreshTokenData} = await axios.post(
-        urlBuilder(REFRESH_AUTH_URL, ANDROID_ID),
-        {
-          refreshToken: this.tokens.refresh_token,
-        },
-      );
+      const {data: refreshTokenData} = await axios.post(urlBuilder(REFRESH_AUTH_URL, ANDROID_ID), {
+        refreshToken: this.tokens.refresh_token,
+      });
 
       this.tokens = refreshTokenData.data.token;
       this.save();
@@ -537,10 +477,7 @@ class EspnHandler {
     }
   };
 
-  private authorizeEvent = async (
-    eventId: string,
-    mrss: string,
-  ): Promise<void> => {
+  private authorizeEvent = async (eventId: string, mrss: string): Promise<void> => {
     if (mrss && authorizedResources[eventId]) {
       return;
     }
@@ -558,12 +495,7 @@ class EspnHandler {
     try {
       await axios.get(authorizeEventTokenUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            authorizeEventTokenUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-          ),
+          Authorization: createAdobeAuthHeader('GET', authorizeEventTokenUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
           'User-Agent': userAgent,
         },
       });
@@ -571,21 +503,12 @@ class EspnHandler {
       authorizedResources[eventId] = true;
     } catch (e) {
       console.error(e);
-      console.log(
-        'Could not authorize event. Might be blacked out or not available from your TV provider',
-      );
+      console.log('Could not authorize event. Might be blacked out or not available from your TV provider');
     }
   };
 
   private startProviderAuthFlow = async (): Promise<void> => {
-    const regUrl = [
-      'https://',
-      'api.auth.adobe.com',
-      '/reggie/',
-      'v1/',
-      'ESPN',
-      '/regcode',
-    ].join('');
+    const regUrl = ['https://', 'api.auth.adobe.com', '/reggie/', 'v1/', 'ESPN', '/regcode'].join('');
 
     if (!this.adobe_device_id) {
       this.adobe_device_id = getRandomHex();
@@ -602,21 +525,14 @@ class EspnHandler {
         }).toString(),
         {
           headers: {
-            Authorization: createAdobeAuthHeader(
-              'POST',
-              regUrl,
-              ADOBE_KEY,
-              ADOBE_PUBLIC_KEY,
-            ),
+            Authorization: createAdobeAuthHeader('POST', regUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
             'User-Agent': userAgent,
           },
         },
       );
 
       console.log('== TV Provider Auth ==');
-      console.log(
-        'Please open a browser window and go to: https://www.espn.com/watch/activate',
-      );
+      console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
       console.log('Enter code: ', data.code);
       console.log('App will continue when login has completed...');
 
@@ -654,24 +570,12 @@ class EspnHandler {
   };
 
   private authenticateRegCode = async (regcode: string): Promise<boolean> => {
-    const regUrl = [
-      'https://',
-      'api.auth.adobe.com',
-      '/api/v1/',
-      'authenticate/',
-      regcode,
-      '?requestor=ESPN',
-    ].join('');
+    const regUrl = ['https://', 'api.auth.adobe.com', '/api/v1/', 'authenticate/', regcode, '?requestor=ESPN'].join('');
 
     try {
       const {data} = await axios.get(regUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            regUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-          ),
+          Authorization: createAdobeAuthHeader('GET', regUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
           'User-Agent': userAgent,
         },
       });
@@ -708,12 +612,7 @@ class EspnHandler {
     try {
       const {data} = await axios.get(renewUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            renewUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-          ),
+          Authorization: createAdobeAuthHeader('GET', renewUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
           'User-Agent': userAgent,
         },
       });
@@ -748,9 +647,7 @@ class EspnHandler {
         },
       );
 
-      const {data: wsInfo} = await axios.get(
-        `${licensePlate.data.fastCastHost}/public/websockethost`,
-      );
+      const {data: wsInfo} = await axios.get(`${licensePlate.data.fastCastHost}/public/websockethost`);
 
       return new Promise((resolve, reject) => {
         const client = new Sockette(
@@ -786,9 +683,7 @@ class EspnHandler {
             },
             onopen: () => {
               console.log('== ESPN+ Auth ==');
-              console.log(
-                'Please open a browser window and go to: https://www.espn.com/watch/activate',
-              );
+              console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
               console.log('Enter code: ', licensePlate.data.pairingCode);
 
               client.json({
@@ -832,15 +727,12 @@ class EspnHandler {
   private createDeviceGrant = async () => {
     if (!this.device_grant || !isTokenValid(this.device_grant.assertion)) {
       try {
-        this.device_grant = await makeApiCall(
-          this.appConfig.services.device.client.endpoints.createDeviceGrant,
-          {
-            applicationRuntime: 'chrome',
-            attributes: {},
-            deviceFamily: 'browser',
-            deviceProfile: 'linux',
-          },
-        );
+        this.device_grant = await makeApiCall(this.appConfig.services.device.client.endpoints.createDeviceGrant, {
+          applicationRuntime: 'chrome',
+          attributes: {},
+          deviceFamily: 'browser',
+          deviceProfile: 'linux',
+        });
 
         this.save();
       } catch (e) {
@@ -874,24 +766,17 @@ class EspnHandler {
   private getDeviceTokenExchange = async (force?: boolean) => {
     await this.createDeviceGrant();
 
-    if (
-      !this.device_token_exchange ||
-      !isRefreshTokenValid(this.device_token_exchange) ||
-      force
-    ) {
+    if (!this.device_token_exchange || !isRefreshTokenValid(this.device_token_exchange) || force) {
       try {
-        this.device_token_exchange = await makeApiCall(
-          this.appConfig.services.token.client.endpoints.exchange,
-          {
-            grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-            latitude: 0,
-            longitude: 0,
-            platform: 'browser',
-            setCookie: false,
-            subject_token: this.device_grant.assertion,
-            subject_token_type: 'urn:bamtech:params:oauth:token-type:device',
-          },
-        );
+        this.device_token_exchange = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
+          grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+          latitude: 0,
+          longitude: 0,
+          platform: 'browser',
+          setCookie: false,
+          subject_token: this.device_grant.assertion,
+          subject_token_type: 'urn:bamtech:params:oauth:token-type:device',
+        });
 
         this.save();
       } catch (e) {
@@ -904,23 +789,16 @@ class EspnHandler {
   private getDeviceRefreshToken = async (force?: boolean) => {
     await this.getDeviceTokenExchange();
 
-    if (
-      !this.device_refresh_token ||
-      !isAccessTokenValid(this.device_refresh_token) ||
-      force
-    ) {
+    if (!this.device_refresh_token || !isAccessTokenValid(this.device_refresh_token) || force) {
       try {
-        this.device_refresh_token = await makeApiCall(
-          this.appConfig.services.token.client.endpoints.exchange,
-          {
-            grant_type: 'refresh_token',
-            latitude: 0,
-            longitude: 0,
-            platform: 'browser',
-            refresh_token: this.device_token_exchange.refresh_token,
-            setCookie: false,
-          },
-        );
+        this.device_refresh_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
+          grant_type: 'refresh_token',
+          latitude: 0,
+          longitude: 0,
+          platform: 'browser',
+          refresh_token: this.device_token_exchange.refresh_token,
+          setCookie: false,
+        });
 
         this.save();
       } catch (e) {
@@ -933,24 +811,17 @@ class EspnHandler {
   private getBamAccessToken = async (force?: boolean) => {
     await this.createAccountGrant();
 
-    if (
-      !this.account_token ||
-      !isAccessTokenValid(this.account_token) ||
-      force
-    ) {
+    if (!this.account_token || !isAccessTokenValid(this.account_token) || force) {
       try {
-        this.account_token = await makeApiCall(
-          this.appConfig.services.token.client.endpoints.exchange,
-          {
-            grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-            latitude: 0,
-            longitude: 0,
-            platform: 'browser',
-            setCookie: false,
-            subject_token: this.id_token_grant.assertion,
-            subject_token_type: 'urn:bamtech:params:oauth:token-type:account',
-          },
-        );
+        this.account_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
+          grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+          latitude: 0,
+          longitude: 0,
+          platform: 'browser',
+          setCookie: false,
+          subject_token: this.id_token_grant.assertion,
+          subject_token_type: 'urn:bamtech:params:oauth:token-type:account',
+        });
 
         this.save();
       } catch (e) {
@@ -961,11 +832,9 @@ class EspnHandler {
   };
 
   private save = () => {
-    fsExtra.writeJSONSync(
-      path.join(configPath, 'tokens.json'),
-      _.omit(this, 'appConfig', 'graphQlApiKey'),
-      {spaces: 2},
-    );
+    fsExtra.writeJSONSync(path.join(configPath, 'tokens.json'), _.omit(this, 'appConfig', 'graphQlApiKey'), {
+      spaces: 2,
+    });
   };
 
   private load = () => {

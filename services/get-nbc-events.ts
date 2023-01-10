@@ -10,15 +10,10 @@ const parseCategories = (event: INbcEntry) => {
   return [...new Set(categories)];
 };
 
-const parseStart = (start: string): number =>
-  parseInt(moment.utc(start, 'YYYYMMDD-HHmm').format('x'), 10);
-const parseEnd = (end: string): number =>
-  parseInt(moment.utc(end, 'YYYY-MM-DD HH:mm:ss').format('x'), 10);
+const parseStart = (start: string): number => parseInt(moment.utc(start, 'YYYYMMDD-HHmm').format('x'), 10);
+const parseEnd = (end: string): number => parseInt(moment.utc(end, 'YYYY-MM-DD HH:mm:ss').format('x'), 10);
 const parseDuration = (event: INbcEntry): number =>
-  moment(parseEnd(event.eventtimeofdayend)).diff(
-    moment(parseStart(event.start)),
-    'seconds',
-  );
+  moment(parseEnd(event.eventtimeofdayend)).diff(moment(parseStart(event.start)), 'seconds');
 const parseUrl = (event: INbcEntry): string => {
   if (event.ottStreamUrl) {
     return event.ottStreamUrl;

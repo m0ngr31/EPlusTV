@@ -9,12 +9,7 @@ import url from 'url';
 import {androidNbcUserAgent, userAgent} from './user-agent';
 import {configPath} from './init-directories';
 import {useNbcSports} from './networks';
-import {
-  createAdobeAuthHeader,
-  IAdobeAuth,
-  isAdobeTokenValid,
-  willAdobeTokenExpire,
-} from './adobe-helpers';
+import {createAdobeAuthHeader, IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 
 interface IAppConfig {
@@ -58,24 +53,7 @@ export interface INbcEntry {
 //   exp: number;
 // }
 
-const ADOBE_KEY = [
-  'Q',
-  '0',
-  'C',
-  'A',
-  'F',
-  'e',
-  '5',
-  'T',
-  'S',
-  'C',
-  'e',
-  'E',
-  'U',
-  '8',
-  '6',
-  't',
-].join('');
+const ADOBE_KEY = ['Q', '0', 'C', 'A', 'F', 'e', '5', 'T', 'S', 'C', 'e', 'E', 'U', '8', '6', 't'].join('');
 
 const ADOBE_PUBLIC_KEY = [
   'n',
@@ -119,8 +97,7 @@ interface IAuthResources {
 const RESOURCE_ID =
   '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>NBCOlympics</title><item><title>NBC Sports PGA Event</title><guid>123456789</guid><media:rating scheme="urn:vchip">TV-PG</media:rating></item></channel></rss>';
 
-const NBC_APP_CONFIG =
-  'https://stream.nbcsports.com/data/mobile/apps/NBCSports/configuration-vjs.json';
+const NBC_APP_CONFIG = 'https://stream.nbcsports.com/data/mobile/apps/NBCSports/configuration-vjs.json';
 
 const authorizedResources: IAuthResources = {};
 
@@ -205,26 +182,14 @@ class NbcHandler {
 
       const {data} = await axios.get(mediaTokenUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            mediaTokenUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-            'nbcsports',
-          ),
+          Authorization: createAdobeAuthHeader('GET', mediaTokenUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
           'User-Agent': userAgent,
         },
       });
 
       const token = data.serializedToken;
 
-      const tokenizedUrl = [
-        'https://',
-        'tokens',
-        '.',
-        'playmaker',
-        'services.com',
-      ].join('');
+      const tokenizedUrl = ['https://', 'tokens', '.', 'playmaker', 'services.com'].join('');
 
       const {data: urlData} = await axios.post(
         tokenizedUrl,
@@ -258,9 +223,7 @@ class NbcHandler {
       url = urlData.akamai[0].tokenizedUrl;
     } catch (e) {
       console.error(e);
-      console.log(
-        'Could not get stream data. Event might be upcoming, ended, or in blackout...',
-      );
+      console.log('Could not get stream data. Event might be upcoming, ended, or in blackout...');
     }
 
     return [
@@ -289,13 +252,7 @@ class NbcHandler {
     try {
       await axios.get(authorizeEventTokenUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            authorizeEventTokenUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-            'nbcsports',
-          ),
+          Authorization: createAdobeAuthHeader('GET', authorizeEventTokenUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
           'User-Agent': userAgent,
         },
       });
@@ -303,9 +260,7 @@ class NbcHandler {
       authorizedResources[eventId] = true;
     } catch (e) {
       console.error(e);
-      console.log(
-        'Could not authorize event. Might be blacked out or not available from your TV provider',
-      );
+      console.log('Could not authorize event. Might be blacked out or not available from your TV provider');
     }
   };
 
@@ -320,14 +275,7 @@ class NbcHandler {
   };
 
   private startProviderAuthFlow = async (): Promise<void> => {
-    const regUrl = [
-      'https://',
-      'api.auth.adobe.com',
-      '/reggie/',
-      'v1/',
-      'nbcsports',
-      '/regcode',
-    ].join('');
+    const regUrl = ['https://', 'api.auth.adobe.com', '/reggie/', 'v1/', 'nbcsports', '/regcode'].join('');
 
     try {
       const {data} = await axios.post(
@@ -339,22 +287,14 @@ class NbcHandler {
         }).toString(),
         {
           headers: {
-            Authorization: createAdobeAuthHeader(
-              'POST',
-              regUrl,
-              ADOBE_KEY,
-              ADOBE_PUBLIC_KEY,
-              'nbcsports',
-            ),
+            Authorization: createAdobeAuthHeader('POST', regUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
             'User-Agent': userAgent,
           },
         },
       );
 
       console.log('== TV Provider Auth ==');
-      console.log(
-        'Please open a browser window and go to: https://activate.nbcsports.com',
-      );
+      console.log('Please open a browser window and go to: https://activate.nbcsports.com');
       console.log('Enter code: ', data.code);
       console.log('Select Android TV');
       console.log('App will continue when login has completed...');
@@ -405,13 +345,7 @@ class NbcHandler {
     try {
       const {data} = await axios.get(regUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            regUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-            'nbcsports',
-          ),
+          Authorization: createAdobeAuthHeader('GET', regUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
           'User-Agent': userAgent,
         },
       });
@@ -448,13 +382,7 @@ class NbcHandler {
     try {
       const {data} = await axios.get(renewUrl, {
         headers: {
-          Authorization: createAdobeAuthHeader(
-            'GET',
-            renewUrl,
-            ADOBE_KEY,
-            ADOBE_PUBLIC_KEY,
-            'nbcsports',
-          ),
+          Authorization: createAdobeAuthHeader('GET', renewUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
           'User-Agent': userAgent,
         },
       });
@@ -468,18 +396,12 @@ class NbcHandler {
   };
 
   private save = () => {
-    fsExtra.writeJSONSync(
-      path.join(configPath, 'nbc_tokens.json'),
-      _.omit(this, 'appConfig'),
-      {spaces: 2},
-    );
+    fsExtra.writeJSONSync(path.join(configPath, 'nbc_tokens.json'), _.omit(this, 'appConfig'), {spaces: 2});
   };
 
   private load = () => {
     if (fs.existsSync(path.join(configPath, 'nbc_tokens.json'))) {
-      const {adobe_device_id, adobe_auth} = fsExtra.readJSONSync(
-        path.join(configPath, 'nbc_tokens.json'),
-      );
+      const {adobe_device_id, adobe_auth} = fsExtra.readJSONSync(path.join(configPath, 'nbc_tokens.json'));
 
       this.adobe_device_id = adobe_device_id;
       this.adobe_auth = adobe_auth;
