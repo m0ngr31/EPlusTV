@@ -192,9 +192,9 @@ class FoxHandler {
       await this.getPrelimToken();
     }
 
-    // if (!isAdobeFoxTokenValid(this.adobe_auth)) {
-    // await this.startProviderAuthFlow();
-    // }
+    if (!isAdobeFoxTokenValid(this.adobe_auth)) {
+      await this.startProviderAuthFlow();
+    }
 
     if (willAuthTokenExpire(this.adobe_auth)) {
       console.log('Updating FOX Sports auth code');
