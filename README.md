@@ -29,7 +29,8 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | Environment Variable | Description | Required? |
 |---|---|---|
 | START_CHANNEL | What the first channel number should be. | No. If not set, the start channel will default to 1. |
-| NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is > 100 if you are using ESPN+ | No. If not set, it will default to 150. |
+| NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is > 100 if you are using ESPN+. | No. If not set, it will default to 150. |
+| USE_SLATE | Play a short video with text while event is loading. This doesn't work in all players so use with caution! | No. This is off by default. |
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No |
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No |
 | MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, `1080p`, `720p`, and `540p` (Some providers don't offer 4K or 1080p and will attempt to play the highest framerate available for selected resolution). | If not set, `UHD/SDR` is the default. |

@@ -5,7 +5,6 @@ interface IChannelStatus {
   nextUp?: string;
   nextUpTimer?: any;
   player?: IManifestPlayer;
-  playingSlate?: boolean;
 }
 
 interface IManifestPlayer {

@@ -4,7 +4,7 @@ import path from 'path';
 import _ from 'lodash';
 
 import {generateM3u} from './services/generate-m3u';
-import {getSlate} from './services/stream-slate';
+import {getSlate, USE_SLATE} from './services/stream-slate';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {checkNextStream, launchChannel} from './services/launch-channel';
@@ -15,7 +15,7 @@ import {foxHandler} from './services/fox-handler';
 import {getFoxEventSchedules} from './services/get-fox-events';
 import {nbcHandler} from './services/nbc-handler';
 import {getNbcEventSchedules} from './services/get-nbc-events';
-import {cleanEntries} from './services/shared-helpers';
+import {cleanEntries, sleep} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 
 import {version} from './package.json';
@@ -71,21 +71,30 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   // Channel heatbeat
   if (!appStatus.channels[id]) {
-    appStatus.channels[id] = {
-      playingSlate: true,
-    };
+    appStatus.channels[id] = {};
   }
 
   appStatus.channels[id].heartbeat = new Date().valueOf();
 
   const uri = `${req.protocol}://${req.headers.host}`;
 
-  if (!appStatus.channels[id].player?.m3u8) {
-    contents = getSlate(uri);
+  if (USE_SLATE) {
+    if (!appStatus.channels[id].player?.m3u8) {
+      contents = getSlate(uri);
 
-    // Start stream
-    launchChannel(id, uri);
+      // Start stream
+      launchChannel(id, uri);
+    } else {
+      contents = appStatus.channels[id].player?.m3u8;
+    }
   } else {
+    while (!appStatus.channels[id].player?.m3u8) {
+      // Start stream
+      launchChannel(id, uri);
+      // Keep sleeping until the stream starts
+      await sleep(250);
+    }
+
     contents = appStatus.channels[id].player?.m3u8;
   }
 
@@ -199,7 +208,6 @@ setInterval(() => {
       val.nextUp = null;
       val.nextUpTimer = null;
       val.heartbeat = null;
-      val.playingSlate = false;
     }
   });
 }, 60 * 1000);

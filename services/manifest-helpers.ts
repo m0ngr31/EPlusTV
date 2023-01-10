@@ -5,6 +5,7 @@ import _ from 'lodash';
 import {userAgent} from './user-agent';
 import {IHeaders} from './shared-interfaces';
 import {cacheLayer} from './cache-layer';
+import {USE_SLATE} from './stream-slate';
 import {appStatus} from './app-status';
 
 const isRelativeUrl = (url?: string): boolean =>
@@ -85,6 +86,7 @@ export class ChunklistHandler {
   private baseManifestUrl: string;
   private headers: IHeaders;
   private channel: string;
+  private sequenceDelta: number;
 
   constructor(
     manifestUrl: string,
@@ -116,11 +118,8 @@ export class ChunklistHandler {
   }
 
   public async getSegmentOrKey(segmentId: string): Promise<ArrayBuffer> {
-    if (appStatus.channels[this.channel]?.playingSlate) {
-      appStatus.channels[this.channel].playingSlate = false;
-    }
-
     try {
+      appStatus.channels[this.channel].heartbeat = new Date().valueOf();
       return cacheLayer.getDataFromSegment(segmentId, this.headers);
     } catch (e) {
       console.error(e);
@@ -212,7 +211,9 @@ export class ChunklistHandler {
 
       let splitChunklist: string[] = updatedChunkList.split('\n');
 
-      const currentSequence = getSequence(updatedChunkList) + 6;
+      const currentSequence = _.isNumber(this.sequenceDelta)
+        ? getSequence(updatedChunkList) + this.sequenceDelta
+        : 6;
 
       if (!this.interval) {
         // Setup interval to refresh chunklist
@@ -221,30 +222,34 @@ export class ChunklistHandler {
           getTargetDuration(chunkList) * 1000,
         );
 
-        let hasFoundFirst = false;
+        if (USE_SLATE) {
+          this.sequenceDelta = 6 - getSequence(updatedChunkList);
 
+          let hasFoundFirst = false;
+
+          splitChunklist = splitChunklist.map(line => {
+            if (line.startsWith('#EXT-X-KEY') && !hasFoundFirst) {
+              hasFoundFirst = true;
+              line = `#EXT-X-DISCONTINUITY\n${line}`;
+            } else if (line.startsWith('#EXTINF') && !hasFoundFirst) {
+              hasFoundFirst = true;
+              line = `#EXT-X-DISCONTINUITY\n${line}`;
+            }
+
+            return line;
+          });
+        }
+      }
+
+      if (USE_SLATE) {
         splitChunklist = splitChunklist.map(line => {
-          if (line.startsWith('#EXTINF') && !hasFoundFirst) {
-            hasFoundFirst = true;
-
-            line = `#EXT-X-DISCONTINUITY\n${line}`;
-          }
-
           if (line.startsWith('#EXT-X-MEDIA-SEQUENCE')) {
-            // Put discontinuity sequence: 1 here
+            line = `#EXT-X-MEDIA-SEQUENCE:${currentSequence}`;
           }
 
           return line;
         });
       }
-
-      splitChunklist = splitChunklist.map(line => {
-        if (line.startsWith('#EXT-X-MEDIA-SEQUENCE')) {
-          line = `#EXT-X-MEDIA-SEQUENCE:${currentSequence}`;
-        }
-
-        return line;
-      });
 
       process.nextTick(() => (this.m3u8 = splitChunklist.join('\n')));
     } catch (e) {
