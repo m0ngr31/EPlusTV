@@ -4,7 +4,7 @@ import path from 'path';
 import _ from 'lodash';
 
 import {generateM3u} from './services/generate-m3u';
-import {getSlate} from './services/stream-slate';
+import {getSlate, USE_SLATE} from './services/stream-slate';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {checkNextStream, launchChannel} from './services/launch-channel';
@@ -13,25 +13,12 @@ import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
 import {getFoxEventSchedules} from './services/get-fox-events';
-import {IAppStatus} from './services/shared-interfaces';
 import {nbcHandler} from './services/nbc-handler';
 import {getNbcEventSchedules} from './services/get-nbc-events';
-import {cleanEntries} from './services/shared-helpers';
+import {cleanEntries, sleep} from './services/shared-helpers';
+import {appStatus} from './services/app-status';
 
 import {version} from './package.json';
-
-const NUM_OF_CHANNELS = 150;
-
-let START_CHANNEL = _.toNumber(process.env.START_CHANNEL);
-if (_.isNaN(START_CHANNEL)) {
-  START_CHANNEL = 1;
-}
-
-const appStatus: IAppStatus = {
-  channels: {},
-};
-
-const SLATE_FILE = path.join(process.cwd(), 'slate/static/000000000.ts');
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => process.exit(0);
@@ -43,18 +30,14 @@ const schedule = async () => {
   await getNbcEventSchedules();
   console.log('=== Done getting events ===');
   console.log('=== Building the schedule ===');
-  await scheduleEntries(START_CHANNEL);
+  await scheduleEntries();
   console.log('=== Done building the schedule ===');
 };
 
 const app = express();
 
 app.get('/channels.m3u', (req, res) => {
-  const m3uFile = generateM3u(
-    NUM_OF_CHANNELS,
-    `${req.protocol}://${req.headers.host}`,
-    START_CHANNEL,
-  );
+  const m3uFile = generateM3u(`${req.protocol}://${req.headers.host}`);
 
   if (!m3uFile) {
     notFound(req, res);
@@ -68,7 +51,7 @@ app.get('/channels.m3u', (req, res) => {
 });
 
 app.get('/xmltv.xml', async (req, res) => {
-  const xmlFile = await generateXml(NUM_OF_CHANNELS, START_CHANNEL);
+  const xmlFile = await generateXml();
 
   if (!xmlFile) {
     notFound(req, res);
@@ -95,12 +78,23 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   const uri = `${req.protocol}://${req.headers.host}`;
 
-  if (!appStatus.channels[id].player?.m3u8) {
-    contents = getSlate(uri);
+  if (USE_SLATE) {
+    if (!appStatus.channels[id].player?.m3u8) {
+      contents = getSlate(uri);
 
-    // Start stream
-    launchChannel(id, appStatus, uri);
+      // Start stream
+      launchChannel(id, uri);
+    } else {
+      contents = appStatus.channels[id].player?.m3u8;
+    }
   } else {
+    while (!appStatus.channels[id].player?.m3u8) {
+      // Start stream
+      launchChannel(id, uri);
+      // Keep sleeping until the stream starts
+      await sleep(250);
+    }
+
     contents = appStatus.channels[id].player?.m3u8;
   }
 
@@ -110,7 +104,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
   });
   res.end(contents, 'utf-8');
 
-  checkNextStream(id, appStatus, `${req.protocol}://${req.headers.host}`);
+  checkNextStream(id, `${req.protocol}://${req.headers.host}`);
 });
 
 app.get('/channels/:id/:part.key', async (req, res) => {
@@ -140,10 +134,13 @@ app.get('/channels/:id/:part.ts', async (req, res) => {
   const {id, part} = req.params;
   let contents;
 
-  const isSlate = id === 'slate';
+  const isSlate = id === 'starting';
 
   if (isSlate) {
-    contents = fs.readFileSync(SLATE_FILE);
+    const fileStr = `slate/${id}/${part}.ts`;
+    const filename = path.join(process.cwd(), fileStr);
+
+    contents = fs.readFileSync(filename);
   } else {
     try {
       contents = await appStatus.channels[id].player.getSegmentOrKey(part);
@@ -172,7 +169,7 @@ process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
 
 (async () => {
-  console.log(`=== EPlusTV v${version} starting... ===`);
+  console.log(`=== EPlusTV v${version} starting ===`);
   initDirectories();
 
   await espnHandler.initialize();

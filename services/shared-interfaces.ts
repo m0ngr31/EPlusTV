@@ -11,7 +11,7 @@ interface IManifestPlayer {
   m3u8?: string;
   interval?: NodeJS.Timer;
 
-  getSegmentOrKey(segmentId: string): Promise<void>;
+  getSegmentOrKey(segmentId: string): Promise<ArrayBuffer>;
   stop(): void;
 }
 
@@ -25,6 +25,6 @@ export interface IStringObj {
 
 export interface IAppStatus {
   channels: {
-    [string: number]: IChannelStatus;
+    [string: number | string]: IChannelStatus;
   };
 }

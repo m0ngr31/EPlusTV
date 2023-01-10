@@ -1,6 +1,7 @@
+import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {db} from './database';
 
-export const scheduleEntries = async (START_CHANNEL: number): Promise<void> => {
+export const scheduleEntries = async (): Promise<void> => {
   const unscheduledEntries = await db.entries
     .find({channel: {$exists: false}})
     .sort({start: 1});
@@ -16,7 +17,7 @@ export const scheduleEntries = async (START_CHANNEL: number): Promise<void> => {
     if (!availableChannels || !availableChannels.length) {
       const channelNums = await db.schedule.count({});
 
-      if (channelNums > 99) {
+      if (channelNums > NUM_OF_CHANNELS - 1) {
         continue;
       }
 

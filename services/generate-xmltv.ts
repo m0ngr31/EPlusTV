@@ -4,6 +4,7 @@ import moment from 'moment';
 
 import {db} from './database';
 import {usesMultiple} from './networks';
+import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 
 const formatEntryName = entry => {
   let entryName = entry.name;
@@ -36,10 +37,7 @@ const formatCategories = categories => {
   return tagList;
 };
 
-export const generateXml = async (
-  numChannels: number,
-  startChannel: number,
-): Promise<xml> => {
+export const generateXml = async (): Promise<xml> => {
   const wrap: any = {
     tv: [
       {
@@ -50,8 +48,8 @@ export const generateXml = async (
     ],
   };
 
-  _.times(numChannels, i => {
-    const channelNum = startChannel + i;
+  _.times(NUM_OF_CHANNELS, i => {
+    const channelNum = START_CHANNEL + i;
     wrap.tv.push({
       channel: [
         {

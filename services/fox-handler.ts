@@ -153,7 +153,7 @@ const FOX_APP_CONFIG =
 const willPrelimTokenExpire = (token: IAdobePrelimAuthToken): boolean =>
   new Date().valueOf() + 3600 * 1000 > token.exp;
 const willAuthTokenExpire = (token: IAdobeAuthFox): boolean =>
-  new Date().valueOf() + 3600 * 1000 > token.authn_expire;
+  new Date().valueOf() + 3600 * 1000 > token.tokenExpiration;
 
 const getEventNetwork = (event: IFoxEvent): string => {
   if (event.contentSKUResolved && event.contentSKUResolved[0]) {
@@ -196,6 +196,12 @@ class FoxHandler {
       await this.startProviderAuthFlow();
     }
 
+    if (willAuthTokenExpire(this.adobe_auth)) {
+      console.log('Updating FOX Sports auth code');
+      await this.authenticateRegCode();
+      await this.refreshProviderToken();
+    }
+
     await this.getEntitlements();
   };
 
@@ -216,8 +222,8 @@ class FoxHandler {
     }
 
     if (willAuthTokenExpire(this.adobe_auth)) {
-      // This currently doesn't work...
       console.log('Updating FOX Sports auth code');
+      await this.authenticateRegCode();
       await this.refreshProviderToken();
     }
   };
@@ -427,7 +433,7 @@ class FoxHandler {
 
         const authenticate = async () => {
           if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode();
+            const res = await this.authenticateRegCode(false);
             numOfReqs += 1;
 
             if (res) {
@@ -452,7 +458,9 @@ class FoxHandler {
     }
   };
 
-  private authenticateRegCode = async (): Promise<boolean> => {
+  private authenticateRegCode = async (
+    showAuthnError = true,
+  ): Promise<boolean> => {
     try {
       const {data} = await axios.get(
         `${this.appConfig.api.auth.checkadobeauthn}?device_id=${this.adobe_device_id}`,
@@ -465,17 +473,25 @@ class FoxHandler {
         },
       );
 
-      this.adobe_auth = data;
+      this.adobe_auth = {
+        ...data,
+        tokenExpiration: Math.min(
+          parseInt(moment().add(1, 'day').format('x'), 10),
+          data.tokenExpiration,
+        ),
+      };
       this.save();
 
       return true;
     } catch (e) {
       if (e.response?.status !== 404) {
-        console.error(e);
-
-        if (e.response?.status === 410) {
-          console.log('Adobe AuthN token has expired for FOX Sports');
-        } else {
+        if (showAuthnError) {
+          if (e.response?.status === 410) {
+            console.error(e);
+            console.log('Adobe AuthN token has expired for FOX Sports');
+          }
+        } else if (e.response?.status !== 410) {
+          console.error(e);
           console.log('Could not get provider token data for Fox Sports!');
         }
       }
@@ -508,7 +524,7 @@ class FoxHandler {
         },
       });
 
-      this.adobe_auth.authn_expire = data.expires;
+      this.adobe_auth.authn_expire = parseInt(data.expires, 10);
       this.save();
     } catch (e) {
       console.error(e);

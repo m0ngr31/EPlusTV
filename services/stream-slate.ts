@@ -1,18 +1,17 @@
-import _ from 'lodash';
+import path from 'path';
+import fs from 'fs';
 
-import {generateRandom} from './shared-helpers';
+const slatePlaylist: string = fs.readFileSync(
+  path.join(process.cwd(), 'slate/starting/starting.m3u8'),
+  {encoding: 'utf-8'},
+);
 
-const SEGMENTS = [generateRandom(8), generateRandom(8), generateRandom(8)];
+const reSegment = /(.*).ts$/gm;
 
-export const getSlate = (uri: string): string => {
-  let playlist = `#EXTM3U
-#EXT-X-TARGETDURATION:4
-#EXT-X-VERSION:3
-#EXT-X-MEDIA-SEQUENCE:0`;
+export const getSlate = (uri: string): string =>
+  slatePlaylist.replace(reSegment, `${uri}/channels/starting/$1.ts`);
 
-  _.forEach(SEGMENTS, segment => {
-    playlist = `${playlist}\n#EXTINF:4.000000,\n${uri}/channels/slate/${segment}.ts`;
-  });
-
-  return playlist;
-};
+export const USE_SLATE =
+  process.env.USE_SLATE && process.env.USE_SLATE.toLowerCase() !== 'false'
+    ? true
+    : false;

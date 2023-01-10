@@ -51,8 +51,10 @@ export const isAdobeTokenValid = (token?: IAdobeAuth): boolean => {
 export const isAdobeFoxTokenValid = (token?: IAdobeAuthFox): boolean => {
   if (!token) return false;
 
+  const now = new Date().valueOf();
+
   try {
-    return new Date().valueOf() < token.authn_expire;
+    return now < token.authn_expire && now < token.tokenExpiration;
   } catch (e) {
     return false;
   }
