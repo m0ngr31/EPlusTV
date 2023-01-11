@@ -3,13 +3,13 @@ import fsExtra from 'fs-extra';
 import path from 'path';
 import axios from 'axios';
 import _ from 'lodash';
+import moment from 'moment';
 
 import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './init-directories';
 import {useFoxSports} from './networks';
 import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import moment from 'moment';
 import {IHeaders} from './shared-interfaces';
 
 const getMaxRes = _.memoize(() => {
@@ -93,11 +93,12 @@ interface IFoxEventsData {
 
 const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
 
-// Will tokens expire in the next hour?
+// Will prelim token expire in the next month?
 const willPrelimTokenExpire = (token: IAdobePrelimAuthToken): boolean =>
-  new Date().valueOf() + 3600 * 1000 > token.tokenExpiration;
+  new Date().valueOf() + 3600 * 1000 * 24 * 30 > token.tokenExpiration;
+// Will auth token expire in the next day?
 const willAuthTokenExpire = (token: IAdobeAuthFox): boolean =>
-  new Date().valueOf() + 3600 * 1000 > token.tokenExpiration;
+  new Date().valueOf() + 3600 * 1000 * 24 > token.tokenExpiration;
 
 const getEventNetwork = (event: IFoxEvent): string => {
   if (event.contentSKUResolved && event.contentSKUResolved[0]) {
@@ -137,6 +138,7 @@ class FoxHandler {
     }
 
     if (!isAdobeFoxTokenValid(this.adobe_auth)) {
+      this.removeTokens();
       await this.startProviderAuthFlow();
     }
 
@@ -154,7 +156,6 @@ class FoxHandler {
     }
 
     if (willPrelimTokenExpire(this.adobe_prelim_auth_token)) {
-      // It has been 2 years, time to get a new code
       console.log('Updating FOX Sports prelim token');
       await this.getPrelimToken();
     }
@@ -387,10 +388,7 @@ class FoxHandler {
         },
       });
 
-      this.adobe_auth = {
-        ...data,
-        tokenExpiration: Math.min(parseInt(moment().add(1, 'day').format('x'), 10), data.tokenExpiration),
-      };
+      this.adobe_auth = data;
       this.save();
 
       return true;
@@ -409,6 +407,13 @@ class FoxHandler {
 
       return false;
     }
+  };
+
+  private removeTokens = () => {
+    this.adobe_auth = undefined;
+    this.adobe_prelim_auth_token = undefined;
+
+    this.save();
   };
 
   private save = () => {
