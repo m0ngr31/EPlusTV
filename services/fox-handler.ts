@@ -138,7 +138,6 @@ class FoxHandler {
     }
 
     if (!isAdobeFoxTokenValid(this.adobe_auth)) {
-      this.removeTokens();
       await this.startProviderAuthFlow();
     }
 
@@ -407,13 +406,6 @@ class FoxHandler {
 
       return false;
     }
-  };
-
-  private removeTokens = () => {
-    this.adobe_auth = undefined;
-    this.adobe_prelim_auth_token = undefined;
-
-    this.save();
   };
 
   private save = () => {
