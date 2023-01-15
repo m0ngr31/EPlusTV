@@ -3,7 +3,6 @@ import fsExtra from 'fs-extra';
 import path from 'path';
 import axios from 'axios';
 import _ from 'lodash';
-// import moment from 'moment';
 import url from 'url';
 
 import {androidNbcUserAgent, userAgent} from './user-agent';
@@ -49,11 +48,6 @@ export interface INbcEntry {
   start: string;
 }
 
-// interface IAdobePrelimAuthToken {
-//   token: string;
-//   exp: number;
-// }
-
 const ADOBE_KEY = ['Q', '0', 'C', 'A', 'F', 'e', '5', 'T', 'S', 'C', 'e', 'E', 'U', '8', '6', 't'].join('');
 
 const ADOBE_PUBLIC_KEY = [
@@ -94,6 +88,22 @@ const ADOBE_PUBLIC_KEY = [
 interface IAuthResources {
   [key: string]: boolean;
 }
+
+export const parseUrl = (event: INbcEntry): string => {
+  if (event.ottStreamUrl) {
+    return event.ottStreamUrl;
+  } else if (event.iosStreamUrl) {
+    return event.iosStreamUrl;
+  } else if (event.videoSources && event.videoSources[0]) {
+    if (event.videoSources[0].ottStreamUrl) {
+      return event.videoSources[0].ottStreamUrl;
+    } else if (event.videoSources[0].iosStreamUrl) {
+      return event.videoSources[0].iosStreamUrl;
+    }
+  }
+
+  return;
+};
 
 const RESOURCE_ID =
   '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>NBCOlympics</title><item><title>NBC Sports PGA Event</title><guid>123456789</guid><media:rating scheme="urn:vchip">TV-PG</media:rating></item></channel></rss>';
@@ -167,6 +177,23 @@ class NbcHandler {
 
   public getEventData = async (event: IEntry): Promise<[string, IHeaders]> => {
     let url: string;
+    let eventUrl = event.url;
+
+    // Try and find the URL manually
+    if (!eventUrl) {
+      try {
+        const events = await this.getEvents();
+        const index = events.findIndex(e => e.pid === event.id);
+
+        if (!index) {
+          throw new Error('Could not get event url. Bailing');
+        }
+
+        eventUrl = parseUrl(events[index]);
+      } catch (e) {
+        console.log('Could not get event url. Bailing');
+      }
+    }
 
     try {
       await this.authorizeEvent(event.id);
@@ -199,13 +226,13 @@ class NbcHandler {
           authInfo: {
             authenticationType: 'adobe-pass',
             requestorId: 'nbcsports',
-            resourceId: Buffer.from(RESOURCE_ID, 'utf-8').toString('base64'),
+            resourceId: Buffer.from(encodeURIComponent(RESOURCE_ID), 'utf-8').toString('base64'),
             token,
           },
           cdns: [
             {
               name: 'akamai',
-              url: event.url,
+              url: eventUrl,
             },
           ],
           pid: event.id,

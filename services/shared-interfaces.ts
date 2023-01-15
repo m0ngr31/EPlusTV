@@ -5,12 +5,11 @@ interface IChannelStatus {
 }
 
 interface IManifestPlayer {
-  m3u8?: string;
-  interval?: NodeJS.Timer;
+  playlist?: string;
 
   init(url: string): Promise<void>;
   getSegmentOrKey(segmentId: string): Promise<ArrayBuffer>;
-  stop(): void;
+  cacheChunklist(chunkListId: string): Promise<string>;
 }
 
 export interface IHeaders {

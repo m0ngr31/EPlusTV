@@ -1,6 +1,6 @@
 import moment from 'moment';
 
-import {nbcHandler, INbcEntry} from './nbc-handler';
+import {nbcHandler, INbcEntry, parseUrl} from './nbc-handler';
 import {useNbcSports} from './networks';
 import {db} from './database';
 import {IEntry} from './shared-interfaces';
@@ -15,21 +15,6 @@ const parseStart = (start: string): number => parseInt(moment.utc(start, 'YYYYMM
 const parseEnd = (end: string): number => parseInt(moment.utc(end, 'YYYY-MM-DD HH:mm:ss').format('x'), 10);
 const parseDuration = (event: INbcEntry): number =>
   moment(parseEnd(event.eventtimeofdayend)).diff(moment(parseStart(event.start)), 'seconds');
-const parseUrl = (event: INbcEntry): string => {
-  if (event.ottStreamUrl) {
-    return event.ottStreamUrl;
-  } else if (event.iosStreamUrl) {
-    return event.iosStreamUrl;
-  } else if (event.videoSources && event.videoSources[0]) {
-    if (event.videoSources[0].ottStreamUrl) {
-      return event.videoSources[0].ottStreamUrl;
-    } else if (event.videoSources[0].iosStreamUrl) {
-      return event.videoSources[0].iosStreamUrl;
-    }
-  }
-
-  return;
-};
 
 const parseAirings = async (events: INbcEntry[]) => {
   for (const event of events) {
@@ -52,7 +37,7 @@ const parseAirings = async (events: INbcEntry[]) => {
       //   event.videoSources[0] &&
       //   (event.videoSources[0].drmType || event.videoSources[0].drmAssetId)
       // ) {
-      //   console.log(`${event.title} has DRM!`);
+      //   console.log(`${event.title} has DRM, so not scheduling`);
       //   continue;
       // }
 
@@ -70,6 +55,22 @@ const parseAirings = async (events: INbcEntry[]) => {
         start,
         url: parseUrl(event),
       });
+    } else if (!entryExists.url || entryExists.url.length === 0) {
+      // Don't mess with DRM stuff for right now
+      // if (
+      //   event.videoSources &&
+      //   event.videoSources[0] &&
+      //   (event.videoSources[0].drmType || event.videoSources[0].drmAssetId)
+      // ) {
+      //   continue;
+      // }
+
+      const eventUrl = parseUrl(event);
+
+      if (eventUrl) {
+        console.log('Updating event: ', event.title);
+        await db.entries.update<IEntry>({_id: entryExists._id}, {$set: {url: parseUrl(event)}});
+      }
     }
   }
 };

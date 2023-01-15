@@ -50,11 +50,11 @@ const parseAirings = async events => {
   }
 };
 
-export const getEventSchedules = async (): Promise<void> => {
+export const getEspnEventSchedules = async (): Promise<void> => {
   let entries = [];
 
   try {
-    console.log('Looking for live events...');
+    console.log('Looking for ESPN events...');
 
     if (useEspnPlus) {
       const liveEntries = await espnHandler.getLiveEvents();
@@ -97,12 +97,11 @@ export const getEventSchedules = async (): Promise<void> => {
       entries = [...entries, ...liveEntries];
     }
   } catch (e) {
-    console.log("Couldn't get live events");
+    console.log('Could not parse ESPN events');
   }
 
   const today = new Date();
 
-  console.log('Looking for upcoming events...');
   for (const [i] of [0, 1, 2].entries()) {
     const date = moment(today).add(i, 'days');
 
@@ -148,7 +147,7 @@ export const getEventSchedules = async (): Promise<void> => {
         entries = [...entries, ...upcomingEntries];
       }
     } catch (e) {
-      console.log(`Couldn't get events for ${date.format('dddd, MMMM Do YYYY')}`);
+      console.log('Could not parse ESPN events');
     }
   }
 

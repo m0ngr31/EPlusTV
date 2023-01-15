@@ -1,6 +1,6 @@
 {
   "name": "eplustv",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,7 @@
   "author": "Joe Ipson <joe@ipson.me>",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.27.2",
+    "axios": "^1.2.2",
     "dynamic-hls-proxy": "^1.1.21",
     "express": "^4.17.1",
     "fs-extra": "^10.0.0",

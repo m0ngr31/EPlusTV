@@ -61,8 +61,8 @@ export const willAdobeTokenExpire = (token?: IAdobeAuth): boolean => {
 
   try {
     const parsedExp = parseInt(token.expires, 10);
-    // Will the token expire in the next hour?
-    return new Date().valueOf() + 3600 * 1000 > new Date(parsedExp).valueOf();
+    // Will the token expire in the next day?
+    return new Date().valueOf() + 3600 * 1000 * 24 > new Date(parsedExp).valueOf();
   } catch (e) {
     return true;
   }

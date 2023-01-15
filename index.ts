@@ -1,14 +1,11 @@
 import express from 'express';
-import fs from 'fs';
-import path from 'path';
 import _ from 'lodash';
 
 import {generateM3u} from './services/generate-m3u';
-import {getSlate, USE_SLATE} from './services/stream-slate';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {launchChannel} from './services/launch-channel';
-import {getEventSchedules} from './services/get-espn-events';
+import {getEspnEventSchedules} from './services/get-espn-events';
 import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
@@ -25,7 +22,7 @@ const shutDown = () => process.exit(0);
 
 const schedule = async () => {
   console.log('=== Getting events ===');
-  await getEventSchedules();
+  await getEspnEventSchedules();
   await getFoxEventSchedules();
   await getNbcEventSchedules();
   console.log('=== Done getting events ===');
@@ -70,42 +67,56 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   let contents = null;
 
-  // Channel heatbeat
+  // Channel heatbeat needs initial object
   if (!appStatus.channels[id]) {
     appStatus.channels[id] = {};
   }
 
-  appStatus.channels[id].heartbeat = new Date().valueOf();
-
   const uri = `${req.protocol}://${req.headers.host}`;
 
-  if (USE_SLATE) {
-    if (!appStatus.channels[id].player?.m3u8) {
-      contents = getSlate(uri);
-
-      // Start stream
-      launchChannel(id, uri);
-    } else {
-      contents = appStatus.channels[id].player?.m3u8;
-    }
-  } else {
-    if (!appStatus.channels[id].player?.m3u8) {
-      try {
-        await launchChannel(id, uri);
-      } catch (e) {}
-    }
-
+  if (!appStatus.channels[id].player?.playlist) {
     try {
-      contents = appStatus.channels[id].player?.m3u8;
+      await launchChannel(id, uri);
     } catch (e) {}
+  }
 
-    if (!contents) {
-      console.log(
-        `Could not get a playlist for channel #${id}. Please make sure there is an event scheduled and you have access to it.`,
-      );
-      notFound(req, res);
-      return;
-    }
+  try {
+    contents = appStatus.channels[id].player?.playlist;
+  } catch (e) {}
+
+  if (!contents) {
+    console.log(
+      `Could not get a playlist for channel #${id}. Please make sure there is an event scheduled and you have access to it.`,
+    );
+    notFound(req, res);
+    return;
+  }
+
+  res.writeHead(200, {
+    'Cache-Control': 'no-cache',
+    'Content-Type': 'application/vnd.apple.mpegurl',
+  });
+  res.end(contents, 'utf-8');
+});
+
+app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
+  const {id, chunklistid} = req.params;
+
+  let contents = null;
+
+  if (!appStatus.channels[id].player?.playlist) {
+    notFound(req, res);
+    return;
+  }
+
+  try {
+    contents = await appStatus.channels[id].player.cacheChunklist(chunklistid);
+  } catch (e) {}
+
+  if (!contents) {
+    console.log(`Could not get chunklist for channel #${id}.`);
+    notFound(req, res);
+    return;
   }
 
   res.writeHead(200, {
@@ -142,20 +153,11 @@ app.get('/channels/:id/:part.ts', async (req, res) => {
   const {id, part} = req.params;
   let contents;
 
-  const isSlate = id === 'starting';
-
-  if (isSlate) {
-    const fileStr = `slate/${id}/${part}.ts`;
-    const filename = path.join(process.cwd(), fileStr);
-
-    contents = fs.readFileSync(filename);
-  } else {
-    try {
-      contents = await appStatus.channels[id].player.getSegmentOrKey(part);
-    } catch (e) {
-      notFound(req, res);
-      return;
-    }
+  try {
+    contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+  } catch (e) {
+    notFound(req, res);
+    return;
   }
 
   if (!contents) {
@@ -177,7 +179,7 @@ process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
 
 (async () => {
-  console.log(`=== EPlusTV v${version} starting ===`);
+  console.log(`=== E+TV v${version} starting ===`);
   initDirectories();
 
   await espnHandler.initialize();
@@ -207,7 +209,6 @@ setInterval(() => {
     if (now - val.heartbeat > 120 * 1000) {
       if (val.player) {
         console.log('Killing unwatched channel: ', key);
-        val.player.stop();
       }
       val.current = null;
       val.player = null;

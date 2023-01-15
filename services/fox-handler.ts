@@ -68,6 +68,7 @@ export interface IFoxEvent {
   startDate: string;
   endDate: string;
   network: string;
+  streamTypes: string[];
   images: {
     logo?: {
       FHD: string;

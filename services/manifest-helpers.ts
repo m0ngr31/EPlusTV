@@ -1,11 +1,10 @@
-import axios from 'axios';
 import {Chunklist, Playlist, RenditionSortOrder} from 'dynamic-hls-proxy';
+import axios from 'axios';
 import _ from 'lodash';
 
 import {userAgent} from './user-agent';
 import {IHeaders} from './shared-interfaces';
-import {cacheLayer} from './cache-layer';
-import {USE_SLATE} from './stream-slate';
+import {cacheLayer, promiseCache} from './caching';
 import {appStatus} from './app-status';
 
 const isRelativeUrl = (url?: string): boolean => (url?.startsWith('http') ? false : true);
@@ -38,7 +37,7 @@ const getResolutionRanges = _.memoize((): [number, number] => {
 });
 
 const reTarget = /#EXT-X-TARGETDURATION:([0-9]+)/;
-const reSequence = /#EXT-X-MEDIA-SEQUENCE:([0-9]+)/;
+const reAudioTrack = /#EXT-X-MEDIA:TYPE=AUDIO.*URI="(.*)"$/gm;
 
 const getTargetDuration = (chunklist: string, divide = true): number => {
   let targetDuration = 2;
@@ -56,52 +55,24 @@ const getTargetDuration = (chunklist: string, divide = true): number => {
   return targetDuration;
 };
 
-const getSequence = (chunklist: string): number => {
-  let sequence = 0;
-
-  const tester = reSequence.exec(chunklist);
-
-  if (tester && tester[1]) {
-    sequence = parseInt(tester[1], 10);
-
-    if (!_.isNumber(sequence) || _.isNaN(sequence)) {
-      sequence = 3;
-    }
-  }
-
-  return sequence;
-};
-
 export class ChunklistHandler {
-  public m3u8: string;
-  public interval: NodeJS.Timer;
+  public playlist: string;
 
   private baseUrl: string;
-  private baseManifestUrl: string;
+  private baseProxyUrl: string;
   private headers: IHeaders;
   private channel: string;
-  private sequenceDelta: number;
+  private segmentDuration: number;
 
   constructor(headers: IHeaders, appUrl: string, channel: string) {
     this.headers = headers;
     this.channel = channel;
-
     this.baseUrl = `${appUrl}/channels/${channel}/`;
+    this.baseProxyUrl = `${appUrl}/chunklist/${channel}/`;
   }
 
   public async init(manifestUrl: string): Promise<void> {
-    const chunkListUrl = await this.getChunklist(manifestUrl, this.headers);
-
-    if (!chunkListUrl) {
-      throw new Error('Could not create player instance');
-    }
-
-    const fullChunkUrl = cleanUrl(
-      isRelativeUrl(chunkListUrl) ? `${createBaseUrl(manifestUrl)}/${chunkListUrl}` : chunkListUrl,
-    );
-    this.baseManifestUrl = cleanUrl(createBaseUrl(fullChunkUrl));
-
-    await this.proxyChunklist(fullChunkUrl);
+    await this.parseManifest(manifestUrl, this.headers);
   }
 
   public async getSegmentOrKey(segmentId: string): Promise<ArrayBuffer> {
@@ -113,23 +84,21 @@ export class ChunklistHandler {
     }
   }
 
-  public stop(): void {
-    this.interval && clearInterval(this.interval);
-    this.m3u8 = undefined;
-  }
-
-  private async getChunklist(manifestUrl: string, headers: IHeaders): Promise<string> {
+  public async parseManifest(manifestUrl: string, headers: IHeaders): Promise<void> {
     const [hMin, hMax] = getResolutionRanges();
 
     try {
-      const {data: manifest} = await axios.get(manifestUrl, {
+      const {data: manifest} = await axios.get<string>(manifestUrl, {
         headers: {
           'User-Agent': userAgent,
           ...headers,
         },
       });
 
+      let updatedManifest = manifest;
+
       const playlist = Playlist.loadFromString(manifest);
+      const renditions = playlist.getRenditions();
 
       playlist.setResolutionRange(hMin, hMax);
 
@@ -137,36 +106,115 @@ export class ChunklistHandler {
         .sortByBandwidth(getMaxRes() === '540p' ? RenditionSortOrder.nonHdFirst : RenditionSortOrder.bestFirst)
         .setLimit(1);
 
-      return playlist.getVideoRenditionUrl(0);
+      let chunklist: string;
+
+      try {
+        chunklist = decodeURIComponent(playlist.getVideoRenditionUrl(0));
+      } catch (e) {
+        chunklist = decodeURIComponent(playlist.getRenditions().audioRenditions[0].uri);
+      }
+
+      /** For FOX 4K streams */
+      const audioTracks = [...manifest.matchAll(reAudioTrack)];
+
+      audioTracks.forEach(track => {
+        if (track && track[1]) {
+          const fullChunklistUrl = cleanUrl(
+            isRelativeUrl(track[1]) ? `${createBaseUrl(manifestUrl)}/${track[1]}` : track[1],
+          );
+
+          const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+          updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+        }
+      });
+
+      /**
+       * For some reason this library picks up 4K FOX Sports streams as
+       * Audio renditions instead of video. So we have to check these too
+       */
+      renditions.audioRenditions.forEach(rendition => {
+        if (decodeURIComponent(rendition.uri) !== chunklist) {
+          updatedManifest = updatedManifest.replace(decodeURI(rendition.uri), '');
+        } else {
+          const fullChunklistUrl = cleanUrl(
+            isRelativeUrl(rendition.uri) ? `${createBaseUrl(manifestUrl)}/${rendition.uri}` : rendition.uri,
+          );
+
+          const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+          updatedManifest = updatedManifest.replace(rendition.uri, `${this.baseProxyUrl}${chunklistName}.m3u8`);
+        }
+      });
+
+      renditions.videoRenditions.forEach(rendition => {
+        if (decodeURIComponent(rendition.uri) !== chunklist) {
+          updatedManifest = updatedManifest.replace(decodeURI(rendition.uri), '');
+        } else {
+          const fullChunklistUrl = cleanUrl(
+            isRelativeUrl(rendition.uri) ? `${createBaseUrl(manifestUrl)}/${rendition.uri}` : rendition.uri,
+          );
+
+          const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+          updatedManifest = updatedManifest.replace(rendition.uri, `${this.baseProxyUrl}${chunklistName}.m3u8`);
+        }
+      });
+
+      // Cleanup m3u8
+      updatedManifest = updatedManifest
+        .replace(/#UPLYNK-MEDIA.*$/gm, '')
+        .replace(/#EXT-X-I-FRAME-STREAM-INF.*$/gm, '')
+        .replace(/#EXT-X-IMAGE-STREAM-INF.*$/gm, '')
+        .replace(/#EXT-X-STREAM-INF.*$\n\n/gm, '')
+        .replace(/\n\n/gm, '\n');
+
+      this.playlist = updatedManifest;
     } catch (e) {
       console.error(e);
       console.log('Could not parse M3U8 properly!');
     }
   }
 
-  private async proxyChunklist(chunkListUrl: string): Promise<void> {
+  public cacheChunklist(chunklistId: string): Promise<string> {
+    if (this.segmentDuration) {
+      return promiseCache.getPromise(chunklistId, this.proxyChunklist(chunklistId), this.segmentDuration * 1000);
+    }
+
+    return this.proxyChunklist(chunklistId);
+  }
+
+  private async proxyChunklist(chunkListId: string): Promise<string> {
     try {
-      const {data: chunkList} = await axios.get(chunkListUrl, {
+      const url = cacheLayer.getChunklistFromId(chunkListId);
+      const baseManifestUrl = cleanUrl(createBaseUrl(url));
+
+      const {data: chunkList} = await axios.get(url, {
         headers: {
           'User-Agent': userAgent,
           ...this.headers,
         },
       });
 
+      if (!this.segmentDuration) {
+        this.segmentDuration = getTargetDuration(chunkList);
+      }
+
       let updatedChunkList = chunkList;
       const keys = new Set<string>();
       const chunks = Chunklist.loadFromString(chunkList);
 
       chunks.segments.forEach(segment => {
+        const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
+          ? `${baseManifestUrl}${segment.segment.uri}`
+          : segment.segment.uri;
+
         if (segment.segment.key?.uri) {
-          const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
-            ? `${this.baseManifestUrl}${segment.segment.uri}`
-            : segment.segment.uri;
           const segmentName = cacheLayer.getSegmentFromUrl(fullSegmentUrl, `${this.channel}-segment`);
 
-          updatedChunkList = updatedChunkList.replace(segment.segment.uri, `${this.channel}/${segmentName}.ts`);
+          updatedChunkList = updatedChunkList.replace(segment.segment.uri, `${this.baseUrl}${segmentName}.ts`);
 
           keys.add(segment.segment.key.uri);
+        } else {
+          // Don't proxy segments that don't have keys
+          updatedChunkList = updatedChunkList.replace(segment.segment.uri, `${fullSegmentUrl}`);
         }
       });
 
@@ -178,44 +226,7 @@ export class ChunklistHandler {
         }
       });
 
-      let splitChunklist: string[] = updatedChunkList.split('\n');
-
-      const currentSequence = _.isNumber(this.sequenceDelta) ? getSequence(updatedChunkList) + this.sequenceDelta : 6;
-
-      if (!this.interval) {
-        // Setup interval to refresh chunklist
-        this.interval = setInterval(() => this.proxyChunklist(chunkListUrl), getTargetDuration(chunkList) * 1000);
-
-        if (USE_SLATE) {
-          this.sequenceDelta = 6 - getSequence(updatedChunkList);
-
-          let hasFoundFirst = false;
-
-          splitChunklist = splitChunklist.map(line => {
-            if (line.startsWith('#EXT-X-KEY') && !hasFoundFirst) {
-              hasFoundFirst = true;
-              line = `#EXT-X-DISCONTINUITY\n${line}`;
-            } else if (line.startsWith('#EXTINF') && !hasFoundFirst) {
-              hasFoundFirst = true;
-              line = `#EXT-X-DISCONTINUITY\n${line}`;
-            }
-
-            return line;
-          });
-        }
-      }
-
-      if (USE_SLATE) {
-        splitChunklist = splitChunklist.map(line => {
-          if (line.startsWith('#EXT-X-MEDIA-SEQUENCE')) {
-            line = `#EXT-X-MEDIA-SEQUENCE:${currentSequence}`;
-          }
-
-          return line;
-        });
-      }
-
-      this.m3u8 = splitChunklist.join('\n');
+      return updatedChunkList;
     } catch (e) {
       console.error(e);
       console.log('Could not parse chunklist properly!');

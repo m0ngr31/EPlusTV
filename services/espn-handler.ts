@@ -96,7 +96,7 @@ const willTokenExpire = (token?: string): boolean => {
   try {
     const decoded: IJWToken = jwt_decode(token);
     // Will the token expire in the next hour?
-    return new Date().valueOf() / 1000 + 3600 > decoded.exp;
+    return Math.floor(new Date().valueOf() / 1000) + 3600 > decoded.exp;
   } catch (e) {
     return true;
   }
@@ -272,7 +272,7 @@ class EspnHandler {
       await this.startProviderAuthFlow();
     }
 
-    if (useEspnPlus && (!this.tokens || !isTokenValid(this.tokens.id_token))) {
+    if (useEspnPlus && (!this.tokens || !isTokenValid(this.tokens?.id_token))) {
       if (canRefreshToken(this.tokens)) {
         await this.refreshTokens();
       } else {
@@ -283,7 +283,7 @@ class EspnHandler {
 
   public refreshTokens = async () => {
     if (useEspnPlus && (!isTokenValid(this.tokens?.id_token) || willTokenExpire(this.tokens?.id_token))) {
-      console.log('Refreshing auth token');
+      console.log('Refreshing auth token (ESPN+)');
       await this.refreshAuth();
     }
 
@@ -293,7 +293,7 @@ class EspnHandler {
         !isTokenValid(this.device_token_exchange.access_token) ||
         willTokenExpire(this.device_token_exchange.access_token))
     ) {
-      console.log('Refreshing device token');
+      console.log('Refreshing device token (ESPN+)');
       await this.getDeviceTokenExchange(true);
     }
 
@@ -303,7 +303,7 @@ class EspnHandler {
         !isTokenValid(this.device_refresh_token.access_token) ||
         willTokenExpire(this.device_refresh_token.access_token))
     ) {
-      console.log('Refreshing device refresh token');
+      console.log('Refreshing device refresh token (ESPN+)');
       await this.getDeviceRefreshToken(true);
     }
 
@@ -313,12 +313,12 @@ class EspnHandler {
         !isTokenValid(this.account_token.access_token) ||
         willTokenExpire(this.account_token.access_token))
     ) {
-      console.log('Refreshing BAM access token');
+      console.log('Refreshing BAM access token (ESPN+)');
       await this.getBamAccessToken(true);
     }
 
     if (requiresProvider && willAdobeTokenExpire(this.adobe_auth)) {
-      console.log('Refreshing TV Provider token');
+      console.log('Refreshing TV Provider token (ESPN)');
       await this.refreshProviderToken();
     }
   };

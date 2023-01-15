@@ -12,6 +12,11 @@ const parseCategories = (event: IFoxEvent) => {
       categories.push(classifier);
     }
   }
+
+  if (event.streamTypes.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
+    categories.push('4K');
+  }
+
   return [...new Set(categories)];
 };
 
