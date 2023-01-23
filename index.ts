@@ -4,13 +4,10 @@ import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
 import {launchChannel} from './services/launch-channel';
-import {getEspnEventSchedules} from './services/get-espn-events';
 import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
-import {getFoxEventSchedules} from './services/get-fox-events';
 import {nbcHandler} from './services/nbc-handler';
-import {getNbcEventSchedules} from './services/get-nbc-events';
 import {cleanEntries} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 
@@ -21,9 +18,9 @@ const shutDown = () => process.exit(0);
 
 const schedule = async () => {
   console.log('=== Getting events ===');
-  await getEspnEventSchedules();
-  await getFoxEventSchedules();
-  await getNbcEventSchedules();
+  await espnHandler.getSchedule();
+  await foxHandler.getSchedule();
+  await nbcHandler.getSchedule();
   console.log('=== Done getting events ===');
   await cleanEntries();
   console.log('=== Building the schedule ===');
@@ -103,7 +100,7 @@ app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
 
   let contents = null;
 
-  if (!appStatus.channels[id].player?.playlist) {
+  if (!appStatus.channels[id]?.player?.playlist) {
     notFound(req, res);
     return;
   }

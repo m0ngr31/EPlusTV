@@ -4,6 +4,7 @@ import path from 'path';
 import axios from 'axios';
 import _ from 'lodash';
 import url from 'url';
+import moment from 'moment';
 
 import {androidNbcUserAgent, userAgent} from './user-agent';
 import {configPath} from './init-directories';
@@ -11,6 +12,7 @@ import {useNbcSports} from './networks';
 import {createAdobeAuthHeader, IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 import {IEntry, IHeaders} from './shared-interfaces';
+import {db} from './database';
 
 interface IAppConfig {
   channelChanger: {
@@ -24,7 +26,7 @@ interface IAppConfig {
   }[];
 }
 
-export interface INbcEntry {
+interface INbcEntry {
   _id: string;
   pid: string;
   eventId: string;
@@ -46,6 +48,10 @@ export interface INbcEntry {
   sportName: string;
   eventtimeofdayend: string;
   start: string;
+}
+
+interface IAuthResources {
+  [key: string]: boolean;
 }
 
 const ADOBE_KEY = ['Q', '0', 'C', 'A', 'F', 'e', '5', 'T', 'S', 'C', 'e', 'E', 'U', '8', '6', 't'].join('');
@@ -85,11 +91,7 @@ const ADOBE_PUBLIC_KEY = [
   'w',
 ].join('');
 
-interface IAuthResources {
-  [key: string]: boolean;
-}
-
-export const parseUrl = (event: INbcEntry): string => {
+const parseUrl = (event: INbcEntry): string => {
   if (event.ottStreamUrl) {
     return event.ottStreamUrl;
   } else if (event.iosStreamUrl) {
@@ -103,6 +105,76 @@ export const parseUrl = (event: INbcEntry): string => {
   }
 
   return;
+};
+
+const parseCategories = (event: INbcEntry) => {
+  const categories = ['Sports', 'NBC Sports', event.sportName];
+
+  return [...new Set(categories)];
+};
+
+const parseStart = (start: string): number => parseInt(moment.utc(start, 'YYYYMMDD-HHmm').format('x'), 10);
+const parseEnd = (end: string): number => parseInt(moment.utc(end, 'YYYY-MM-DD HH:mm:ss').format('x'), 10);
+const parseDuration = (event: INbcEntry): number =>
+  moment(parseEnd(event.eventtimeofdayend)).diff(moment(parseStart(event.start)), 'seconds');
+
+const parseAirings = async (events: INbcEntry[]) => {
+  for (const event of events) {
+    const entryExists = await db.entries.findOne<IEntry>({id: event.pid});
+
+    if (!entryExists) {
+      const start = parseStart(event.start);
+      const end = parseEnd(event.eventtimeofdayend);
+
+      const now = moment();
+      const twoDays = moment().add(2, 'days');
+
+      if (moment(start).isAfter(twoDays) || moment(end).isBefore(now)) {
+        continue;
+      }
+
+      // Don't mess with DRM stuff for right now
+      if (
+        event.videoSources &&
+        event.videoSources[0] &&
+        (event.videoSources[0].drmType || event.videoSources[0].drmAssetId)
+      ) {
+        console.log(`${event.title} has DRM, so not scheduling`);
+        continue;
+      }
+
+      console.log('Adding event: ', event.title);
+
+      await db.entries.insert<IEntry>({
+        categories: parseCategories(event),
+        duration: parseDuration(event),
+        end,
+        from: 'nbcsports',
+        id: event.pid,
+        image: `http://hdliveextra-pmd.edgesuite.net/HD/image_sports/mobile/${event.image}_m50.jpg`,
+        name: event.title,
+        network: event.channel,
+        start,
+        url: parseUrl(event),
+      });
+    } else if (!entryExists.url || entryExists.url.length === 0) {
+      // Don't mess with DRM stuff for right now
+      if (
+        event.videoSources &&
+        event.videoSources[0] &&
+        (event.videoSources[0].drmType || event.videoSources[0].drmAssetId)
+      ) {
+        continue;
+      }
+
+      const eventUrl = parseUrl(event);
+
+      if (eventUrl) {
+        console.log('Updating event: ', event.title);
+        await db.entries.update<IEntry>({_id: entryExists._id}, {$set: {url: parseUrl(event)}});
+      }
+    }
+  }
 };
 
 const RESOURCE_ID =
@@ -146,33 +218,25 @@ class NbcHandler {
     }
 
     if (willAdobeTokenExpire(this.adobe_auth)) {
-      console.log('Refreshing TV Provider token');
+      console.log('Refreshing TV Provider token (NBC Sports)');
       await this.refreshProviderToken();
     }
   };
 
-  public getEvents = async (): Promise<INbcEntry[]> => {
-    let entries = [];
-
-    try {
-      for (const category of this.appConfig.channelChanger) {
-        if (category.id === 'nbc-sports' || category.id === 'nbc-golf') {
-          for (const subCategory of category.subNav) {
-            if (subCategory.id === 'live-upcoming') {
-              const {data} = await axios.get<{results: INbcEntry[]}>(
-                subCategory.feedUrl.replace('[PLATFORM]', 'android'),
-              );
-              entries = [...entries, ...data.results];
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      console.log('Could not get schedule for NBC Sports');
+  public getSchedule = async (): Promise<void> => {
+    if (!useNbcSports) {
+      return;
     }
 
-    return entries;
+    console.log('Looking for NBC Sports events...');
+
+    try {
+      const entries = await nbcHandler.getEvents();
+      await parseAirings(entries);
+    } catch (e) {
+      console.error(e);
+      console.log('Could not parse NBC Sports events');
+    }
   };
 
   public getEventData = async (event: IEntry): Promise<[string, IHeaders]> => {
@@ -260,6 +324,30 @@ class NbcHandler {
         'User-Agent': androidNbcUserAgent,
       },
     ];
+  };
+
+  private getEvents = async (): Promise<INbcEntry[]> => {
+    let entries = [];
+
+    try {
+      for (const category of this.appConfig.channelChanger) {
+        if (category.id === 'nbc-sports' || category.id === 'nbc-golf') {
+          for (const subCategory of category.subNav) {
+            if (subCategory.id === 'live-upcoming') {
+              const {data} = await axios.get<{results: INbcEntry[]}>(
+                subCategory.feedUrl.replace('[PLATFORM]', 'android'),
+              );
+              entries = [...entries, ...data.results];
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get schedule for NBC Sports');
+    }
+
+    return entries;
   };
 
   private authorizeEvent = async (eventId: string) => {
@@ -371,7 +459,7 @@ class NbcHandler {
     ].join('');
 
     try {
-      const {data} = await axios.get(regUrl, {
+      const {data} = await axios.get<IAdobeAuth>(regUrl, {
         headers: {
           Authorization: createAdobeAuthHeader('GET', regUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
           'User-Agent': userAgent,
@@ -408,7 +496,7 @@ class NbcHandler {
     ].join('');
 
     try {
-      const {data} = await axios.get(renewUrl, {
+      const {data} = await axios.get<IAdobeAuth>(renewUrl, {
         headers: {
           Authorization: createAdobeAuthHeader('GET', renewUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY, 'nbcsports'),
           'User-Agent': userAgent,

@@ -18,6 +18,7 @@ const convertHostUrl = (url: string, fullUrl: string): string => {
 
   return `${uri.origin}${url}`;
 };
+const isBase64Uri = (url: string) => url.indexOf('base64') > -1 || url.startsWith('data');
 
 const PROXY_SEGMENTS =
   process.env.PROXY_SEGMENTS && process.env.PROXY_SEGMENTS.toLowerCase() !== 'false' ? true : false;
@@ -65,7 +66,7 @@ const getTargetDuration = (chunklist: string, divide = true): number => {
   return targetDuration;
 };
 
-export class ChunklistHandler {
+export class PlaylistHandler {
   public playlist: string;
 
   private baseUrl: string;
@@ -73,15 +74,17 @@ export class ChunklistHandler {
   private headers: IHeaders;
   private channel: string;
   private segmentDuration: number;
+  private network: string;
 
-  constructor(headers: IHeaders, appUrl: string, channel: string) {
+  constructor(headers: IHeaders, appUrl: string, channel: string, network: string) {
     this.headers = headers;
     this.channel = channel;
     this.baseUrl = `${appUrl}/channels/${channel}/`;
     this.baseProxyUrl = `${appUrl}/chunklist/${channel}/`;
+    this.network = network;
   }
 
-  public async init(manifestUrl: string): Promise<void> {
+  public async initialize(manifestUrl: string): Promise<void> {
     await this.parseManifest(manifestUrl, this.headers);
   }
 
@@ -208,7 +211,7 @@ export class ChunklistHandler {
       const url = cacheLayer.getChunklistFromId(chunkListId);
       const baseManifestUrl = cleanUrl(createBaseUrl(url));
 
-      const {data: chunkList} = await axios.get(url, {
+      const {data: chunkList} = await axios.get<string>(url, {
         headers: {
           'User-Agent': userAgent,
           ...this.headers,
@@ -224,25 +227,32 @@ export class ChunklistHandler {
       const chunks = Chunklist.loadFromString(chunkList);
 
       chunks.segments.forEach(segment => {
-        const fullSegmentUrl = isRelativeUrl(segment.segment.uri)
-          ? usesHostRoot(segment.segment.uri)
-            ? convertHostUrl(segment.segment.uri, baseManifestUrl)
-            : cleanUrl(`${baseManifestUrl}${segment.segment.uri}`)
-          : segment.segment.uri;
+        const segmentUrl: string = segment.segment.uri;
+        const segmentKey = segment.segment.key?.uri;
 
-        if (segment.segment.key?.uri) {
-          if (PROXY_SEGMENTS) {
-            const segmentName = cacheLayer.getSegmentFromUrl(fullSegmentUrl, `${this.channel}-segment`);
+        const fullSegmentUrl = isRelativeUrl(segmentUrl)
+          ? usesHostRoot(segmentUrl)
+            ? convertHostUrl(segmentUrl, baseManifestUrl)
+            : cleanUrl(`${baseManifestUrl}${segmentUrl}`)
+          : segmentUrl;
 
-            updatedChunkList = updatedChunkList.replace(segment.segment.uri, `${this.baseUrl}${segmentName}.ts`);
-          } else {
-            updatedChunkList = updatedChunkList.replace(segment.segment.uri, fullSegmentUrl);
-          }
-
-          keys.add(segment.segment.key.uri);
+        if (
+          PROXY_SEGMENTS &&
+          // Proxy keyed segments
+          (segmentKey ||
+            // Proxy non-keyed segments that aren't on ESPN
+            (!segmentKey && this.network !== 'espn')) &&
+          // Just until I figure out a workaround
+          !segmentUrl.endsWith('mp4')
+        ) {
+          const segmentName = cacheLayer.getSegmentFromUrl(fullSegmentUrl, `${this.channel}-segment`);
+          updatedChunkList = updatedChunkList.replace(segmentUrl, `${this.baseUrl}${segmentName}.ts`);
         } else {
-          // Don't proxy segments that don't have keys
-          updatedChunkList = updatedChunkList.replace(segment.segment.uri, fullSegmentUrl);
+          updatedChunkList = updatedChunkList.replace(segmentUrl, fullSegmentUrl);
+        }
+
+        if (segmentKey && !isBase64Uri(segmentKey)) {
+          keys.add(segmentKey);
         }
       });
 

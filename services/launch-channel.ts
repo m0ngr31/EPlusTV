@@ -2,7 +2,7 @@ import {db} from './database';
 import {espnHandler} from './espn-handler';
 import {foxHandler} from './fox-handler';
 import {IEntry, IHeaders} from './shared-interfaces';
-import {ChunklistHandler} from './manifest-helpers';
+import {PlaylistHandler} from './playlist-handler';
 import {nbcHandler} from './nbc-handler';
 import {appStatus} from './app-status';
 
@@ -23,11 +23,14 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
   });
 
   if (playingNow) {
-    if (playingNow.from === 'foxsports') {
+    const network =
+      playingNow.from === 'foxsports' ? 'foxsports' : playingNow.from === 'nbcsports' ? 'nbcsports' : 'espn';
+
+    if (network === 'foxsports') {
       try {
         [url, headers] = await foxHandler.getEventData(appStatus.channels[channelId].current);
       } catch (e) {}
-    } else if (playingNow.from === 'nbcsports') {
+    } else if (network === 'nbcsports') {
       try {
         [url, headers] = await nbcHandler.getEventData(playingNow);
       } catch (e) {}
@@ -40,10 +43,10 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
     if (!url) {
       console.log('Failed to parse the stream');
     } else {
-      appStatus.channels[channelId].player = new ChunklistHandler(headers, appUrl, channelId);
+      appStatus.channels[channelId].player = new PlaylistHandler(headers, appUrl, channelId, network);
 
       try {
-        await appStatus.channels[channelId].player.init(url);
+        await appStatus.channels[channelId].player.initialize(url);
         await checkNextStream(channelId);
       } catch (e) {
         appStatus.channels[channelId].player = undefined;

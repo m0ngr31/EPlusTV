@@ -10,21 +10,8 @@ import {configPath} from './init-directories';
 import {useFoxSports} from './networks';
 import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {IHeaders} from './shared-interfaces';
-
-const getMaxRes = _.memoize(() => {
-  switch (process.env.MAX_RESOLUTION) {
-    case 'UHD/HDR':
-      return 'UHD/HDR';
-    case '720p':
-      return '720p';
-    default:
-      return 'UHD/SDR';
-  }
-});
-
-const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS;
-const maxRes = getMaxRes();
+import {IEntry, IHeaders} from './shared-interfaces';
+import {db} from './database';
 
 interface IAppConfig {
   api: {
@@ -54,7 +41,7 @@ interface IAdobePrelimAuthToken {
   profileId: string;
 }
 
-export interface IFoxEvent {
+interface IFoxEvent {
   airingType: string;
   audioOnly: boolean;
   broadcastID: string;
@@ -91,6 +78,57 @@ interface IFoxEventsData {
     }[];
   };
 }
+
+const getMaxRes = _.memoize(() => {
+  switch (process.env.MAX_RESOLUTION) {
+    case 'UHD/HDR':
+      return 'UHD/HDR';
+    case '720p':
+      return '720p';
+    default:
+      return 'UHD/SDR';
+  }
+});
+
+const parseCategories = (event: IFoxEvent) => {
+  const categories = ['Sports', 'FOX Sports'];
+  for (const classifier of [...(event.categoryTags || []), ...(event.genres || [])]) {
+    if (classifier !== null) {
+      categories.push(classifier);
+    }
+  }
+
+  if (event.streamTypes.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
+    categories.push('4K');
+  }
+
+  return [...new Set(categories)];
+};
+
+const parseAirings = async (events: IFoxEvent[]) => {
+  for (const event of events) {
+    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
+
+    if (!entryExists) {
+      console.log('Adding event: ', event.name);
+
+      await db.entries.insert<IEntry>({
+        categories: parseCategories(event),
+        duration: moment(event.endDate).diff(moment(event.startDate), 'seconds'),
+        end: new Date(event.endDate).valueOf(),
+        from: 'foxsports',
+        id: event.id,
+        image: event.images.logo?.FHD || event.images.seriesDetail?.FHD,
+        name: event.name,
+        network: event.callSign,
+        start: new Date(event.startDate).valueOf(),
+      });
+    }
+  }
+};
+
+const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS;
+const maxRes = getMaxRes();
 
 const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
 
@@ -143,7 +181,7 @@ class FoxHandler {
     }
 
     if (willAuthTokenExpire(this.adobe_auth)) {
-      console.log('Updating FOX Sports auth code');
+      console.log('Refreshing TV Provider token (FOX Sports)');
       await this.authenticateRegCode();
     }
 
@@ -161,52 +199,26 @@ class FoxHandler {
     }
 
     if (willAuthTokenExpire(this.adobe_auth)) {
-      console.log('Updating FOX Sports auth code');
+      console.log('Refreshing TV Provider token (FOX Sports)');
       await this.authenticateRegCode();
     }
   };
 
-  public getEvents = async () => {
-    const events = [];
-
-    const now = new Date();
-
-    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').toISOString}`;
-
-    try {
-      const {data} = await axios.get<IFoxEventsData>(
-        encodeURI(`https://api3.fox.com/v2.0/screens/live?dateRange=${dateRange}`),
-        {
-          headers: {
-            'User-Agent': userAgent,
-            authorization: `Bearer ${this.adobe_prelim_auth_token.accessToken}`,
-            'x-api-key': this.appConfig.api.key,
-          },
-        },
-      );
-
-      _.forEach(data.panels.member, member => {
-        _.forEach(member.items.member, m => {
-          if (
-            _.some(this.entitlements, network => network === getEventNetwork(m)) &&
-            !m.audioOnly &&
-            m.startDate &&
-            m.endDate &&
-            m.id
-          ) {
-            if (m.airingType === 'live') {
-              events.push(m);
-            } else if (allowReplays && m.airingType !== 'live') {
-              events.push(m);
-            }
-          }
-        });
-      });
-    } catch (e) {
-      console.log(e);
+  public getSchedule = async (): Promise<void> => {
+    if (!useFoxSports) {
+      return;
     }
 
-    return events;
+    console.log('Looking for FOX Sports events...');
+
+    const entries = await this.getEvents();
+
+    try {
+      await parseAirings(entries);
+    } catch (e) {
+      console.error(e);
+      console.log('Could not parse FOX Sports events');
+    }
   };
 
   public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
@@ -258,6 +270,49 @@ class FoxHandler {
       console.error(e);
       console.log('Could not get stream information!');
     }
+  };
+
+  private getEvents = async (): Promise<IFoxEvent[]> => {
+    const events: IFoxEvent[] = [];
+
+    const now = new Date();
+
+    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').toISOString}`;
+
+    try {
+      const {data} = await axios.get<IFoxEventsData>(
+        encodeURI(`https://api3.fox.com/v2.0/screens/live?dateRange=${dateRange}`),
+        {
+          headers: {
+            'User-Agent': userAgent,
+            authorization: `Bearer ${this.adobe_prelim_auth_token.accessToken}`,
+            'x-api-key': this.appConfig.api.key,
+          },
+        },
+      );
+
+      _.forEach(data.panels.member, member => {
+        _.forEach(member.items.member, m => {
+          if (
+            _.some(this.entitlements, network => network === getEventNetwork(m)) &&
+            !m.audioOnly &&
+            m.startDate &&
+            m.endDate &&
+            m.id
+          ) {
+            if (m.airingType === 'live') {
+              events.push(m);
+            } else if (allowReplays && m.airingType !== 'live') {
+              events.push(m);
+            }
+          }
+        });
+      });
+    } catch (e) {
+      console.log(e);
+    }
+
+    return events;
   };
 
   private getAppConfig = async () => {

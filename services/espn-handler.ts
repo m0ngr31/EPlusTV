@@ -7,15 +7,91 @@ import ws from 'ws';
 import jwt_decode from 'jwt-decode';
 import _ from 'lodash';
 import url from 'url';
+import moment from 'moment';
 
 import {userAgent} from './user-agent';
 import {configPath} from './init-directories';
-import {useEspnPlus, requiresProvider} from './networks';
+import {
+  useEspnPlus,
+  requiresProvider,
+  useAccN,
+  useAccNx,
+  useEspn1,
+  useEspn2,
+  useEspn3,
+  useEspnU,
+  useLonghorn,
+  useSec,
+  useSecPlus,
+} from './networks';
 import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {IHeaders} from './shared-interfaces';
+import {IEntry, IHeaders} from './shared-interfaces';
+import {db} from './database';
 
 global.WebSocket = ws;
+
+interface IAuthResources {
+  [key: string]: boolean;
+}
+
+interface IJWToken {
+  exp: number;
+  iat: number;
+  [key: string]: string | number;
+}
+
+interface IEndpoint {
+  href: string;
+  headers: {
+    [key: string]: string;
+  };
+  method: 'POST' | 'GET';
+}
+
+interface IAppConfig {
+  services: {
+    account: {
+      client: {
+        endpoints: {
+          createAccountGrant: IEndpoint;
+        };
+      };
+    };
+    token: {
+      client: {
+        endpoints: {
+          exchange: IEndpoint;
+        };
+      };
+    };
+    device: {
+      client: {
+        endpoints: {
+          createAccountGrant: IEndpoint;
+          createDeviceGrant: IEndpoint;
+        };
+      };
+    };
+  };
+}
+
+interface IToken {
+  access_token: string;
+  refresh_token: string;
+}
+
+interface IGrant {
+  grant_type: string;
+  assertion: string;
+}
+
+interface ITokens extends IToken {
+  ttl: number;
+  refresh_ttl: number;
+  swid: string;
+  id_token: string;
+}
 
 const ADOBE_KEY = ['g', 'B', '8', 'H', 'Y', 'd', 'E', 'P', 'y', 'e', 'z', 'e', 'Y', 'b', 'R', '1'].join('');
 
@@ -179,68 +255,39 @@ const getNetworkInfo = (network?: string) => {
 };
 
 const authorizedResources: IAuthResources = {};
+const parseCategories = event => {
+  const categories = ['Sports', 'ESPN'];
+  for (const classifier of [event.category, event.subcategory, event.sport, event.league]) {
+    if (classifier !== null && classifier.name !== null) {
+      categories.push(classifier.name);
+    }
+  }
+  return [...new Set(categories)];
+};
 
-interface IAuthResources {
-  [key: string]: boolean;
-}
+const parseAirings = async events => {
+  for (const event of events) {
+    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
-interface IJWToken {
-  exp: number;
-  iat: number;
-  [key: string]: string | number;
-}
+    if (!entryExists) {
+      console.log('Adding event: ', event.name);
 
-interface IEndpoint {
-  href: string;
-  headers: {
-    [key: string]: string;
-  };
-  method: 'POST' | 'GET';
-}
-
-interface IAppConfig {
-  services: {
-    account: {
-      client: {
-        endpoints: {
-          createAccountGrant: IEndpoint;
-        };
-      };
-    };
-    token: {
-      client: {
-        endpoints: {
-          exchange: IEndpoint;
-        };
-      };
-    };
-    device: {
-      client: {
-        endpoints: {
-          createAccountGrant: IEndpoint;
-          createDeviceGrant: IEndpoint;
-        };
-      };
-    };
-  };
-}
-
-export interface IToken {
-  access_token: string;
-  refresh_token: string;
-}
-
-export interface IGrant {
-  grant_type: string;
-  assertion: string;
-}
-
-export interface ITokens extends IToken {
-  ttl: number;
-  refresh_ttl: number;
-  swid: string;
-  id_token: string;
-}
+      await db.entries.insert<IEntry>({
+        categories: parseCategories(event),
+        duration: event.duration,
+        end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),
+        feed: event.feedName,
+        from: 'espn',
+        id: event.id,
+        image: event.image?.url,
+        name: event.name,
+        network: event.network?.name || 'ESPN+',
+        start: new Date(event.startDateTime).valueOf(),
+        url: event.source?.url,
+      });
+    }
+  }
+};
 
 class EspnHandler {
   public tokens?: ITokens;
@@ -292,38 +339,112 @@ class EspnHandler {
     }
   };
 
-  public getLiveEvents = async (network?: string) => {
-    await this.getGraphQlApiKey();
+  public getSchedule = async (): Promise<void> => {
+    let entries = [];
 
-    const [networks, packages] = getNetworkInfo(network);
+    try {
+      console.log('Looking for ESPN events...');
 
-    const query =
-      'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
-    const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"LIVE","networks":${networks},"packages":${packages},"limit":500}`;
+      if (useEspnPlus) {
+        const liveEntries = await this.getLiveEvents();
+        entries = [...entries, ...liveEntries];
+      }
+      if (useEspn1) {
+        const liveEntries = await this.getLiveEvents('espn1');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useEspn2) {
+        const liveEntries = await this.getLiveEvents('espn2');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useEspn3) {
+        const liveEntries = await this.getLiveEvents('espn3');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useEspnU) {
+        const liveEntries = await this.getLiveEvents('espnU');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useSec) {
+        const liveEntries = await this.getLiveEvents('secn');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useSecPlus) {
+        const liveEntries = await this.getLiveEvents('secnPlus');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useAccN) {
+        const liveEntries = await this.getLiveEvents('accn');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useAccNx) {
+        const liveEntries = await this.getLiveEvents('accnx');
+        entries = [...entries, ...liveEntries];
+      }
+      if (useLonghorn) {
+        const liveEntries = await this.getLiveEvents('longhorn');
+        entries = [...entries, ...liveEntries];
+      }
+    } catch (e) {
+      console.log('Could not parse ESPN events');
+    }
 
-    const {data: entryData} = await axios.get(
-      encodeURI(
-        `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
-      ),
-    );
-    return entryData.data.airings;
-  };
+    const today = new Date();
 
-  public getUpcomingEvents = async (date: string, network?: string) => {
-    await this.getGraphQlApiKey();
+    for (const [i] of [0, 1, 2].entries()) {
+      const date = moment(today).add(i, 'days');
 
-    const [networks, packages] = getNetworkInfo(network);
+      try {
+        if (useEspnPlus) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'));
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useEspn1) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn1');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useEspn2) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn2');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useEspn3) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn3');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useEspnU) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espnU');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useSec) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secn');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useSecPlus) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secnPlus');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useAccN) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accn');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useAccNx) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accnx');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useLonghorn) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'longhorn');
+          entries = [...entries, ...upcomingEntries];
+        }
+      } catch (e) {
+        console.log('Could not parse ESPN events');
+      }
+    }
 
-    const query =
-      'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
-    const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"UPCOMING","networks":${networks},"packages":${packages},"day":"${date}","limit":500}`;
-
-    const {data: entryData} = await axios.get(
-      encodeURI(
-        `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
-      ),
-    );
-    return entryData.data.airings;
+    try {
+      await parseAirings(entries);
+    } catch (e) {
+      console.log('Could not parse events');
+    }
   };
 
   public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
@@ -484,6 +605,40 @@ class EspnHandler {
     {leading: true, trailing: false},
   );
 
+  private getLiveEvents = async (network?: string) => {
+    await this.getGraphQlApiKey();
+
+    const [networks, packages] = getNetworkInfo(network);
+
+    const query =
+      'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
+    const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"LIVE","networks":${networks},"packages":${packages},"limit":500}`;
+
+    const {data: entryData} = await axios.get(
+      encodeURI(
+        `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
+      ),
+    );
+    return entryData.data.airings;
+  };
+
+  private getUpcomingEvents = async (date: string, network?: string) => {
+    await this.getGraphQlApiKey();
+
+    const [networks, packages] = getNetworkInfo(network);
+
+    const query =
+      'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
+    const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"UPCOMING","networks":${networks},"packages":${packages},"day":"${date}","limit":500}`;
+
+    const {data: entryData} = await axios.get(
+      encodeURI(
+        `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
+      ),
+    );
+    return entryData.data.airings;
+  };
+
   private authorizeEvent = async (eventId: string, mrss: string): Promise<void> => {
     if (mrss && authorizedResources[eventId]) {
       return;
@@ -580,7 +735,7 @@ class EspnHandler {
     const regUrl = ['https://', 'api.auth.adobe.com', '/api/v1/', 'authenticate/', regcode, '?requestor=ESPN'].join('');
 
     try {
-      const {data} = await axios.get(regUrl, {
+      const {data} = await axios.get<IAdobeAuth>(regUrl, {
         headers: {
           Authorization: createAdobeAuthHeader('GET', regUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
           'User-Agent': userAgent,
@@ -617,7 +772,7 @@ class EspnHandler {
     ].join('');
 
     try {
-      const {data} = await axios.get(renewUrl, {
+      const {data} = await axios.get<IAdobeAuth>(renewUrl, {
         headers: {
           Authorization: createAdobeAuthHeader('GET', renewUrl, ADOBE_KEY, ADOBE_PUBLIC_KEY),
           'User-Agent': userAgent,

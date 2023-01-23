@@ -7,7 +7,7 @@ interface IChannelStatus {
 interface IManifestPlayer {
   playlist?: string;
 
-  init(url: string): Promise<void>;
+  initialize(url: string): Promise<void>;
   getSegmentOrKey(segmentId: string): Promise<ArrayBuffer>;
   cacheChunklist(chunkListId: string): Promise<string>;
 }
