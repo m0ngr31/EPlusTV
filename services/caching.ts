@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, {AxiosResponse} from 'axios';
 
 import {generateRandom} from './shared-helpers';
 import {IHeaders} from './shared-interfaces';
@@ -15,7 +15,7 @@ interface IPromiseMap {
 class PromiseCache {
   private mapper = new Map<string, IPromiseMap>();
 
-  public getPromise(keyId: string, call: Promise<any>, ttl: number): Promise<any> {
+  public getPromise<T>(keyId: string, call: Promise<any>, ttl: number): Promise<T> {
     const now = new Date().valueOf();
 
     const mappedPromse = this.mapper.get(keyId);
@@ -91,7 +91,7 @@ class CacheLayer {
     }
 
     try {
-      const {data} = await promiseCache.getPromise(
+      const {data} = await promiseCache.getPromise<AxiosResponse<ArrayBuffer>>(
         segment,
         axios.get<ArrayBuffer>(url, {
           headers: {

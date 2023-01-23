@@ -8,7 +8,7 @@ import {appStatus} from './app-status';
 
 const checkingStream = {};
 
-const startChannelStream = async (channelId: string, appUrl) => {
+const startChannelStream = async (channelId: string, appUrl: string) => {
   if (appStatus.channels[channelId].player || checkingStream[channelId]) {
     return;
   }
@@ -44,6 +44,7 @@ const startChannelStream = async (channelId: string, appUrl) => {
 
       try {
         await appStatus.channels[channelId].player.init(url);
+        await checkNextStream(channelId);
       } catch (e) {
         appStatus.channels[channelId].player = undefined;
       }
@@ -70,5 +71,26 @@ export const launchChannel = async (channelId: string, appUrl: string): Promise<
     console.log(`Channel #${channelId} has an active event (${playingNow.name}). Going to start the stream.`);
     appStatus.channels[channelId].current = playingNow.id;
     await startChannelStream(channelId, appUrl);
+  }
+};
+
+export const checkNextStream = async (channelId: string): Promise<void> => {
+  if (appStatus.channels[channelId].heartbeatTimer || checkingStream[channelId]) {
+    return;
+  }
+
+  const now = new Date().valueOf();
+
+  const channel = parseInt(channelId, 10);
+  const entries = await db.entries.find<IEntry>({channel, start: {$gt: now}}).sort({start: 1});
+
+  if (entries && entries.length > 0) {
+    const diff = entries[0].start - now;
+
+    appStatus.channels[channelId].heartbeatTimer = setTimeout(() => {
+      appStatus.channels[channelId].current = null;
+      appStatus.channels[channelId].player = null;
+      appStatus.channels[channelId].heartbeatTimer = null;
+    }, diff);
   }
 };

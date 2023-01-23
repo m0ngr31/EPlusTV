@@ -282,39 +282,8 @@ class EspnHandler {
   };
 
   public refreshTokens = async () => {
-    if (useEspnPlus && (!isTokenValid(this.tokens?.id_token) || willTokenExpire(this.tokens?.id_token))) {
-      console.log('Refreshing auth token (ESPN+)');
-      await this.refreshAuth();
-    }
-
-    if (
-      useEspnPlus &&
-      (!this.device_token_exchange ||
-        !isTokenValid(this.device_token_exchange.access_token) ||
-        willTokenExpire(this.device_token_exchange.access_token))
-    ) {
-      console.log('Refreshing device token (ESPN+)');
-      await this.getDeviceTokenExchange(true);
-    }
-
-    if (
-      useEspnPlus &&
-      (!this.device_refresh_token ||
-        !isTokenValid(this.device_refresh_token.access_token) ||
-        willTokenExpire(this.device_refresh_token.access_token))
-    ) {
-      console.log('Refreshing device refresh token (ESPN+)');
-      await this.getDeviceRefreshToken(true);
-    }
-
-    if (
-      useEspnPlus &&
-      (!this.account_token ||
-        !isTokenValid(this.account_token.access_token) ||
-        willTokenExpire(this.account_token.access_token))
-    ) {
-      console.log('Refreshing BAM access token (ESPN+)');
-      await this.getBamAccessToken(true);
+    if (useEspnPlus) {
+      await this.updatePlusTokens();
     }
 
     if (requiresProvider && willAdobeTokenExpire(this.adobe_auth)) {
@@ -476,6 +445,44 @@ class EspnHandler {
       console.log('Could not get auth refresh token');
     }
   };
+
+  private updatePlusTokens = _.throttle(
+    async () => {
+      if (!isTokenValid(this.tokens?.id_token) || willTokenExpire(this.tokens?.id_token)) {
+        console.log('Refreshing auth token (ESPN+)');
+        await this.refreshAuth();
+      }
+
+      if (
+        !this.device_token_exchange ||
+        !isTokenValid(this.device_token_exchange.access_token) ||
+        willTokenExpire(this.device_token_exchange.access_token)
+      ) {
+        console.log('Refreshing device token (ESPN+)');
+        await this.getDeviceTokenExchange(true);
+      }
+
+      if (
+        !this.device_refresh_token ||
+        !isTokenValid(this.device_refresh_token.access_token) ||
+        willTokenExpire(this.device_refresh_token.access_token)
+      ) {
+        console.log('Refreshing device refresh token (ESPN+)');
+        await this.getDeviceRefreshToken(true);
+      }
+
+      if (
+        !this.account_token ||
+        !isTokenValid(this.account_token.access_token) ||
+        willTokenExpire(this.account_token.access_token)
+      ) {
+        console.log('Refreshing BAM access token (ESPN+)');
+        await this.getBamAccessToken(true);
+      }
+    },
+    60 * 1000,
+    {leading: true, trailing: false},
+  );
 
   private authorizeEvent = async (eventId: string, mrss: string): Promise<void> => {
     if (mrss && authorizedResources[eventId]) {

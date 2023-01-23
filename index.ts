@@ -1,5 +1,4 @@
 import express from 'express';
-import _ from 'lodash';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
@@ -67,7 +66,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   let contents = null;
 
-  // Channel heatbeat needs initial object
+  // Channel data needs initial object
   if (!appStatus.channels[id]) {
     appStatus.channels[id] = {};
   }
@@ -196,26 +195,6 @@ process.on('SIGINT', shutDown);
   console.log('=== Starting Server ===');
   app.listen(8000, () => console.log('Server started on port 8000'));
 })();
-
-// Cleanup intervals
-setInterval(() => {
-  // Check for channel heartbeat and kill any streams that aren't being used
-  const now = new Date().valueOf();
-  _.forOwn(appStatus.channels, (val, key) => {
-    if (!val.heartbeat) {
-      return;
-    }
-
-    if (now - val.heartbeat > 120 * 1000) {
-      if (val.player) {
-        console.log('Killing unwatched channel: ', key);
-      }
-      val.current = null;
-      val.player = null;
-      val.heartbeat = null;
-    }
-  });
-}, 60 * 1000);
 
 // Check for events every 4 hours and set the schedule
 setInterval(async () => {

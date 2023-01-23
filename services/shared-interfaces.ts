@@ -1,7 +1,7 @@
 interface IChannelStatus {
-  heartbeat?: number;
   current?: string;
   player?: IManifestPlayer;
+  heartbeatTimer?: NodeJS.Timer;
 }
 
 interface IManifestPlayer {

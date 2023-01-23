@@ -322,9 +322,9 @@ class NbcHandler {
       );
 
       console.log('== TV Provider Auth ==');
-      console.log('Please open a browser window and go to: https://activate.nbcsports.com');
+      console.log('Please open a browser window and go to: https://www.nbcsports.com/activate');
       console.log('Enter code: ', data.code);
-      console.log('Select Android TV');
+      console.log('Select "Android TV"');
       console.log('App will continue when login has completed...');
 
       return new Promise(async (resolve, reject) => {
