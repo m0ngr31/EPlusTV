@@ -12,6 +12,14 @@ const createBaseUrl = (url: string): string => {
   const cleaned = url.replace(/\.m3u8.*$/, '');
   return cleaned.substring(0, cleaned.lastIndexOf('/') + 1);
 };
+const createBaseUrlChunklist = (url: string): string => {
+  const cleaned = url.replace(/\.m3u8.*$/, '');
+  const filteredUrl = cleaned
+    .split('/')
+    .filter(seg => !seg.match(/=/))
+    .join('/');
+  return filteredUrl.substring(0, filteredUrl.lastIndexOf('/') + 1);
+};
 const usesHostRoot = (url: string): boolean => url.startsWith('/');
 const convertHostUrl = (url: string, fullUrl: string): string => {
   const uri = new URL(fullUrl);
@@ -100,12 +108,15 @@ export class PlaylistHandler {
     const [hMin, hMax] = getResolutionRanges();
 
     try {
-      const {data: manifest} = await axios.get<string>(manifestUrl, {
+      const {data: manifest, request} = await axios.get<string>(manifestUrl, {
         headers: {
           'User-Agent': userAgent,
           ...headers,
         },
       });
+
+      const realManifestUrl = request.res.responseUrl;
+      const urlParams = new URL(realManifestUrl).search;
 
       let updatedManifest = manifest;
 
@@ -132,10 +143,14 @@ export class PlaylistHandler {
       audioTracks.forEach(track => {
         if (track && track[1]) {
           const fullChunklistUrl = cleanUrl(
-            isRelativeUrl(track[1]) ? `${createBaseUrl(manifestUrl)}/${track[1]}` : track[1],
+            isRelativeUrl(track[1])
+              ? usesHostRoot(track[1])
+                ? convertHostUrl(track[1], realManifestUrl)
+                : `${createBaseUrl(realManifestUrl)}/${track[1]}`
+              : track[1],
           );
 
-          const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+          const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
           updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
         }
       });
@@ -145,10 +160,14 @@ export class PlaylistHandler {
       subTracks.forEach(track => {
         if (track && track[1]) {
           const fullChunklistUrl = cleanUrl(
-            isRelativeUrl(track[1]) ? `${createBaseUrl(manifestUrl)}/${track[1]}` : track[1],
+            isRelativeUrl(track[1])
+              ? usesHostRoot(track[1])
+                ? convertHostUrl(track[1], realManifestUrl)
+                : `${createBaseUrl(realManifestUrl)}/${track[1]}`
+              : track[1],
           );
 
-          const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+          const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
           updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
         }
       });
@@ -162,10 +181,14 @@ export class PlaylistHandler {
         //   // updatedManifest = updatedManifest.replace(decodeURI(rendition.uri), '');
         // } else {
         const fullChunklistUrl = cleanUrl(
-          isRelativeUrl(rendition.uri) ? `${createBaseUrl(manifestUrl)}/${rendition.uri}` : rendition.uri,
+          isRelativeUrl(rendition.uri)
+            ? usesHostRoot(rendition.uri)
+              ? convertHostUrl(rendition.uri, realManifestUrl)
+              : `${createBaseUrl(realManifestUrl)}/${rendition.uri}`
+            : rendition.uri,
         );
 
-        const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+        const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
         updatedManifest = updatedManifest.replace(rendition.uri, `${this.baseProxyUrl}${chunklistName}.m3u8`);
         // }
       });
@@ -175,21 +198,25 @@ export class PlaylistHandler {
         //   // updatedManifest = updatedManifest.replace(decodeURI(rendition.uri), '');
         // } else {
         const fullChunklistUrl = cleanUrl(
-          isRelativeUrl(rendition.uri) ? `${createBaseUrl(manifestUrl)}/${rendition.uri}` : rendition.uri,
+          isRelativeUrl(rendition.uri)
+            ? usesHostRoot(rendition.uri)
+              ? convertHostUrl(rendition.uri, realManifestUrl)
+              : `${createBaseUrl(realManifestUrl)}/${rendition.uri}`
+            : rendition.uri,
         );
 
-        const chunklistName = cacheLayer.getChunklistFromUrl(fullChunklistUrl);
+        const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
         updatedManifest = updatedManifest.replace(rendition.uri, `${this.baseProxyUrl}${chunklistName}.m3u8`);
         // }
       });
 
       // Cleanup m3u8
-      updatedManifest = updatedManifest
-        .replace(/#UPLYNK-MEDIA.*$/gm, '')
-        .replace(/#EXT-X-I-FRAME-STREAM-INF.*$/gm, '')
-        .replace(/#EXT-X-IMAGE-STREAM-INF.*$/gm, '')
-        .replace(/#EXT-X-STREAM-INF.*$\n\n/gm, '')
-        .replace(/\n\n/gm, '\n');
+      // updatedManifest = updatedManifest
+      //   .replace(/#UPLYNK-MEDIA.*$/gm, '')
+      //   .replace(/#EXT-X-I-FRAME-STREAM-INF.*$/gm, '')
+      //   .replace(/#EXT-X-IMAGE-STREAM-INF.*$/gm, '')
+      //   .replace(/#EXT-X-STREAM-INF.*$\n\n/gm, '')
+      //   .replace(/\n\n/gm, '\n');
 
       this.playlist = updatedManifest;
     } catch (e) {
@@ -209,14 +236,17 @@ export class PlaylistHandler {
   private async proxyChunklist(chunkListId: string): Promise<string> {
     try {
       const url = cacheLayer.getChunklistFromId(chunkListId);
-      const baseManifestUrl = cleanUrl(createBaseUrl(url));
 
-      const {data: chunkList} = await axios.get<string>(url, {
+      const {data: chunkList, request} = await axios.get<string>(url, {
         headers: {
           'User-Agent': userAgent,
           ...this.headers,
         },
       });
+
+      const realChunklistUrl = request.res.responseUrl;
+      const baseManifestUrl = cleanUrl(createBaseUrlChunklist(realChunklistUrl));
+      const urlParams = new URL(realChunklistUrl).search;
 
       if (!this.segmentDuration) {
         this.segmentDuration = getTargetDuration(chunkList);
@@ -245,10 +275,10 @@ export class PlaylistHandler {
           // Just until I figure out a workaround
           !segmentUrl.endsWith('mp4')
         ) {
-          const segmentName = cacheLayer.getSegmentFromUrl(fullSegmentUrl, `${this.channel}-segment`);
+          const segmentName = cacheLayer.getSegmentFromUrl(`${fullSegmentUrl}${urlParams}`, `${this.channel}-segment`);
           updatedChunkList = updatedChunkList.replace(segmentUrl, `${this.baseUrl}${segmentName}.ts`);
         } else {
-          updatedChunkList = updatedChunkList.replace(segmentUrl, fullSegmentUrl);
+          updatedChunkList = updatedChunkList.replace(segmentUrl, `${fullSegmentUrl}${urlParams}`);
         }
 
         if (segmentKey && !isBase64Uri(segmentKey)) {
@@ -263,7 +293,7 @@ export class PlaylistHandler {
             : cleanUrl(`${baseManifestUrl}${key}`)
           : key;
 
-        const keyName = cacheLayer.getSegmentFromUrl(fullKeyUrl, `${this.channel}-key`);
+        const keyName = cacheLayer.getSegmentFromUrl(`${fullKeyUrl}${urlParams}`, `${this.channel}-key`);
 
         while (updatedChunkList.indexOf(key) > -1) {
           updatedChunkList = updatedChunkList.replace(key, `${this.baseUrl}${keyName}.key`);
