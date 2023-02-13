@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.0.5**
+Current version: **2.0.6**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, and NBC Sports programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org), [Channels](https://getchannels.com), or [xTeVe](https://github.com/xteve-project/xTeVe).
