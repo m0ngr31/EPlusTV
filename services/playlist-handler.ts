@@ -12,12 +12,15 @@ const createBaseUrl = (url: string): string => {
   const cleaned = url.replace(/\.m3u8.*$/, '');
   return cleaned.substring(0, cleaned.lastIndexOf('/') + 1);
 };
-const createBaseUrlChunklist = (url: string): string => {
+const createBaseUrlChunklist = (url: string, network: string): string => {
   const cleaned = url.replace(/\.m3u8.*$/, '');
-  const filteredUrl = cleaned
-    .split('/')
-    .filter(seg => !seg.match(/=/))
-    .join('/');
+  let filteredUrl: string[] | string = cleaned.split('/');
+
+  if (network === 'foxsports') {
+    filteredUrl = filteredUrl.filter(seg => !seg.match(/=/));
+  }
+
+  filteredUrl = filteredUrl.join('/');
   return filteredUrl.substring(0, filteredUrl.lastIndexOf('/') + 1);
 };
 const usesHostRoot = (url: string): boolean => url.startsWith('/');
@@ -245,7 +248,7 @@ export class PlaylistHandler {
       });
 
       const realChunklistUrl = request.res.responseUrl;
-      const baseManifestUrl = cleanUrl(createBaseUrlChunklist(realChunklistUrl));
+      const baseManifestUrl = cleanUrl(createBaseUrlChunklist(realChunklistUrl, this.network));
       const urlParams = new URL(realChunklistUrl).search;
 
       if (!this.segmentDuration) {
