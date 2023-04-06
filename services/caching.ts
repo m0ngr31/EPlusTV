@@ -21,7 +21,8 @@ class PromiseCache {
     const mappedPromse = this.mapper.get(keyId);
 
     if (mappedPromse && mappedPromse.ttl > now) {
-      return this.mapper.get(keyId).promise.catch(() => {
+      return this.mapper.get(keyId).promise.catch(e => {
+        console.error(e);
         // Remove promise from cache if it has failed
         this.removePromise(keyId);
       });
@@ -91,7 +92,7 @@ class CacheLayer {
     }
 
     try {
-      const {data} = await promiseCache.getPromise<AxiosResponse<ArrayBuffer>>(
+      const res = await promiseCache.getPromise<AxiosResponse<ArrayBuffer>>(
         segment,
         axios.get<ArrayBuffer>(url, {
           headers: {
@@ -102,6 +103,12 @@ class CacheLayer {
         }),
         1000 * 60 * 3,
       );
+
+      if (!res) {
+        throw new Error('Cached segment or key failed to resolve!');
+      }
+
+      const {data} = res;
 
       const size = (data as any).length;
 

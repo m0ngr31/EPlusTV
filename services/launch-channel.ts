@@ -1,10 +1,11 @@
 import {db} from './database';
 import {espnHandler} from './espn-handler';
 import {foxHandler} from './fox-handler';
+import {mlbHandler} from './mlb-handler';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
-import {nbcHandler} from './nbc-handler';
 import {appStatus} from './app-status';
+import {removeChannelStatus} from './shared-helpers';
 
 const checkingStream = {};
 
@@ -23,16 +24,15 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
   });
 
   if (playingNow) {
-    const network =
-      playingNow.from === 'foxsports' ? 'foxsports' : playingNow.from === 'nbcsports' ? 'nbcsports' : 'espn';
+    const network = playingNow.from === 'foxsports' ? 'foxsports' : playingNow.from === 'mlbtv' ? 'mlbtv' : 'espn';
 
     if (network === 'foxsports') {
       try {
         [url, headers] = await foxHandler.getEventData(appStatus.channels[channelId].current);
       } catch (e) {}
-    } else if (network === 'nbcsports') {
+    } else if (network === 'mlbtv') {
       try {
-        [url, headers] = await nbcHandler.getEventData(playingNow);
+        [url, headers] = await mlbHandler.getEventData(playingNow);
       } catch (e) {}
     } else {
       try {
@@ -78,7 +78,7 @@ export const launchChannel = async (channelId: string, appUrl: string): Promise<
 };
 
 export const checkNextStream = async (channelId: string): Promise<void> => {
-  if (appStatus.channels[channelId].heartbeatTimer || checkingStream[channelId]) {
+  if (appStatus.channels[channelId].heartbeatTimer) {
     return;
   }
 
@@ -91,9 +91,8 @@ export const checkNextStream = async (channelId: string): Promise<void> => {
     const diff = entries[0].start - now;
 
     appStatus.channels[channelId].heartbeatTimer = setTimeout(() => {
-      appStatus.channels[channelId].current = null;
-      appStatus.channels[channelId].player = null;
-      appStatus.channels[channelId].heartbeatTimer = null;
+      console.log(`Channel ${channelId} is scheduled to finish. Removing playlist info`);
+      removeChannelStatus(channelId);
     }, diff);
   }
 };

@@ -13,8 +13,12 @@ export const useFoxSports = process.env.FOXSPORTS;
 
 export const useNbcSports = process.env.NBCSPORTS;
 
-export const requiresProvider =
+export const useMLBtv = process.env.MLBTV;
+
+export const requiresEspnProvider =
   useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useLonghorn || useAccNx;
 
 export const usesMultiple =
-  ((useFoxSports || useNbcSports) && (requiresProvider || useEspnPlus)) || (requiresProvider && useEspnPlus);
+  ((useFoxSports || useMLBtv) && (requiresEspnProvider || useEspnPlus)) || (requiresEspnProvider && useEspnPlus);
+
+export const useLinear = process.env.USE_LINEAR && (requiresEspnProvider || useFoxSports);

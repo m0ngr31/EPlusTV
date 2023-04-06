@@ -1,6 +1,7 @@
 import crypto from 'crypto';
-import {db} from './database';
 
+import {appStatus} from './app-status';
+import {db} from './database';
 import {IStringObj} from './shared-interfaces';
 
 const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMnumCharsOPQRSTUVWXYZ0123456789';
@@ -38,4 +39,16 @@ export const getRandomHex = (): string => crypto.randomUUID().replace(/-/g, '');
 export const cleanEntries = async (): Promise<void> => {
   const now = new Date().valueOf();
   await db.entries.remove({end: {$lt: now}}, {multi: true});
+};
+
+export const removeChannelStatus = (channelId: string | number): void => {
+  try {
+    if (appStatus.channels[channelId].heartbeatTimer) {
+      clearTimeout(appStatus.channels[channelId].heartbeatTimer);
+    }
+
+    delete appStatus.channels[channelId];
+  } catch (e) {
+    console.log('Failed to delete channel info for ', channelId);
+  }
 };

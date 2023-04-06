@@ -7,7 +7,7 @@ import {usesMultiple} from './networks';
 import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {IEntry} from './shared-interfaces';
 
-const formatEntryName = entry => {
+const formatEntryName = (entry: IEntry) => {
   let entryName = entry.name;
 
   if (entry.feed) {
@@ -21,7 +21,7 @@ const formatEntryName = entry => {
   return entryName;
 };
 
-const formatCategories = categories => {
+const formatCategories = (categories: string[]) => {
   const tagList = [];
   for (const category of categories) {
     tagList.push({

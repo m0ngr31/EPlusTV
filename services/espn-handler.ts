@@ -10,10 +10,10 @@ import url from 'url';
 import moment from 'moment';
 
 import {userAgent} from './user-agent';
-import {configPath} from './init-directories';
+import {configPath} from './config';
 import {
   useEspnPlus,
-  requiresProvider,
+  requiresEspnProvider,
   useAccN,
   useAccNx,
   useEspn1,
@@ -26,19 +26,13 @@ import {
 } from './networks';
 import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {IEntry, IHeaders, IJWToken} from './shared-interfaces';
 import {db} from './database';
 
 global.WebSocket = ws;
 
 interface IAuthResources {
   [key: string]: boolean;
-}
-
-interface IJWToken {
-  exp: number;
-  iat: number;
-  [key: string]: string | number;
 }
 
 interface IEndpoint {
@@ -266,16 +260,24 @@ const parseCategories = event => {
 };
 
 const parseAirings = async events => {
+  const now = moment();
+
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
+      const end = moment(event.startDateTime).add(event.duration, 'seconds');
+
+      if (end.isBefore(now)) {
+        continue;
+      }
+
       console.log('Adding event: ', event.name);
 
       await db.entries.insert<IEntry>({
         categories: parseCategories(event),
         duration: event.duration,
-        end: moment(event.startDateTime).add(event.duration, 'seconds').valueOf(),
+        end: end.valueOf(),
         feed: event.feedName,
         from: 'espn',
         id: event.id,
@@ -304,7 +306,7 @@ class EspnHandler {
   private graphQlApiKey: string;
 
   public initialize = async () => {
-    if (!requiresProvider && !useEspnPlus) {
+    if (!requiresEspnProvider && !useEspnPlus) {
       return;
     }
 
@@ -315,7 +317,7 @@ class EspnHandler {
       await this.getAppConfig();
     }
 
-    if (requiresProvider && !isAdobeTokenValid(this.adobe_auth)) {
+    if (requiresEspnProvider && !isAdobeTokenValid(this.adobe_auth)) {
       await this.startProviderAuthFlow();
     }
 
@@ -333,7 +335,7 @@ class EspnHandler {
       await this.updatePlusTokens();
     }
 
-    if (requiresProvider && willAdobeTokenExpire(this.adobe_auth)) {
+    if (requiresEspnProvider && willAdobeTokenExpire(this.adobe_auth)) {
       console.log('Refreshing TV Provider token (ESPN)');
       await this.refreshProviderToken();
     }
@@ -343,12 +345,17 @@ class EspnHandler {
     let entries = [];
 
     try {
-      console.log('Looking for ESPN events...');
-
       if (useEspnPlus) {
+        console.log('Looking for ESPN+ events...');
+
         const liveEntries = await this.getLiveEvents();
         entries = [...entries, ...liveEntries];
       }
+
+      if (requiresEspnProvider) {
+        console.log('Looking for ESPN events');
+      }
+
       if (useEspn1) {
         const liveEntries = await this.getLiveEvents('espn1');
         entries = [...entries, ...liveEntries];

@@ -2,6 +2,7 @@ interface IChannelStatus {
   current?: string;
   player?: IManifestPlayer;
   heartbeatTimer?: NodeJS.Timer;
+  heartbeat?: Date;
 }
 
 interface IManifestPlayer {
@@ -26,6 +27,12 @@ export interface IAppStatus {
   };
 }
 
+export interface IJWToken {
+  exp: number;
+  iat: number;
+  [key: string]: string | number;
+}
+
 export interface IEntry {
   categories: string[];
   duration: number;
@@ -44,4 +51,9 @@ export interface IEntry {
 export interface IChannel {
   channel: string | number;
   endsAt: number;
+}
+
+export interface ILinearChannel {
+  channel: number;
+  name: string;
 }

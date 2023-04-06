@@ -6,7 +6,7 @@ import _ from 'lodash';
 import moment from 'moment';
 
 import {androidFoxUserAgent, userAgent} from './user-agent';
-import {configPath} from './init-directories';
+import {configPath} from './config';
 import {useFoxSports} from './networks';
 import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
@@ -106,16 +106,24 @@ const parseCategories = (event: IFoxEvent) => {
 };
 
 const parseAirings = async (events: IFoxEvent[]) => {
+  const now = moment();
+
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
+      const end = moment(event.endDate);
+
+      if (end.isBefore(now)) {
+        continue;
+      }
+
       console.log('Adding event: ', event.name);
 
       await db.entries.insert<IEntry>({
         categories: parseCategories(event),
-        duration: moment(event.endDate).diff(moment(event.startDate), 'seconds'),
-        end: new Date(event.endDate).valueOf(),
+        duration: end.diff(moment(event.startDate), 'seconds'),
+        end: end.valueOf(),
         from: 'foxsports',
         id: event.id,
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD,
@@ -211,9 +219,8 @@ class FoxHandler {
 
     console.log('Looking for FOX Sports events...');
 
-    const entries = await this.getEvents();
-
     try {
+      const entries = await this.getEvents();
       await parseAirings(entries);
     } catch (e) {
       console.error(e);

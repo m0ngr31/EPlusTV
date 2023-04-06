@@ -7,24 +7,25 @@ import {launchChannel} from './services/launch-channel';
 import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
-import {nbcHandler} from './services/nbc-handler';
-import {cleanEntries} from './services/shared-helpers';
+import {mlbHandler} from './services/mlb-handler';
+import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 
 import {version} from './package.json';
+import moment from 'moment';
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => process.exit(0);
 
-const schedule = async () => {
+const schedule = async (firstRun = true) => {
   console.log('=== Getting events ===');
   await espnHandler.getSchedule();
   await foxHandler.getSchedule();
-  await nbcHandler.getSchedule();
+  await mlbHandler.getSchedule();
   console.log('=== Done getting events ===');
   await cleanEntries();
   console.log('=== Building the schedule ===');
-  await scheduleEntries();
+  await scheduleEntries(firstRun);
   console.log('=== Done building the schedule ===');
 };
 
@@ -65,7 +66,9 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   // Channel data needs initial object
   if (!appStatus.channels[id]) {
-    appStatus.channels[id] = {};
+    appStatus.channels[id] = {
+      heartbeat: new Date(),
+    };
   }
 
   const uri = `${req.protocol}://${req.headers.host}`;
@@ -87,6 +90,8 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     notFound(req, res);
     return;
   }
+
+  appStatus.channels[id].heartbeat = new Date();
 
   res.writeHead(200, {
     'Cache-Control': 'no-cache',
@@ -115,6 +120,8 @@ app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
     return;
   }
 
+  appStatus.channels[id].heartbeat = new Date();
+
   res.writeHead(200, {
     'Cache-Control': 'no-cache',
     'Content-Type': 'application/vnd.apple.mpegurl',
@@ -137,6 +144,8 @@ app.get('/channels/:id/:part.key', async (req, res) => {
     notFound(req, res);
     return;
   }
+
+  appStatus.channels[id].heartbeat = new Date();
 
   res.writeHead(200, {
     'Cache-Control': 'no-cache',
@@ -184,8 +193,8 @@ process.on('SIGINT', shutDown);
   await foxHandler.initialize();
   await foxHandler.refreshTokens();
 
-  await nbcHandler.initialize();
-  await nbcHandler.refreshTokens();
+  await mlbHandler.initialize();
+  await mlbHandler.refreshTokens();
 
   await schedule();
 
@@ -195,12 +204,31 @@ process.on('SIGINT', shutDown);
 
 // Check for events every 4 hours and set the schedule
 setInterval(async () => {
-  await schedule();
+  await schedule(false);
 }, 1000 * 60 * 60 * 4);
 
 // Check for updated refresh tokens 30 minutes
 setInterval(async () => {
   await espnHandler.refreshTokens();
   await foxHandler.refreshTokens();
-  await nbcHandler.refreshTokens();
+  await mlbHandler.refreshTokens();
 }, 1000 * 60 * 30);
+
+// Remove idle playlists
+setInterval(() => {
+  const now = moment();
+
+  for (const key of Object.keys(appStatus.channels)) {
+    if (appStatus.channels[key] && appStatus.channels[key].heartbeat) {
+      const channelHeartbeat = moment(appStatus.channels[key].heartbeat);
+
+      if (now.diff(channelHeartbeat, 'minutes') > 5) {
+        console.log(`Channel ${key} has been idle for more than 5 minutes. Removing playlist info`);
+        removeChannelStatus(key);
+      }
+    } else {
+      console.log(`Channel ${key} was setup improperly... Removing`);
+      removeChannelStatus(key);
+    }
+  }
+}, 1000 * 60);

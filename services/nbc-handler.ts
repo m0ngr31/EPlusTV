@@ -7,7 +7,7 @@ import url from 'url';
 import moment from 'moment';
 
 import {androidNbcUserAgent, userAgent} from './user-agent';
-import {configPath} from './init-directories';
+import {configPath} from './config';
 import {useNbcSports} from './networks';
 import {createAdobeAuthHeader, IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
@@ -231,7 +231,7 @@ class NbcHandler {
     console.log('Looking for NBC Sports events...');
 
     try {
-      const entries = await nbcHandler.getEvents();
+      const entries = await this.getEvents();
       await parseAirings(entries);
     } catch (e) {
       console.error(e);

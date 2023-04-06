@@ -1,12 +1,10 @@
 {
   "name": "eplustv",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "start": "ts-node index.ts",
-    "prepare": "husky install",
-    "build": "rm -rf dist; tsc"
+    "prepare": "husky install"
   },
   "keywords": [],
   "author": "Joe Ipson <joe@ipson.me>",
