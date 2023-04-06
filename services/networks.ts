@@ -22,3 +22,5 @@ export const usesMultiple =
   ((useFoxSports || useMLBtv) && (requiresEspnProvider || useEspnPlus)) || (requiresEspnProvider && useEspnPlus);
 
 export const useLinear = process.env.USE_LINEAR && (requiresEspnProvider || useFoxSports);
+
+export const digitalNetworks = ['ESPN+', 'ESPN3', 'SEC Network +', 'ACCNX', 'FS1-DIGITAL'];

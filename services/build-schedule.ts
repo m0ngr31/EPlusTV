@@ -1,7 +1,13 @@
+import _ from 'lodash';
+
 import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {db, IDocument} from './database';
-import {useLinear} from './networks';
+import {digitalNetworks, useLinear} from './networks';
 import {IChannel, IEntry, ILinearChannel} from './shared-interfaces';
+
+const isDigitalNetwork = (network: string): boolean =>
+  _.some(digitalNetworks, n => n === network) || network.indexOf('-DIGITAL') > -1;
+const isEventOnLinear = (event: IEntry): boolean => event.from !== 'mlbtv' && !isDigitalNetwork(event.network);
 
 const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): Promise<void> => {
   const availableChannels = await db.schedule.find<IChannel>({endsAt: {$lt: entry.start}}).sort({channel: 1});
@@ -34,13 +40,31 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
     // eslint-disable-next-line object-shorthand
     await db.entries.update<IEntry>(
       {
-        $where () {
-          return this.from !== 'mlbtv' && this.network !== 'ESPN+';
+        $where() {
+          return isEventOnLinear(this);
         },
       },
       {$unset: {channel: true}},
       {multi: true},
     );
+
+    // Remove linear channels that got added accidentally
+    if (firstRun) {
+      // eslint-disable-next-line object-shorthand
+      const numRemoved = await db.linear.remove(
+        {
+          $where () {
+            return isDigitalNetwork(this.name);
+          },
+        },
+        {multi: true},
+      );
+
+      if (numRemoved > 0) {
+        needReschedule = true;
+        await db.linear.remove({}, {multi: true});
+      }
+    }
   }
 
   const unscheduledEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
@@ -49,8 +73,8 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
   const unscheduledRegularEntries = await db.entries.count({
     $and: [
       {
-        $where () {
-          return this.from === 'mlbtv' || this.network === 'ESPN+';
+        $where() {
+          return !isEventOnLinear(this);
         },
       },
       {channel: {$exists: false}},
@@ -65,7 +89,7 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
       await scheduleEntry(entry, START_CHANNEL);
     } else {
       // Normal entries
-      if (entry.from === 'mlbtv' || entry.network === 'ESPN+') {
+      if (!isEventOnLinear(entry)) {
         const linearChannelNums = await db.linear.count({});
         await scheduleEntry(entry, linearChannelNums + START_CHANNEL);
         // Linear entries
