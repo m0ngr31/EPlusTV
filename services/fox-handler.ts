@@ -91,14 +91,15 @@ const getMaxRes = _.memoize(() => {
 });
 
 const parseCategories = (event: IFoxEvent) => {
-  const categories = ['Sports', 'FOX Sports'];
+  const categories = ['FOX Sports'];
   for (const classifier of [...(event.categoryTags || []), ...(event.genres || [])]) {
     if (classifier !== null) {
       categories.push(classifier);
     }
   }
 
-  if (event.streamTypes.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
+  if (event.streamTypes?.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
+    console.log('Found 4K event: ', event);
     categories.push('4K');
   }
 
@@ -135,7 +136,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
   }
 };
 
-const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS;
+const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS?.toLowerCase() === 'true' ? true : false;
 const maxRes = getMaxRes();
 
 const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';

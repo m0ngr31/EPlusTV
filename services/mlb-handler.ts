@@ -7,7 +7,7 @@ import _ from 'lodash';
 import jwt_decode from 'jwt-decode';
 import moment from 'moment';
 
-import {mlbUserAgent, androidMlbUserAgent, userAgent} from './user-agent';
+import {okHttpUserAgent, androidMlbUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useMLBtv} from './networks';
 import {getRandomHex} from './shared-helpers';
@@ -196,7 +196,7 @@ const parseAirings = async (events: IGame[]) => {
             const entryExists = await db.entries.findOne<IEntry>({id: item.contentId});
 
             if (!entryExists) {
-              if (process.env.MLBTV_ONLY_FREE && !item.freeGame) {
+              if (process.env.MLBTV_ONLY_FREE?.toLowerCase() === 'true' ? true : false && !item.freeGame) {
                 continue;
               }
 
@@ -346,7 +346,7 @@ class MLBHandler {
 
       const {data} = await axios.get<ISchedule>(url, {
         headers: {
-          'User-Agent': mlbUserAgent,
+          'User-Agent': okHttpUserAgent,
         },
       });
 
@@ -411,7 +411,7 @@ class MLBHandler {
         {
           headers: {
             Authorization: `Bearer ${this.auth_token}`,
-            'User-Agent': mlbUserAgent,
+            'User-Agent': okHttpUserAgent,
           },
         },
       );
@@ -435,7 +435,7 @@ class MLBHandler {
     try {
       const {data} = await axios.post(`https://ids.mlb.com/oauth2/${MLB_OAUTH_ID}/v1/token`, loginBody.toString(), {
         headers: {
-          'User-Agent': mlbUserAgent,
+          'User-Agent': okHttpUserAgent,
         },
       });
 

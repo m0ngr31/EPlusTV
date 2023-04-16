@@ -250,7 +250,7 @@ const getNetworkInfo = (network?: string) => {
 
 const authorizedResources: IAuthResources = {};
 const parseCategories = event => {
-  const categories = ['Sports', 'ESPN'];
+  const categories = ['ESPN'];
   for (const classifier of [event.category, event.subcategory, event.sport, event.league]) {
     if (classifier !== null && classifier.name !== null) {
       categories.push(classifier.name);

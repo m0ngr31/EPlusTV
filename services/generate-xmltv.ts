@@ -21,22 +21,17 @@ const formatEntryName = (entry: IEntry) => {
   return entryName;
 };
 
-const formatCategories = (categories: string[]) => {
-  const tagList = [];
-  for (const category of categories) {
-    tagList.push({
-      category: [
-        {
-          _attr: {
-            lang: 'en',
-          },
+const formatCategories = (categories: string[] = []) =>
+  ['Sports', ...categories].map(category => ({
+    category: [
+      {
+        _attr: {
+          lang: 'en',
         },
-        category,
-      ],
-    });
-  }
-  return tagList;
-};
+      },
+      category,
+    ],
+  }));
 
 export const generateXml = async (): Promise<xml> => {
   const wrap: any = {

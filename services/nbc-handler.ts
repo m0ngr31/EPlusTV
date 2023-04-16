@@ -108,7 +108,7 @@ const parseUrl = (event: INbcEntry): string => {
 };
 
 const parseCategories = (event: INbcEntry) => {
-  const categories = ['Sports', 'NBC Sports', event.sportName];
+  const categories = ['NBC Sports', event.sportName];
 
   return [...new Set(categories)];
 };
