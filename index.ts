@@ -1,4 +1,5 @@
 import express from 'express';
+import moment from 'moment';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
@@ -12,7 +13,6 @@ import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 
 import {version} from './package.json';
-import moment from 'moment';
 
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => process.exit(0);

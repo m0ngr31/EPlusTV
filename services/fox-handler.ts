@@ -202,7 +202,7 @@ class FoxHandler {
       return;
     }
 
-    if (willPrelimTokenExpire(this.adobe_prelim_auth_token)) {
+    if (!this.adobe_prelim_auth_token || willPrelimTokenExpire(this.adobe_prelim_auth_token)) {
       console.log('Updating FOX Sports prelim token');
       await this.getPrelimToken();
     }
