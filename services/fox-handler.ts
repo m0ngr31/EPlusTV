@@ -99,7 +99,6 @@ const parseCategories = (event: IFoxEvent) => {
   }
 
   if (event.streamTypes?.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
-    console.log('Found 4K event: ', event);
     categories.push('4K');
   }
 
