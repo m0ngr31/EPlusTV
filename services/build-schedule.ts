@@ -33,6 +33,26 @@ const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): P
   }
 };
 
+const scheduleLinearEntries = async (): Promise<void> => {
+  const unscheduledLinearEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
+
+  for (const entry of unscheduledLinearEntries) {
+    const exisingLinearChannel = await db.linear.findOne<ILinearChannel>({name: entry.network});
+
+    if (!exisingLinearChannel) {
+      continue;
+    }
+
+    const channelNum = exisingLinearChannel.channel + START_CHANNEL;
+
+    await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: channelNum}});
+    await db.schedule.insert<IChannel>({
+      channel: channelNum,
+      endsAt: entry.end,
+    });
+  }
+};
+
 export const scheduleEntries = async (firstRun = true): Promise<void> => {
   let needReschedule = false;
 
@@ -53,7 +73,7 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
       // eslint-disable-next-line object-shorthand
       const numRemoved = await db.linear.remove(
         {
-          $where () {
+          $where() {
             return isDigitalNetwork(this.name);
           },
         },
@@ -128,30 +148,9 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
         return await scheduleEntries();
       }
 
-      const unscheduledLinearEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
-
-      for (const entry of unscheduledLinearEntries) {
-        const exisingLinearChannel = await db.linear.findOne<ILinearChannel>({name: entry.network});
-
-        if (!exisingLinearChannel) {
-          continue;
-        }
-
-        const channelNum = exisingLinearChannel.channel + START_CHANNEL;
-
-        await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: channelNum}});
-        await db.schedule.insert<IChannel>({
-          channel: channelNum,
-          endsAt: entry.end,
-        });
-      }
+      return await scheduleLinearEntries();
     } else {
-      console.log('***************************************************************************');
-      console.log('**                                                                       **');
-      console.log('** There are new events from linear channels. Please restart the service **');
-      console.log('**                       to schedule these events!                       **');
-      console.log('**                                                                       **');
-      console.log('***************************************************************************');
+      return await scheduleLinearEntries();
     }
   }
 };
