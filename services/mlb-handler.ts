@@ -196,7 +196,7 @@ const parseAirings = async (events: IGame[]) => {
             const entryExists = await db.entries.findOne<IEntry>({id: item.contentId});
 
             if (!entryExists) {
-              if (process.env.MLBTV_ONLY_FREE?.toLowerCase() === 'true' ? true : false && !item.freeGame) {
+              if (process.env.MLBTV_ONLY_FREE?.toLowerCase() === 'true' && !item.freeGame) {
                 continue;
               }
 
