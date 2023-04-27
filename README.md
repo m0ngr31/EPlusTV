@@ -11,6 +11,8 @@ This takes ESPN/ESPN+, FOX Sports, and MLB.tv programming and transforms it into
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the ESPN, FOX Sports, and MLB.tv apps currently provide.
 * The Mouse might not like it and it could be taken down at any minute. Enjoy it while it lasts. ¯\\_(ツ)_/¯
 
+If you're using the `USE_LINEAR` option, have your client pull the XMLTV file every 4 hours so it can stay current if channels change.
+
 # Using
 The server exposes 2 main endpoints:
 

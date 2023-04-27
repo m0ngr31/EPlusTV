@@ -10,7 +10,11 @@ const isDigitalNetwork = (network: string): boolean =>
 const isEventOnLinear = (event: IEntry): boolean => event.from !== 'mlbtv' && !isDigitalNetwork(event.network);
 
 const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): Promise<void> => {
-  const availableChannels = await db.schedule.find<IChannel>({endsAt: {$lt: entry.start}}).sort({channel: 1});
+  let channelNum: number;
+
+  const availableChannels = await db.schedule
+    .find<IChannel>({channel: {$gte: startChannel}, endsAt: {$lt: entry.start}})
+    .sort({channel: 1});
 
   if (!availableChannels || !availableChannels.length) {
     const channelNums = await db.schedule.count({});
@@ -19,18 +23,19 @@ const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): P
       return;
     }
 
-    const newChannelNum = channelNums + startChannel;
+    channelNum = channelNums + startChannel;
 
     await db.schedule.insert<IChannel>({
-      channel: newChannelNum,
+      channel: channelNum,
       endsAt: entry.end,
     });
-
-    await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: newChannelNum}});
   } else {
+    channelNum = +availableChannels[0].channel;
+
     await db.schedule.update<IChannel>({_id: availableChannels[0]._id}, {$set: {endsAt: entry.end}});
-    await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: availableChannels[0].channel}});
   }
+
+  await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: channelNum}});
 };
 
 const scheduleLinearEntries = async (): Promise<void> => {
@@ -44,12 +49,18 @@ const scheduleLinearEntries = async (): Promise<void> => {
     }
 
     const channelNum = exisingLinearChannel.channel + START_CHANNEL;
+    const scheduleExists = await db.schedule.findOne<IChannel>({channel: channelNum});
+
+    if (scheduleExists) {
+      await db.schedule.update<IChannel>({_id: scheduleExists._id}, {$set: {endsAt: entry.end}});
+    } else {
+      await db.schedule.insert<IChannel>({
+        channel: channelNum,
+        endsAt: entry.end,
+      });
+    }
 
     await db.entries.update<IEntry>({_id: entry._id}, {$set: {channel: channelNum}});
-    await db.schedule.insert<IChannel>({
-      channel: channelNum,
-      endsAt: entry.end,
-    });
   }
 };
 
@@ -68,8 +79,8 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
       {multi: true},
     );
 
-    // Remove linear channels that got added accidentally
     if (firstRun) {
+      // Remove linear channels that got added accidentally
       // eslint-disable-next-line object-shorthand
       const numRemoved = await db.linear.remove(
         {
@@ -83,6 +94,34 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
       if (numRemoved > 0) {
         needReschedule = true;
         await db.linear.remove({}, {multi: true});
+      }
+
+      // Check to see if some digital events creeped into the linear channels
+      const linearChannelNums = await db.linear.count({});
+      const entriesInLinear = await db.entries.count({channel: {$lt: linearChannelNums + START_CHANNEL}});
+
+      if (entriesInLinear > 0) {
+        needReschedule = true;
+      }
+
+      // Check to see if linear channel schedules got added a million times
+      if (linearChannelNums > 0) {
+        for (let a = 0; a < linearChannelNums; a++) {
+          const scheduleCount = await db.schedule.count({channel: a + START_CHANNEL});
+
+          if (scheduleCount > 1) {
+            needReschedule = true;
+          }
+        }
+      }
+    }
+  } else {
+    if (firstRun) {
+      // Check to see if we're not using linear channels anymore
+      const linearChannelNums = await db.linear.remove({}, {multi: true});
+
+      if (linearChannelNums > 0) {
+        needReschedule = true;
       }
     }
   }
@@ -130,27 +169,23 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
     }
   }
 
+  if (needReschedule) {
+    console.log('******************************************************************************');
+    console.log('**                                                                          **');
+    console.log('** Need to rebuild the schedule because the USE_LINEAR variable has changed **');
+    console.log('**                         or networks have changed                         **');
+    console.log('**                                                                          **');
+    console.log('******************************************************************************');
+    console.log('**        THIS WILL BREAK SCHEDULED RECORDINGS IN YOUR DVR SOFTWARE         **');
+    console.log('******************************************************************************');
+
+    await db.entries.update<IEntry>({}, {$unset: {channel: true}}, {multi: true});
+    await db.schedule.remove({}, {multi: true});
+
+    return await scheduleEntries();
+  }
+
   if (useLinear) {
-    if (firstRun) {
-      if (needReschedule) {
-        console.log('***************************************************************************');
-        console.log('**                                                                       **');
-        console.log('** Need to rebuild the schedule because the USE_LINEAR variable was used **');
-        console.log('**                     or networks have been changed                     **');
-        console.log('**                                                                       **');
-        console.log('***************************************************************************');
-        console.log('**       THIS WILL BREAK SCHEDULED RECORDINGS IN YOUR DVR SOFTWARE       **');
-        console.log('***************************************************************************');
-
-        await db.entries.update<IEntry>({}, {$unset: {channel: true}}, {multi: true});
-        await db.schedule.remove({}, {multi: true});
-
-        return await scheduleEntries();
-      }
-
-      return await scheduleLinearEntries();
-    } else {
-      return await scheduleLinearEntries();
-    }
+    return await scheduleLinearEntries();
   }
 };
