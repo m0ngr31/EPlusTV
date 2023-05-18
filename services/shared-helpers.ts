@@ -49,6 +49,6 @@ export const removeChannelStatus = (channelId: string | number): void => {
 
     delete appStatus.channels[channelId];
   } catch (e) {
-    console.log('Failed to delete channel info for ', channelId);
+    console.log(`Failed to delete info for channel #${channelId}`);
   }
 };

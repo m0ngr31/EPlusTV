@@ -170,14 +170,16 @@ export const scheduleEntries = async (firstRun = true): Promise<void> => {
   }
 
   if (needReschedule) {
-    console.log('******************************************************************************');
-    console.log('**                                                                          **');
-    console.log('** Need to rebuild the schedule because the USE_LINEAR variable has changed **');
-    console.log('**                         or networks have changed                         **');
-    console.log('**                                                                          **');
-    console.log('******************************************************************************');
-    console.log('**        THIS WILL BREAK SCHEDULED RECORDINGS IN YOUR DVR SOFTWARE         **');
-    console.log('******************************************************************************');
+    console.log('');
+    console.log('====================================================================');
+    console.log('===                                                              ===');
+    console.log('=== Need to rebuild the schedule because the USE_LINEAR variable ===');
+    console.log('===                   or networks have changed                   ===');
+    console.log('===                                                              ===');
+    console.log('====================================================================');
+    console.log('===  THIS WILL BREAK SCHEDULED RECORDINGS IN YOUR DVR SOFTWARE   ===');
+    console.log('====================================================================');
+    console.log('');
 
     await db.entries.update<IEntry>({}, {$unset: {channel: true}}, {multi: true});
     await db.schedule.remove({}, {multi: true});

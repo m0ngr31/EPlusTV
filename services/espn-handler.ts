@@ -700,7 +700,7 @@ class EspnHandler {
         },
       );
 
-      console.log('== TV Provider Auth ==');
+      console.log('=== TV Provider Auth ===');
       console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
       console.log('Enter code: ', data.code);
       console.log('App will continue when login has completed...');
@@ -851,7 +851,7 @@ class EspnHandler {
               }
             },
             onopen: () => {
-              console.log('== ESPN+ Auth ==');
+              console.log('=== ESPN+ Auth ===');
               console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
               console.log('Enter code: ', licensePlate.data.pairingCode);
 

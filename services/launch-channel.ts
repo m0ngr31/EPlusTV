@@ -91,7 +91,7 @@ export const checkNextStream = async (channelId: string): Promise<void> => {
     const diff = entries[0].start - now;
 
     appStatus.channels[channelId].heartbeatTimer = setTimeout(() => {
-      console.log(`Channel ${channelId} is scheduled to finish. Removing playlist info`);
+      console.log(`Channel #${channelId} is scheduled to finish. Removing playlist info.`);
       removeChannelStatus(channelId);
     }, diff);
   }

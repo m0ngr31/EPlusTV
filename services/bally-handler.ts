@@ -109,7 +109,7 @@ class BallyHandler {
         },
       );
 
-      console.log('== TV Provider Auth ==');
+      console.log('=== TV Provider Auth ===');
       console.log('Please open a browser window and go to: https://www.ballysports.com/activate');
       console.log('Enter code: ', data.code);
       console.log('App will continue when login has completed...');

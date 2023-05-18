@@ -409,7 +409,7 @@ class NbcHandler {
         },
       );
 
-      console.log('== TV Provider Auth ==');
+      console.log('=== TV Provider Auth ===');
       console.log('Please open a browser window and go to: https://www.nbcsports.com/activate');
       console.log('Enter code: ', data.code);
       console.log('Select "Android TV"');

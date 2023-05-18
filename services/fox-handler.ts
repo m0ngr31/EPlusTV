@@ -142,10 +142,10 @@ const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.4
 
 // Will prelim token expire in the next month?
 const willPrelimTokenExpire = (token: IAdobePrelimAuthToken): boolean =>
-  new Date().valueOf() + 3600 * 1000 * 24 * 30 > token.tokenExpiration;
+  new Date().valueOf() + 3600 * 1000 * 24 * 30 > (token?.tokenExpiration || 0);
 // Will auth token expire in the next day?
 const willAuthTokenExpire = (token: IAdobeAuthFox): boolean =>
-  new Date().valueOf() + 3600 * 1000 * 24 > token.tokenExpiration;
+  new Date().valueOf() + 3600 * 1000 * 24 > (token?.tokenExpiration || 0);
 
 const getEventNetwork = (event: IFoxEvent): string => {
   if (event.contentSKUResolved && event.contentSKUResolved[0]) {
@@ -230,6 +230,10 @@ class FoxHandler {
 
   public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
     try {
+      if (!this.appConfig) {
+        await this.getAppConfig();
+      }
+
       const {data} = await axios.post(
         this.appConfig.api.content.watch,
         {
@@ -280,6 +284,10 @@ class FoxHandler {
   };
 
   private getEvents = async (): Promise<IFoxEvent[]> => {
+    if (!this.appConfig) {
+      await this.getAppConfig();
+    }
+
     const events: IFoxEvent[] = [];
 
     const now = new Date();
@@ -334,6 +342,10 @@ class FoxHandler {
 
   private getEntitlements = async (): Promise<void> => {
     try {
+      if (!this.appConfig) {
+        await this.getAppConfig();
+      }
+
       const {data} = await axios.get<any>(
         `${this.appConfig.api.auth.getentitlements}?device_type=&device_id=${this.adobe_device_id}&resource=&requestor=`,
         {
@@ -359,6 +371,10 @@ class FoxHandler {
 
   private getPrelimToken = async (): Promise<void> => {
     try {
+      if (!this.appConfig) {
+        await this.getAppConfig();
+      }
+
       const {data} = await axios.post<IAdobePrelimAuthToken>(
         this.appConfig.api.profile.login,
         {
@@ -383,6 +399,10 @@ class FoxHandler {
 
   private startProviderAuthFlow = async (): Promise<void> => {
     try {
+      if (!this.appConfig) {
+        await this.getAppConfig();
+      }
+
       const {data} = await axios.post(
         this.appConfig.api.auth.accountRegCode,
         {
@@ -399,7 +419,7 @@ class FoxHandler {
         },
       );
 
-      console.log('== TV Provider Auth ==');
+      console.log('=== TV Provider Auth ===');
       console.log('Please open a browser window and go to: https://go.foxsports.com');
       console.log('Enter code: ', data.code);
       console.log('App will continue when login has completed...');
@@ -439,6 +459,10 @@ class FoxHandler {
 
   private authenticateRegCode = async (showAuthnError = true): Promise<boolean> => {
     try {
+      if (!this.appConfig) {
+        await this.getAppConfig();
+      }
+
       const {data} = await axios.get(`${this.appConfig.api.auth.checkadobeauthn}?device_id=${this.adobe_device_id}`, {
         headers: {
           'User-Agent': androidFoxUserAgent,

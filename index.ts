@@ -223,11 +223,11 @@ setInterval(() => {
       const channelHeartbeat = moment(appStatus.channels[key].heartbeat);
 
       if (now.diff(channelHeartbeat, 'minutes') > 5) {
-        console.log(`Channel ${key} has been idle for more than 5 minutes. Removing playlist info`);
+        console.log(`Channel #${key} has been idle for more than 5 minutes. Removing playlist info.`);
         removeChannelStatus(key);
       }
     } else {
-      console.log(`Channel ${key} was setup improperly... Removing`);
+      console.log(`Channel #${key} was setup improperly... Removing.`);
       removeChannelStatus(key);
     }
   }
