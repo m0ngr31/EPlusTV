@@ -33,7 +33,8 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | PROXY_SEGMENTS | Proxy keyed `*.ts` files. | No | False |
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No ||
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No ||
-| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, `1080p`, `720p`, and `540p` (Some providers don't offer 4K or 1080p and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR |
+| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, `1080p`, `720p`, and `540p` (Some providers don't offer 4K or 1080p and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR ||
+| PORT | Port the API will be served on. You can set this if it conflicts with another service in your environment. | No | 8000 |
 
 ### Available channel options
 
