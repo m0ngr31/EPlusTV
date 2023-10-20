@@ -18,6 +18,10 @@ const formatEntryName = (entry: IEntry) => {
     entryName = `${entryName} - ${entry.network}`;
   }
 
+  if (entry.sport) {
+    entryName = `${entry.sport} - ${entryName}`;
+  }
+
   return entryName;
 };
 

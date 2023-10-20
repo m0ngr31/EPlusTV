@@ -46,6 +46,7 @@ export interface IEntry {
   start: number;
   url?: string;
   channel?: string | number;
+  sport?: string;
 }
 
 export interface IChannel {

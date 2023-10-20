@@ -1,6 +1,6 @@
 {
   "name": "eplustv",
-  "version": "2.0.17",
+  "version": "2.0.18",
   "description": "",
   "scripts": {
     "start": "ts-node index.ts",

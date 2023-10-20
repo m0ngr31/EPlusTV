@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.0.17**
+Current version: **2.0.18**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org), [Channels](https://getchannels.com), or [xTeVe](https://github.com/xteve-project/xTeVe).
@@ -31,9 +31,8 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is >= 150 if you are using ESPN+. | No | 150 |
 | USE_LINEAR | If you are using linear channels like ESPN, FS1, ect., and want those events on their own dedicated channels. | No | False |
 | PROXY_SEGMENTS | Proxy keyed `*.ts` files. | No | False |
-| PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No ||
-| PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No ||
-| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, `1080p`, `720p`, and `540p` (Some providers don't offer 4K or 1080p and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR ||
+| PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No |
+| PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No |
 | PORT | Port the API will be served on. You can set this if it conflicts with another service in your environment. | No | 8000 |
 
 ### Available channel options
@@ -59,6 +58,7 @@ Use if you would like to login with a TV provider and access various FOX Sports 
 |---|---|---|
 | FOXSPORTS | Set if your TV provider supports it | False |
 | FOXSPORTS_ALLOW_REPLAYS | If you would like to schedule events that aren't live | False |
+| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, `1080p`, `720p`, and `540p` (Some events don't offer 4K or 1080p and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR |
 
 #### MLB.tv
 Use if you would like to login with your MLB.tv account

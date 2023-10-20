@@ -112,7 +112,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
-      const end = moment(event.endDate);
+      const end = moment(event.endDate).add(1, 'hour');
 
       if (end.isBefore(now)) {
         continue;

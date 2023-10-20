@@ -200,7 +200,7 @@ const parseAirings = async (events: IGame[]) => {
                 continue;
               }
 
-              const end = moment(event.gameDate).add(4, 'hours');
+              const end = moment(event.gameDate).add(5, 'hours');
 
               if (end.isBefore(now)) {
                 continue;
