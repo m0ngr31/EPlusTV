@@ -15,7 +15,7 @@ RUN \
   cd /app && \
   npm ci
 
-EXPOSE ${PORT}
+EXPOSE ${PORT:-8080}
 
 RUN chmod +x entrypoint.sh
 
