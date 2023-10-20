@@ -11,6 +11,7 @@ import {foxHandler} from './services/fox-handler';
 import {mlbHandler} from './services/mlb-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
+import {SERVER_PORT} from './services/port';
 
 import {version} from './package.json';
 
@@ -199,7 +200,7 @@ process.on('SIGINT', shutDown);
   await schedule();
 
   console.log('=== Starting Server ===');
-  app.listen(8000, () => console.log('Server started on port 8000'));
+  app.listen(SERVER_PORT, () => console.log(`Server started on port ${SERVER_PORT}`));
 })();
 
 // Check for events every 4 hours and set the schedule
