@@ -266,6 +266,7 @@ const parseAirings = async events => {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
+      const start = moment(event.startDateTime);
       const end = moment(event.startDateTime).add(event.duration, 'seconds').add(1, 'hour');
 
       if (end.isBefore(now)) {
@@ -276,7 +277,7 @@ const parseAirings = async events => {
 
       await db.entries.insert<IEntry>({
         categories: parseCategories(event),
-        duration: event.duration,
+        duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         feed: event.feedName,
         from: 'espn',
@@ -285,7 +286,7 @@ const parseAirings = async events => {
         name: event.name,
         network: event.network?.name || 'ESPN+',
         sport: event.subcategory?.name,
-        start: new Date(event.startDateTime).valueOf(),
+        start: start.valueOf(),
         url: event.source?.url,
       });
     }

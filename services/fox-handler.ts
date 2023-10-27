@@ -112,6 +112,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
+      const start = moment(event.startDate);
       const end = moment(event.endDate).add(1, 'hour');
 
       if (end.isBefore(now)) {
@@ -122,14 +123,14 @@ const parseAirings = async (events: IFoxEvent[]) => {
 
       await db.entries.insert<IEntry>({
         categories: parseCategories(event),
-        duration: end.diff(moment(event.startDate), 'seconds'),
+        duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         from: 'foxsports',
         id: event.id,
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD,
         name: event.name,
         network: event.callSign,
-        start: new Date(event.startDate).valueOf(),
+        start: start.valueOf(),
       });
     }
   }

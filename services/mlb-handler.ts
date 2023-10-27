@@ -200,6 +200,7 @@ const parseAirings = async (events: IGame[]) => {
                 continue;
               }
 
+              const start = moment(event.gameDate);
               const end = moment(event.gameDate).add(5, 'hours');
 
               if (end.isBefore(now)) {
@@ -212,14 +213,15 @@ const parseAirings = async (events: IGame[]) => {
 
               await db.entries.insert<IEntry>({
                 categories: ['Baseball', 'MLB', event.teams.home.team.name, event.teams.away.team.name],
-                duration: 60 * 60 * 5,
+                duration: end.diff(start, 'seconds'),
                 end: end.valueOf(),
                 from: 'mlbtv',
                 id: item.contentId,
                 image: generateThumb(event.teams.home, event.teams.away),
                 name: gameName,
                 network: item.callLetters,
-                start: new Date(event.gameDate).valueOf(),
+                sport: 'MLB',
+                start: start.valueOf(),
               });
             }
           }
