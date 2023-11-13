@@ -23,6 +23,7 @@ import {
   useLonghorn,
   useSec,
   useSecPlus,
+  useEspnPpv,
 } from './networks';
 import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
@@ -243,6 +244,9 @@ const getNetworkInfo = (network?: string) => {
   } else if (network === 'longhorn') {
     networks = '["5c1fd0f3-1022-3bc4-8af9-f785847baaf9"]';
     packages = 'null';
+  } else if (network === 'espn_ppv') {
+    networks = '["d41c5aaf-e100-4726-841f-1e453af347f9"]';
+    packages = 'null';
   }
 
   return [networks, packages];
@@ -394,6 +398,10 @@ class EspnHandler {
         const liveEntries = await this.getLiveEvents('longhorn');
         entries = [...entries, ...liveEntries];
       }
+      if (useEspnPpv) {
+        const liveEntries = await this.getLiveEvents('espn_ppv');
+        entries = [...entries, ...liveEntries];
+      }
     } catch (e) {
       console.log('Could not parse ESPN events');
     }
@@ -442,6 +450,10 @@ class EspnHandler {
         }
         if (useLonghorn) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'longhorn');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useEspnPpv) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn_ppv');
           entries = [...entries, ...upcomingEntries];
         }
       } catch (e) {

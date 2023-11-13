@@ -7,6 +7,7 @@ export const useSecPlus = process.env.SECPLUS?.toLowerCase() === 'true' ? true :
 export const useAccN = process.env.ACCN?.toLowerCase() === 'true' ? true : false;
 export const useAccNx = process.env.ACCNX?.toLowerCase() === 'true' ? true : false;
 export const useLonghorn = process.env.LONGHORN?.toLowerCase() === 'true' ? true : false;
+export const useEspnPpv = process.env.ESPN_PPV?.toLowerCase() === 'true' ? true : false;
 export const useEspnPlus = process.env.ESPNPLUS?.toLowerCase() === 'false' ? false : true;
 
 export const useFoxSports = process.env.FOXSPORTS?.toLowerCase() === 'true' ? true : false;

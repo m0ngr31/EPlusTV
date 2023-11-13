@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.0.19**
+Current version: **2.0.20**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org), [Channels](https://getchannels.com), or [xTeVe](https://github.com/xteve-project/xTeVe).
@@ -51,6 +51,7 @@ Use if you would like to login with a TV provider or ESPN+ and access various ES
 | ACCN | ACCN: Set if your TV provider supports it | False |
 | ACCNX | ACCNX: Set if your TV provider supports it | False |
 | LONGHORN | Longhorn Network: Set if your TV provider supports it | False |
+| ESPN_PPV | PPV: Set if you have purchased PPV events | False |
 
 #### FOX Sports
 Use if you would like to login with a TV provider and access various FOX Sports events
