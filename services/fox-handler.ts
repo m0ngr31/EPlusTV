@@ -7,7 +7,7 @@ import moment from 'moment';
 
 import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
-import {useFoxSports} from './networks';
+import {useFoxOnly4k, useFoxSports} from './networks';
 import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 import {IEntry, IHeaders} from './shared-interfaces';
@@ -119,10 +119,16 @@ const parseAirings = async (events: IFoxEvent[]) => {
         continue;
       }
 
+      const categories = parseCategories(event);
+
+      if (useFoxOnly4k && !_.some(categories, category => category === '4K')) {
+        continue;
+      }
+
       console.log('Adding event: ', event.name);
 
       await db.entries.insert<IEntry>({
-        categories: parseCategories(event),
+        categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         from: 'foxsports',

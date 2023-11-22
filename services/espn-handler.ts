@@ -24,6 +24,7 @@ import {
   useSec,
   useSecPlus,
   useEspnPpv,
+  useEspnews,
 } from './networks';
 import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
@@ -244,6 +245,9 @@ const getNetworkInfo = (network?: string) => {
   } else if (network === 'longhorn') {
     networks = '["5c1fd0f3-1022-3bc4-8af9-f785847baaf9"]';
     packages = 'null';
+  } else if (network === 'espnews') {
+    networks = '["1e760a1c-c204-339d-8317-8e615c9cc0e0"]';
+    packages = 'null';
   } else if (network === 'espn_ppv') {
     networks = '["d41c5aaf-e100-4726-841f-1e453af347f9"]';
     packages = 'null';
@@ -260,6 +264,7 @@ const parseCategories = event => {
       categories.push(classifier.name);
     }
   }
+
   return [...new Set(categories)];
 };
 
@@ -398,6 +403,10 @@ class EspnHandler {
         const liveEntries = await this.getLiveEvents('longhorn');
         entries = [...entries, ...liveEntries];
       }
+      if (useEspnews) {
+        const liveEntries = await this.getLiveEvents('espnews');
+        entries = [...entries, ...liveEntries];
+      }
       if (useEspnPpv) {
         const liveEntries = await this.getLiveEvents('espn_ppv');
         entries = [...entries, ...liveEntries];
@@ -450,6 +459,10 @@ class EspnHandler {
         }
         if (useLonghorn) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'longhorn');
+          entries = [...entries, ...upcomingEntries];
+        }
+        if (useEspnews) {
+          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espnews');
           entries = [...entries, ...upcomingEntries];
         }
         if (useEspnPpv) {

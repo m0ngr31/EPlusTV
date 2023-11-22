@@ -7,10 +7,12 @@ export const useSecPlus = process.env.SECPLUS?.toLowerCase() === 'true' ? true :
 export const useAccN = process.env.ACCN?.toLowerCase() === 'true' ? true : false;
 export const useAccNx = process.env.ACCNX?.toLowerCase() === 'true' ? true : false;
 export const useLonghorn = process.env.LONGHORN?.toLowerCase() === 'true' ? true : false;
+export const useEspnews = process.env.ESPNEWS?.toLowerCase() === 'true' ? true : false;
 export const useEspnPpv = process.env.ESPN_PPV?.toLowerCase() === 'true' ? true : false;
 export const useEspnPlus = process.env.ESPNPLUS?.toLowerCase() === 'false' ? false : true;
 
 export const useFoxSports = process.env.FOXSPORTS?.toLowerCase() === 'true' ? true : false;
+export const useFoxOnly4k = process.env.FOX_ONLY_4K?.toLowerCase() === 'true' ? true : false;
 
 export const useNbcSports = process.env.NBCSPORTS?.toLowerCase() === 'true' ? true : false;
 
@@ -21,7 +23,16 @@ export const useBallyPlus = process.env.BALLYPLUS?.toLowerCase() === 'true' ? tr
 export const useBallySports = useBallyNetwork || useBallyPlus;
 
 export const requiresEspnProvider =
-  useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useLonghorn || useAccNx;
+  useEspn1 ||
+  useEspn2 ||
+  useEspn3 ||
+  useEspnU ||
+  useSec ||
+  useSecPlus ||
+  useAccN ||
+  useLonghorn ||
+  useAccNx ||
+  useEspnews;
 
 export const usesMultiple =
   ((useFoxSports || useMLBtv || useBallySports) && (requiresEspnProvider || useEspnPlus)) ||
