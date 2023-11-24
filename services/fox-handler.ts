@@ -241,29 +241,11 @@ class FoxHandler {
         await this.getAppConfig();
       }
 
-      const {data} = await axios.post(
-        this.appConfig.api.content.watch,
-        {
-          deviceHeight: 2160,
-          deviceWidth: 3840,
-          maxRes,
-          os: 'Android',
-          osv: '11.0.0',
-          streamId: eventId,
-          streamType: 'live',
-        },
-        {
-          headers: {
-            'User-Agent': androidFoxUserAgent,
-            authorization: this.adobe_auth.accessToken,
-            'x-api-key': this.appConfig.api.key,
-          },
-        },
-      );
+      const data = await this.getSteamData(eventId);
 
       // console.log('CDN: ', data.trackingData.properties.CDN);
 
-      if (!data.url) {
+      if (!data || !data?.url) {
         throw new Error('Could not get stream data. Event might be upcoming, ended, or in blackout...');
       }
 
@@ -288,6 +270,57 @@ class FoxHandler {
       console.error(e);
       console.log('Could not get stream information!');
     }
+  };
+
+  private getSteamData = async (eventId: string): Promise<any> => {
+    const streamOrder = ['UHD/HDR', 'UHD/SDR', '720p'];
+
+    let resIndex = streamOrder.findIndex(i => i === maxRes);
+
+    if (resIndex < 0) {
+      resIndex = 1;
+    }
+
+    if (!this.appConfig) {
+      await this.getAppConfig();
+    }
+
+    let watchData;
+
+    for (let a = resIndex; a < streamOrder.length; a++) {
+      try {
+        const {data} = await axios.post(
+          this.appConfig.api.content.watch,
+          {
+            deviceHeight: 2160,
+            deviceWidth: 3840,
+            maxRes: streamOrder[resIndex],
+            os: 'Android',
+            osv: '11.0.0',
+            streamId: eventId,
+            streamType: 'live',
+          },
+          {
+            headers: {
+              'User-Agent': androidFoxUserAgent,
+              authorization: this.adobe_auth.accessToken,
+              'x-api-key': this.appConfig.api.key,
+            },
+          },
+        );
+
+        watchData = data;
+        break;
+      } catch (e) {
+        console.log(
+          `Could not get stream data for ${streamOrder[resIndex]}.${
+            streamOrder[resIndex + 1] && `Trying to get ${streamOrder[resIndex + 1]} next...`
+          }`,
+        );
+      }
+    }
+
+    return watchData;
   };
 
   private getEvents = async (): Promise<IFoxEvent[]> => {

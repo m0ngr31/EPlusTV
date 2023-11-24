@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.0.21**
+Current version: **2.0.22**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org), [Channels](https://getchannels.com), or [xTeVe](https://github.com/xteve-project/xTeVe).
@@ -60,7 +60,7 @@ Use if you would like to login with a TV provider and access various FOX Sports 
 |---|---|---|---|
 | FOXSPORTS | Set if your TV provider supports it | No | False |
 | FOXSPORTS_ALLOW_REPLAYS | If you would like to schedule events that aren't live | No | False |
-| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, `1080p`, `720p`, and `540p` (Some events don't offer 4K or 1080p and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR |
+| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, and `720p` (Some events don't offer 4K and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR |
 | FOX_ONLY_4K | Only grab 4K events | No | False |
 
 #### MLB.tv
