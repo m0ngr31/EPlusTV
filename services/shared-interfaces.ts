@@ -14,7 +14,7 @@ interface IManifestPlayer {
 }
 
 export interface IHeaders {
-  [key: string]: string | number;
+  [key: string]: string | number | string[];
 }
 
 export interface IStringObj {
@@ -52,9 +52,4 @@ export interface IEntry {
 export interface IChannel {
   channel: string | number;
   endsAt: number;
-}
-
-export interface ILinearChannel {
-  channel: number;
-  name: string;
 }

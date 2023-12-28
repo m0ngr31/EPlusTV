@@ -94,12 +94,28 @@ export class PlaylistHandler {
 
   public async parseManifest(manifestUrl: string, headers: IHeaders): Promise<void> {
     try {
-      const {data: manifest, request} = await axios.get<string>(manifestUrl, {
+      const {
+        data: manifest,
+        request,
+        headers: resHeaders,
+      } = await axios.get<string>(manifestUrl, {
         headers: {
           'User-Agent': userAgent,
           ...headers,
         },
       });
+
+      if (resHeaders['set-cookie']) {
+        if (this.headers.Cookie) {
+          if (_.isArray(this.headers.Cookie)) {
+            this.headers.Cookie = [...this.headers.Cookie, ...resHeaders['set-cookie']];
+          } else {
+            this.headers.Cookie = [`${this.headers.Cookie}`, ...resHeaders['set-cookie']];
+          }
+        } else {
+          this.headers.Cookie = resHeaders['set-cookie'];
+        }
+      }
 
       const realManifestUrl = request.res.responseUrl;
       const urlParams = this.network === 'foxsports' ? new URL(realManifestUrl).search : '';

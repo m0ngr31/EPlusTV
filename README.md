@@ -2,10 +2,10 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.0.23**
+Current version: **2.1.0**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org), [Channels](https://getchannels.com), or [xTeVe](https://github.com/xteve-project/xTeVe).
+This takes ESPN/ESPN+, FOX Sports, Paramount+, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the ESPN, FOX Sports, and MLB.tv apps currently provide.
@@ -29,7 +29,6 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 |---|---|---|---|
 | START_CHANNEL | What the first channel number should be. | No | 1 |
 | NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is >= 150 if you are using ESPN+. | No | 150 |
-| USE_LINEAR | If you are using linear channels like ESPN, FS1, ect., and want those events on their own dedicated channels. | No | False |
 | PROXY_SEGMENTS | Proxy keyed `*.ts` files. | No | False |
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No | - |
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No | - |
@@ -41,7 +40,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 Use if you would like to login with a TV provider or ESPN+ and access various ESPN events
 | Environment Variable | Description | Default |
 |---|---|---|
-| ESPNPLUS | Set to false if you only want events that come from your TV provider | True |
+| ESPNPLUS | Set to false if you don't want to use ESPN+ | True |
 | ESPN | ESPN: Set if your TV provider supports it | False |
 | ESPN2 | ESPN2: Set if your TV provider supports it | False |
 | ESPN3 | ESPN2: Set if your TV provider supports it | False |
@@ -62,6 +61,12 @@ Use if you would like to login with a TV provider and access various FOX Sports 
 | FOXSPORTS_ALLOW_REPLAYS | If you would like to schedule events that aren't live | No | False |
 | MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, and `720p` (Some events don't offer 4K and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR |
 | FOX_ONLY_4K | Only grab 4K events | No | False |
+
+#### Paramount+
+Use if you would like to login with Paramount+
+| Environment Variable | Description | Required? | Default |
+|---|---|---|---|
+| PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
 
 #### MLB.tv
 Use if you would like to login with your MLB.tv account

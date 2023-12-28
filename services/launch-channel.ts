@@ -2,6 +2,7 @@ import {db} from './database';
 import {espnHandler} from './espn-handler';
 import {foxHandler} from './fox-handler';
 import {mlbHandler} from './mlb-handler';
+import {paramountHandler} from './paramount-handler';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
@@ -24,7 +25,14 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
   });
 
   if (playingNow) {
-    const network = playingNow.from === 'foxsports' ? 'foxsports' : playingNow.from === 'mlbtv' ? 'mlbtv' : 'espn';
+    const network =
+      playingNow.from === 'foxsports'
+        ? 'foxsports'
+        : playingNow.from === 'mlbtv'
+        ? 'mlbtv'
+        : playingNow.from === 'paramount+'
+        ? 'paramount+'
+        : 'espn';
 
     if (network === 'foxsports') {
       try {
@@ -33,6 +41,10 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
     } else if (network === 'mlbtv') {
       try {
         [url, headers] = await mlbHandler.getEventData(playingNow);
+      } catch (e) {}
+    } else if (network === 'paramount+') {
+      try {
+        [url, headers] = await paramountHandler.getEventData(appStatus.channels[channelId].current);
       } catch (e) {}
     } else {
       try {
