@@ -291,11 +291,11 @@ class MLBHandler {
     }
   };
 
-  public getEventData = async (event: IEntry): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
     try {
       const entitlement = await this.mediaEntitlement();
       const accessToken = await this.accessToken(entitlement);
-      let playbackUrl = await this.playbackUrl(event.id, accessToken);
+      let playbackUrl = await this.playbackUrl(eventId, accessToken);
 
       playbackUrl = playbackUrl.replace('{scenario}', 'browser~csai');
 
@@ -335,7 +335,7 @@ class MLBHandler {
 
     try {
       const startDate = moment();
-      const endDate = moment().add(2, 'days');
+      const endDate = moment().add(2, 'days').endOf('day');
 
       const url = [
         'https://statsapi.mlb.com',

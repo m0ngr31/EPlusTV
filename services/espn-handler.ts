@@ -33,6 +33,10 @@ import {db} from './database';
 
 global.WebSocket = ws;
 
+const espnPlusTokens = path.join(configPath, 'espn_plus_tokens.json');
+const espnLinearTokens = path.join(configPath, 'espn_linear_tokens.json');
+const oldTokenFile = path.join(configPath, 'tokens.json');
+
 interface IAuthResources {
   [key: string]: boolean;
 }
@@ -1028,13 +1032,15 @@ class EspnHandler {
   };
 
   private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'tokens.json'), _.omit(this, 'appConfig', 'graphQlApiKey'), {
+    fsExtra.writeJSONSync(espnPlusTokens, _.omit(this, 'appConfig', 'graphQlApiKey', 'adobe_auth', 'adobe_device_id'), {
       spaces: 2,
     });
+
+    fsExtra.writeJSONSync(espnLinearTokens, _.pick(this, 'adobe_auth', 'adobe_device_id'), {spaces: 2});
   };
 
   private load = () => {
-    if (fs.existsSync(path.join(configPath, 'tokens.json'))) {
+    if (fs.existsSync(oldTokenFile)) {
       const {
         tokens,
         device_grant,
@@ -1044,7 +1050,25 @@ class EspnHandler {
         account_token,
         adobe_device_id,
         adobe_auth,
-      } = fsExtra.readJSONSync(path.join(configPath, 'tokens.json'));
+      } = fsExtra.readJSONSync(oldTokenFile);
+
+      this.tokens = tokens;
+      this.device_grant = device_grant;
+      this.device_token_exchange = device_token_exchange;
+      this.device_refresh_token = device_refresh_token;
+      this.id_token_grant = id_token_grant;
+      this.account_token = account_token;
+      this.adobe_device_id = adobe_device_id;
+      this.adobe_auth = adobe_auth;
+
+      fs.rmSync(oldTokenFile);
+
+      this.save();
+    } else {
+      const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
+        fsExtra.readJSONSync(espnPlusTokens);
+
+      const {adobe_device_id, adobe_auth} = fsExtra.readJSONSync(espnLinearTokens);
 
       this.tokens = tokens;
       this.device_grant = device_grant;

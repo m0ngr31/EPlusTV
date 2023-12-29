@@ -35,6 +35,7 @@ export const generateRandom = (numChars = 8, namespace?: string): string => {
 };
 
 export const getRandomHex = (): string => crypto.randomUUID().replace(/-/g, '');
+export const getRandomUUID = (): string => crypto.randomUUID();
 
 export const cleanEntries = async (): Promise<void> => {
   const now = new Date().valueOf();

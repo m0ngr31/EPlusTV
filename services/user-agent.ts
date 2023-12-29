@@ -10,9 +10,7 @@ const userAgents = [
 export const androidFoxUserAgent =
   'foxsports-androidtv/3.42.1 (Linux;Android 9.0.0;SHIELD Android TV) ExoPlayerLib/2.12.1';
 
-export const androidNbcUserAgent = 'Adobe Primetime/1.4 Dalvik/2.1.0 (Linux; U; Android 6.0.1; Hub Build/MHC19J)';
-
-export const okHttpUserAgent = 'okhttp/3.12.1';
+export const okHttpUserAgent = 'okhttp/4.11.0';
 
 export const androidMlbUserAgent = 'BAMSDK/v4.3.0 (mlbaseball-7993996e 8.1.0; v2.0/v4.3.0; android; tv)';
 

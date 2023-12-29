@@ -332,7 +332,7 @@ class FoxHandler {
 
     const now = new Date();
 
-    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').toISOString()}`;
+    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').endOf('day').toISOString()}`;
 
     try {
       const {data} = await axios.get<IFoxEventsData>(

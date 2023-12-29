@@ -9,6 +9,8 @@ import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
 import {mlbHandler} from './services/mlb-handler';
+import {paramountHandler} from './services/paramount-handler';
+import {msgHandler} from './services/msg-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
@@ -18,15 +20,18 @@ import {version} from './package.json';
 const notFound = (_req, res) => res.status(404).send('404 not found');
 const shutDown = () => process.exit(0);
 
-const schedule = async (firstRun = true) => {
+const schedule = async () => {
   console.log('=== Getting events ===');
   await espnHandler.getSchedule();
   await foxHandler.getSchedule();
   await mlbHandler.getSchedule();
+  await paramountHandler.getSchedule();
+  await msgHandler.getSchedule();
+
   console.log('=== Done getting events ===');
   await cleanEntries();
   console.log('=== Building the schedule ===');
-  await scheduleEntries(firstRun);
+  await scheduleEntries();
   console.log('=== Done building the schedule ===');
 };
 
@@ -197,6 +202,12 @@ process.on('SIGINT', shutDown);
   await mlbHandler.initialize();
   await mlbHandler.refreshTokens();
 
+  await paramountHandler.initialize();
+  await paramountHandler.refreshTokens();
+
+  await msgHandler.initialize();
+  await msgHandler.refreshTokens();
+
   await schedule();
 
   console.log('=== Starting Server ===');
@@ -205,7 +216,7 @@ process.on('SIGINT', shutDown);
 
 // Check for events every 4 hours and set the schedule
 setInterval(async () => {
-  await schedule(false);
+  await schedule();
 }, 1000 * 60 * 60 * 4);
 
 // Check for updated refresh tokens 30 minutes
@@ -213,6 +224,8 @@ setInterval(async () => {
   await espnHandler.refreshTokens();
   await foxHandler.refreshTokens();
   await mlbHandler.refreshTokens();
+  await paramountHandler.refreshTokens();
+  await msgHandler.refreshTokens();
 }, 1000 * 60 * 30);
 
 // Remove idle playlists

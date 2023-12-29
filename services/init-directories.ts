@@ -1,23 +1,18 @@
-import path from 'path';
 import fs from 'fs';
 
 import {configPath} from './config';
-import {initializeEntries, initializeSchedule, initializeLinear} from './database';
+import {entriesDb, initializeEntries, initializeSchedule, scheduleDb} from './database';
 
 export const initDirectories = (): void => {
   if (!fs.existsSync(configPath)) {
     fs.mkdirSync(configPath);
   }
 
-  if (!fs.existsSync(path.join(configPath, 'entries.db'))) {
+  if (!fs.existsSync(entriesDb)) {
     initializeEntries();
   }
 
-  if (!fs.existsSync(path.join(configPath, 'schedule.db'))) {
+  if (!fs.existsSync(scheduleDb)) {
     initializeSchedule();
-  }
-
-  if (!fs.existsSync(path.join(configPath, 'linear.db'))) {
-    initializeLinear();
   }
 };
