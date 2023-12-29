@@ -65,7 +65,7 @@ export const scheduleEntries = async (): Promise<void> => {
   } else {
     const unscheduledEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
 
-    unscheduledEntries && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
+    unscheduledEntries.length > 0 && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
 
     for (const entry of unscheduledEntries) {
       await scheduleEntry(entry, START_CHANNEL);
