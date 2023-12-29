@@ -123,6 +123,8 @@ interface IChannel {
   local: boolean;
 }
 
+const ALLOWED_LOCAL_SPORTS = ['College Basketball', 'College Football', 'NFL Football'];
+
 const parseAirings = async (events: IParamountEvent[]) => {
   const now = moment();
   const inTwoDays = moment().add(2, 'days').endOf('day');
@@ -260,18 +262,20 @@ class ParamountHandler {
           );
 
           data.listing.forEach(e => {
-            const transformedEvent: IParamountEvent = {
-              channelName: e.title,
-              endTimestamp: e.endTimestamp,
-              filePathThumb: e.filePathThumb,
-              startTimestamp: e.startTimestamp,
-              title: e.episodeTitle || e.title,
-              videoContentId: e.videoContentId.startsWith('_')
-                ? `${e.endTimestamp}----${e.videoContentId}`
-                : e.videoContentId,
-            };
+            if (ALLOWED_LOCAL_SPORTS.includes(e.title)) {
+              const transformedEvent: IParamountEvent = {
+                channelName: e.title,
+                endTimestamp: e.endTimestamp,
+                filePathThumb: e.filePathThumb,
+                startTimestamp: e.startTimestamp,
+                title: e.episodeTitle || e.title,
+                videoContentId: e.videoContentId.startsWith('_')
+                  ? `${e.endTimestamp}----${e.videoContentId}`
+                  : e.videoContentId,
+              };
 
-            events.push(transformedEvent);
+              events.push(transformedEvent);
+            }
           });
         } catch (e) {
           console.error(e);

@@ -5,7 +5,7 @@
 Current version: **2.1.0**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, Paramount+, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the ESPN, FOX Sports, and MLB.tv apps currently provide.
@@ -76,6 +76,14 @@ Use if you would like to login with your MLB.tv account
 | MLBTV_USER | MLB.tv Username | False |
 | MLBTV_PASS | MLB.tv Password | False |
 | MLBTV_ONLY_FREE | Only schedule free games | False |
+
+#### MSG+
+Use if you would like to login with your MSG+ account
+| Environment Variable | Description | Default |
+|---|---|---|
+| MSGPLUS | Set if you would like to use MSG+ | False |
+| MSGPLUS_USER | MSG+ Username | False |
+| MSGPLUS_PASS | MSG+ Password | False |
 
 ## Volumes
 | Volume Name | Description | Required? |

@@ -18,6 +18,8 @@ export const useMLBtv = process.env.MLBTV?.toLowerCase() === 'true' ? true : fal
 
 export const useParamountPlus = process.env.PARAMOUNTPLUS?.toLowerCase() === 'true' ? true : false;
 
+export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;
+
 export const requiresEspnProvider =
   useEspn1 ||
   useEspn2 ||

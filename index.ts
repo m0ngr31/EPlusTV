@@ -10,6 +10,7 @@ import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
 import {mlbHandler} from './services/mlb-handler';
 import {paramountHandler} from './services/paramount-handler';
+import {msgHandler} from './services/msg-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
@@ -25,6 +26,7 @@ const schedule = async () => {
   await foxHandler.getSchedule();
   await mlbHandler.getSchedule();
   await paramountHandler.getSchedule();
+  await msgHandler.getSchedule();
 
   console.log('=== Done getting events ===');
   await cleanEntries();
@@ -203,6 +205,9 @@ process.on('SIGINT', shutDown);
   await paramountHandler.initialize();
   await paramountHandler.refreshTokens();
 
+  await msgHandler.initialize();
+  await msgHandler.refreshTokens();
+
   await schedule();
 
   console.log('=== Starting Server ===');
@@ -220,6 +225,7 @@ setInterval(async () => {
   await foxHandler.refreshTokens();
   await mlbHandler.refreshTokens();
   await paramountHandler.refreshTokens();
+  await msgHandler.refreshTokens();
 }, 1000 * 60 * 30);
 
 // Remove idle playlists

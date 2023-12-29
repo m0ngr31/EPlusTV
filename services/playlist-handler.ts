@@ -35,9 +35,17 @@ const PROXY_SEGMENTS =
   process.env.PROXY_SEGMENTS && process.env.PROXY_SEGMENTS.toLowerCase() !== 'false' ? true : false;
 
 const reTarget = /#EXT-X-TARGETDURATION:([0-9]+)/;
-// const reAudioTrack = /#EXT-X-MEDIA:TYPE=AUDIO.*URI="(.*[^,])"/gm;
-const reMap = /#EXT-X-MAP:URI="(.*[^,])"/gm;
-// const reSubMap = /#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="(.*[^,])"/gm;
+const reAudioTrack = /#EXT-X-MEDIA:TYPE=AUDIO.*URI="([^"]+)"/gm;
+const reMap = /#EXT-X-MAP:URI="([^"]+)"/gm;
+const reSubMap = /#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="([^"]+)"/gm;
+const reVersion = /#EXT-X-VERSION:(\d+)/;
+
+const updateVersion = (playlist: string): string =>
+  playlist.replace(reVersion, (match, currentVersion) => {
+    const numericValue = +currentVersion;
+    const newVersion = numericValue < 5 ? 5 : numericValue;
+    return `#EXT-X-VERSION:${newVersion}`;
+  });
 
 const getTargetDuration = (chunklist: string, divide = true): number => {
   let targetDuration = 2;
@@ -120,30 +128,30 @@ export class PlaylistHandler {
       const realManifestUrl = request.res.responseUrl;
       const urlParams = this.network === 'foxsports' ? new URL(realManifestUrl).search : '';
 
-      let updatedManifest = manifest;
+      const clonedManifest = updateVersion(manifest);
+      let updatedManifest = clonedManifest;
 
-      const playlist = HLS.parse(manifest);
+      const playlist = HLS.parse(clonedManifest);
 
-      /** For FOX 4K streams */
-      // const audioTracks = [...manifest.matchAll(reAudioTrack)];
-      // audioTracks.forEach(track => {
-      //   if (track && track[1]) {
-      //     const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
+      const audioTracks = [...manifest.matchAll(reAudioTrack)];
+      audioTracks.forEach(track => {
+        if (track && track[1]) {
+          const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
 
-      //     const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
-      //     updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
-      //   }
-      // });
+          const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
+          updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+        }
+      });
 
-      // const subTracks = [...manifest.matchAll(reSubMap)];
-      // subTracks.forEach(track => {
-      //   if (track && track[1]) {
-      //     const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
+      const subTracks = [...manifest.matchAll(reSubMap)];
+      subTracks.forEach(track => {
+        if (track && track[1]) {
+          const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
 
-      //     const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
-      //     updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
-      //   }
-      // });
+          const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
+          updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+        }
+      });
 
       playlist.variants.forEach(variant => {
         const fullChunklistUrl = parseReplacementUrl(variant.uri, realManifestUrl);
@@ -178,13 +186,14 @@ export class PlaylistHandler {
         },
       });
 
-      let updatedChunkList = chunkList;
-
       const realChunklistUrl = request.res.responseUrl;
       const baseManifestUrl = cleanUrl(createBaseUrlChunklist(realChunklistUrl, this.network));
       const keys = new Set<string>();
 
-      const chunks = HLS.parse(chunkList);
+      const clonedChunklist = updateVersion(chunkList);
+      let updatedChunkList = clonedChunklist;
+
+      const chunks = HLS.parse(clonedChunklist);
 
       chunks.segments.forEach(segment => {
         const segmentUrl = segment.uri;

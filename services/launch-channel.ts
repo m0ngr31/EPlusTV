@@ -7,6 +7,7 @@ import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
 import {removeChannelStatus} from './shared-helpers';
+import {msgHandler} from './msg-handler';
 
 const checkingStream = {};
 
@@ -25,37 +26,29 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
   });
 
   if (playingNow) {
-    const network =
-      playingNow.from === 'foxsports'
-        ? 'foxsports'
-        : playingNow.from === 'mlbtv'
-        ? 'mlbtv'
-        : playingNow.from === 'paramount+'
-        ? 'paramount+'
-        : 'espn';
-
-    if (network === 'foxsports') {
-      try {
-        [url, headers] = await foxHandler.getEventData(appStatus.channels[channelId].current);
-      } catch (e) {}
-    } else if (network === 'mlbtv') {
-      try {
-        [url, headers] = await mlbHandler.getEventData(playingNow);
-      } catch (e) {}
-    } else if (network === 'paramount+') {
-      try {
-        [url, headers] = await paramountHandler.getEventData(appStatus.channels[channelId].current);
-      } catch (e) {}
-    } else {
-      try {
-        [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);
-      } catch (e) {}
-    }
+    try {
+      switch (playingNow.from) {
+        case 'foxsports':
+          [url, headers] = await foxHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'mlbtv':
+          [url, headers] = await mlbHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'paramount+':
+          [url, headers] = await paramountHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'msg+':
+          [url, headers] = await msgHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        default:
+          [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);
+      }
+    } catch (e) {}
 
     if (!url) {
       console.log('Failed to parse the stream');
     } else {
-      appStatus.channels[channelId].player = new PlaylistHandler(headers, appUrl, channelId, network);
+      appStatus.channels[channelId].player = new PlaylistHandler(headers, appUrl, channelId, playingNow.from);
 
       try {
         await appStatus.channels[channelId].player.initialize(url);
