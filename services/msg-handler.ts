@@ -240,11 +240,11 @@ class MSGHandler {
               if (airing.ev_live === 'true' && airing.ca_ty === 'game') {
                 entries.push({
                   artwork: `https://image-resizer-cloud-cdn.api.msgncms.quickplay.com/image/${airing.cid}/3-16x9.png?width=400`,
-                  categories: ['MSG', 'MSG+', 'HD', 'Sports', airing.pgm.spt_lg, airing.pgm.spt_ty],
+                  categories: ['MSG', 'MSG+', 'HD', 'Sports', airing?.pgm?.spt_lg, airing?.pgm?.spt_ty],
                   contentId: `${airing.id}----${airing.cid}`,
                   end: airing.sc_ed_dt,
                   network: airing.net,
-                  sport: airing.pgm.spt_lg,
+                  sport: airing.pgm?.spt_lg,
                   start: airing.sc_st_dt,
                   title: airing.pgm.lon[0].n,
                 });

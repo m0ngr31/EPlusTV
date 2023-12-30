@@ -261,7 +261,7 @@ class ParamountHandler {
             },
           );
 
-          data.listing.forEach(e => {
+          (data.listing || []).forEach(e => {
             if (ALLOWED_LOCAL_SPORTS.includes(e.title)) {
               const transformedEvent: IParamountEvent = {
                 channelName: e.title,
