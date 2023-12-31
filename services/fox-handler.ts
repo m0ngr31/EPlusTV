@@ -330,7 +330,7 @@ class FoxHandler {
 
     const events: IFoxEvent[] = [];
 
-    const now = new Date();
+    const now = moment().startOf('day');
 
     const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').endOf('day').toISOString()}`;
 
@@ -355,7 +355,7 @@ class FoxHandler {
             m.endDate &&
             m.id
           ) {
-            if (m.airingType === 'live') {
+            if (m.airingType === 'live' || m.airingType === 'new') {
               events.push(m);
             } else if (allowReplays && m.airingType !== 'live') {
               events.push(m);
