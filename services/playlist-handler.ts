@@ -133,25 +133,27 @@ export class PlaylistHandler {
 
       const playlist = HLS.parse(clonedManifest);
 
-      const audioTracks = [...manifest.matchAll(reAudioTrack)];
-      audioTracks.forEach(track => {
-        if (track && track[1]) {
-          const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
+      if (this.network !== 'foxsports') {
+        const audioTracks = [...manifest.matchAll(reAudioTrack)];
+        audioTracks.forEach(track => {
+          if (track && track[1]) {
+            const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
 
-          const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
-          updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
-        }
-      });
+            const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
+            updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+          }
+        });
 
-      const subTracks = [...manifest.matchAll(reSubMap)];
-      subTracks.forEach(track => {
-        if (track && track[1]) {
-          const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
+        const subTracks = [...manifest.matchAll(reSubMap)];
+        subTracks.forEach(track => {
+          if (track && track[1]) {
+            const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
 
-          const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
-          updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
-        }
-      });
+            const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
+            updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+          }
+        });
+      }
 
       playlist.variants.forEach(variant => {
         const fullChunklistUrl = parseReplacementUrl(variant.uri, realManifestUrl);
