@@ -108,13 +108,8 @@ const parseAirings = async (events: any[]) => {
     const entryExists = await db.entries.findOne<IEntry>({id: `${event.contentId}`});
 
     if (!entryExists) {
-      const start = moment(event.start);
-      let end: moment.Moment = moment(event.end);
-
-      // Don't extend pre-game shows by an hour
-      if (!(event.title as string).endsWith(' Pre Game')) {
-        end = moment(event.end).add(1, 'hour');
-      }
+      const start = moment(event.start).subtract(30, 'minutes'); // For Pregrame
+      const end = moment(event.end);
 
       if (end.isBefore(now) || start.isAfter(inTwoDays)) {
         continue;
@@ -242,7 +237,7 @@ class MSGHandler {
 
           (data.data || []).forEach(channel => {
             (channel.airing || []).forEach(airing => {
-              if (airing.ev_live === 'true' && (airing.ca_ty === 'game' || airing.ca_ty === 'pregame')) {
+              if (airing.ev_live === 'true' && airing.ca_ty === 'game') {
                 entries.push({
                   artwork: `https://image-resizer-cloud-cdn.api.msgncms.quickplay.com/image/${airing.cid}/3-16x9.png?width=400`,
                   categories: ['MSG', 'MSG+', 'HD', 'Sports', airing?.pgm?.spt_lg, airing?.pgm?.spt_ty],
