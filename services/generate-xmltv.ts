@@ -26,7 +26,7 @@ const formatEntryName = (entry: IEntry) => {
 };
 
 const formatCategories = (categories: string[] = []) =>
-  _.uniq(['Sports', 'HD', ...categories]).map(category => ({
+  _.uniq(['Sports', 'Sports event', 'HD', ...categories]).map(category => ({
     category: [
       {
         _attr: {
