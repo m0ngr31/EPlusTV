@@ -17,7 +17,12 @@ import {SERVER_PORT} from './services/port';
 
 import {version} from './package.json';
 
-const notFound = (_req, res) => res.status(404).send('404 not found');
+const notFound = (_req, res) =>
+  res
+    .writeHead(404, {
+      'X-Tuner-Error': 'EPlusTV: Error getting content',
+    })
+    .send('404 not found');
 const shutDown = () => process.exit(0);
 
 const schedule = async () => {
