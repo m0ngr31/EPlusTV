@@ -123,7 +123,7 @@ interface IChannel {
   local: boolean;
 }
 
-const ALLOWED_LOCAL_SPORTS = ['College Basketball', 'College Football', 'NFL Football'];
+const ALLOWED_LOCAL_SPORTS = ['College Basketball', 'College Football', 'NFL Football', 'Super Bowl LVIII'];
 
 const parseAirings = async (events: IParamountEvent[]) => {
   const now = moment();
