@@ -221,6 +221,8 @@ class ParamountHandler {
       return;
     }
 
+    console.log('Looking for Paramount+ events...');
+
     const events: IParamountEvent[] = [];
 
     try {

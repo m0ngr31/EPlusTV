@@ -218,6 +218,8 @@ class MSGHandler {
       return;
     }
 
+    console.log('Looking for MSG+ events...');
+
     try {
       const today = new Date();
       const entries = [];
