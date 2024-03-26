@@ -241,9 +241,13 @@ class FoxHandler {
         await this.getAppConfig();
       }
 
+      // let cdn;
       const data = await this.getSteamData(eventId);
 
-      // console.log('CDN: ', data.trackingData.properties.CDN);
+      // while (cdn !== 'akamai|limelight|fastly') {
+      //   console.log('CDN: ', data.trackingData.properties.CDN);
+      //   cdn = data.trackingData.properties.CDN;
+      // }
 
       if (!data || !data?.url) {
         throw new Error('Could not get stream data. Event might be upcoming, ended, or in blackout...');

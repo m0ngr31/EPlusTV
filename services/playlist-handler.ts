@@ -16,7 +16,7 @@ const createBaseUrlChunklist = (url: string, network: string): string => {
   const cleaned = url.replace(/\.m3u8.*$/, '');
   let filteredUrl: string[] | string = cleaned.split('/');
 
-  if (network === 'foxsports') {
+  if (network === 'foxsports' && !url.includes('akamai')) {
     filteredUrl = filteredUrl.filter(seg => !seg.match(/=/));
   }
 
@@ -207,8 +207,10 @@ export class PlaylistHandler {
             : cleanUrl(`${baseManifestUrl}${segmentUrl}`)
           : segmentUrl;
 
+        const shouldProxy = PROXY_SEGMENTS || baseManifestUrl.includes('akamai');
+
         if (
-          PROXY_SEGMENTS &&
+          shouldProxy &&
           // Proxy keyed segments
           (segmentKey ||
             // Proxy non-keyed segments that aren't on ESPN
