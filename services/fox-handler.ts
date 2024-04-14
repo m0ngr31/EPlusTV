@@ -298,7 +298,7 @@ class FoxHandler {
           {
             deviceHeight: 2160,
             deviceWidth: 3840,
-            maxRes: streamOrder[resIndex],
+            maxRes: streamOrder[a],
             os: 'Android',
             osv: '11.0.0',
             streamId: eventId,
@@ -317,8 +317,8 @@ class FoxHandler {
         break;
       } catch (e) {
         console.log(
-          `Could not get stream data for ${streamOrder[resIndex]}.${
-            streamOrder[resIndex + 1] && `Trying to get ${streamOrder[resIndex + 1]} next...`
+          `Could not get stream data for ${streamOrder[a]}.${
+            streamOrder[a + 1] ? `Trying to get ${streamOrder[a + 1]} next...` : ''
           }`,
         );
       }
