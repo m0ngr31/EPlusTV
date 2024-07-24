@@ -207,7 +207,7 @@ export class PlaylistHandler {
             : cleanUrl(`${baseManifestUrl}${segmentUrl}`)
           : segmentUrl;
 
-        const shouldProxy = PROXY_SEGMENTS || baseManifestUrl.includes('akamai');
+        const shouldProxy = PROXY_SEGMENTS || baseManifestUrl.includes('akamai') || this.network === 'mlbtv';
 
         if (
           shouldProxy &&

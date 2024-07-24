@@ -12,6 +12,8 @@ export const androidFoxUserAgent =
 
 export const okHttpUserAgent = 'okhttp/4.11.0';
 
+export const oktaUserAgent = 'okta-auth-js/7.0.2 okta-signin-widget-7.14.0';
+
 export const androidMlbUserAgent = 'BAMSDK/v4.3.0 (mlbaseball-7993996e 8.1.0; v2.0/v4.3.0; android; tv)';
 
 // Will generate one random User Agent for the session
