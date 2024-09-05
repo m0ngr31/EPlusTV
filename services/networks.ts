@@ -16,6 +16,8 @@ export const useFoxOnly4k = process.env.FOX_ONLY_4K?.toLowerCase() === 'true' ? 
 
 export const useMLBtv = process.env.MLBTV?.toLowerCase() === 'true' ? true : false;
 
+export const useB1GPlus = process.env.B1GPLUS?.toLowerCase() === 'true' ? true : false;
+
 export const useParamountPlus = process.env.PARAMOUNTPLUS?.toLowerCase() === 'true' ? true : false;
 
 export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;

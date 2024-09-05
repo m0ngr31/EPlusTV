@@ -7,7 +7,7 @@ if (_.isNaN(startChannel)) {
 
 let numOfChannels = _.toNumber(process.env.NUM_OF_CHANNELS);
 if (_.isNaN(numOfChannels)) {
-  numOfChannels = 150;
+  numOfChannels = 200;
 }
 
 export const START_CHANNEL = startChannel;

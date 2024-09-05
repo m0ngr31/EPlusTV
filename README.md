@@ -2,16 +2,14 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.1.13**
+Current version: **2.2.0**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, and MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, B1G+, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
-* This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the ESPN, FOX Sports, and MLB.tv apps currently provide.
+* This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
 * The Mouse might not like it and it could be taken down at any minute. Enjoy it while it lasts. ¯\\_(ツ)_/¯
-
-If you're using the `USE_LINEAR` option, have your client pull the XMLTV file every 4 hours so it can stay current if channels change.
 
 # Using
 The server exposes 2 main endpoints:
@@ -28,7 +26,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | START_CHANNEL | What the first channel number should be. | No | 1 |
-| NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is >= 150 if you are using ESPN+. | No | 150 |
+| NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is >= 200 if you are using ESPN+. | No | 200 |
 | PROXY_SEGMENTS | Proxy keyed `*.ts` files. | No | False |
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No | - |
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No | - |
@@ -67,6 +65,14 @@ Use if you would like to login with Paramount+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
+
+#### B1G+
+Use if you would like to login with your B1G+ account
+| Environment Variable | Description | Default |
+|---|---|---|
+| B1GPLUS | Set if you would like to use B1G+ | False |
+| B1GPLUS_USER | B1G+ Username | False |
+| B1GPLUS_PASS | B1G+ Password | False |
 
 #### MLB.tv
 Use if you would like to login with your MLB.tv account

@@ -9,6 +9,7 @@ import {scheduleEntries} from './services/build-schedule';
 import {espnHandler} from './services/espn-handler';
 import {foxHandler} from './services/fox-handler';
 import {mlbHandler} from './services/mlb-handler';
+import {b1gHandler} from './services/b1g-handler';
 import {paramountHandler} from './services/paramount-handler';
 import {msgHandler} from './services/msg-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
@@ -32,6 +33,7 @@ const schedule = async () => {
   await espnHandler.getSchedule();
   await foxHandler.getSchedule();
   await mlbHandler.getSchedule();
+  await b1gHandler.getSchedule();
   await paramountHandler.getSchedule();
   await msgHandler.getSchedule();
 
@@ -209,6 +211,9 @@ process.on('SIGINT', shutDown);
   await mlbHandler.initialize();
   await mlbHandler.refreshTokens();
 
+  await b1gHandler.initialize();
+  await b1gHandler.refreshTokens();
+
   await paramountHandler.initialize();
   await paramountHandler.refreshTokens();
 
@@ -231,6 +236,7 @@ setInterval(async () => {
   await espnHandler.refreshTokens();
   await foxHandler.refreshTokens();
   await mlbHandler.refreshTokens();
+  await b1gHandler.refreshTokens();
   await paramountHandler.refreshTokens();
   await msgHandler.refreshTokens();
 }, 1000 * 60 * 30);
