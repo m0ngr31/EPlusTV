@@ -5,6 +5,7 @@ import {mlbHandler} from './mlb-handler';
 import {paramountHandler} from './paramount-handler';
 import {b1gHandler} from './b1g-handler';
 import {msgHandler} from './msg-handler';
+import {floSportsHandler} from './flo-handler';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
@@ -43,6 +44,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'b1g+':
           [url, headers] = await b1gHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'flo':
+          [url, headers] = await floSportsHandler.getEventData(appStatus.channels[channelId].current);
           break;
         default:
           [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);

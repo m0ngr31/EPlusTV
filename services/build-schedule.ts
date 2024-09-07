@@ -1,7 +1,5 @@
-import fs from 'fs';
-
 import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
-import {db, IDocument, linearDb} from './database';
+import {db, IDocument} from './database';
 import {IChannel, IEntry} from './shared-interfaces';
 
 const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): Promise<void> => {
@@ -34,41 +32,11 @@ const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): P
 };
 
 export const scheduleEntries = async (): Promise<void> => {
-  let needReschedule = false;
+  const unscheduledEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
 
-  try {
-    // Check to see if we still have linear channels scheduled
-    const linearChannelNums = await db.linear?.remove({}, {multi: true});
+  unscheduledEntries.length > 0 && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
 
-    if (linearChannelNums > 0) {
-      needReschedule = true;
-      fs.rmSync(linearDb);
-    }
-  } catch (e) {}
-
-  if (needReschedule) {
-    console.log('');
-    console.log('====================================================================');
-    console.log('===                                                              ===');
-    console.log('=== Need to rebuild the schedule because the USE_LINEAR variable ===');
-    console.log('===                   is no longer being used.                   ===');
-    console.log('===                                                              ===');
-    console.log('====================================================================');
-    console.log('===  THIS WILL BREAK SCHEDULED RECORDINGS IN YOUR DVR SOFTWARE   ===');
-    console.log('====================================================================');
-    console.log('');
-
-    await db.entries.update<IEntry>({}, {$unset: {channel: true}}, {multi: true});
-    await db.schedule.remove({}, {multi: true});
-
-    return await scheduleEntries();
-  } else {
-    const unscheduledEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
-
-    unscheduledEntries.length > 0 && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
-
-    for (const entry of unscheduledEntries) {
-      await scheduleEntry(entry, START_CHANNEL);
-    }
+  for (const entry of unscheduledEntries) {
+    await scheduleEntry(entry, START_CHANNEL);
   }
 };

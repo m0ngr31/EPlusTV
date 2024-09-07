@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **2.2.0**
+Current version: **2.3.0**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, B1G+, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -65,6 +65,12 @@ Use if you would like to login with Paramount+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
+
+#### FloSports
+Use if you would like to login with FloSports
+| Environment Variable | Description | Required? | Default |
+|---|---|---|---|
+| FLOSPORTS | Set if you would like FloSports events | False | False |
 
 #### B1G+
 Use if you would like to login with your B1G+ account

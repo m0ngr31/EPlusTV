@@ -101,7 +101,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
 
       if (!entryExists) {
         const start = moment(event.startTime);
-        const end = moment(event.startTime).add(5, 'hours');
+        const end = moment(event.startTime).add(4, 'hours');
 
         if (end.isBefore(now) || content.enableDrmProtection) {
           continue;

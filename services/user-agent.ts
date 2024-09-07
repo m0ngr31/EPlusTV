@@ -12,6 +12,9 @@ export const androidFoxUserAgent =
 
 export const okHttpUserAgent = 'okhttp/4.11.0';
 
+export const flowSportsUserAgent =
+  'Dalvik/2.1.0 (Linux; U; Android 9; sdk_google_atv_x86 Build/PSR1.180720.121) FloSports/2.11.0-2220530';
+
 export const oktaUserAgent = 'okta-auth-js/7.0.2 okta-signin-widget-7.14.0';
 
 export const b1gUserAgent = 'Ktor client';
