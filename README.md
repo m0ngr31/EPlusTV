@@ -5,7 +5,7 @@
 Current version: **2.3.0**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, FloSports, B1G+, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
@@ -66,11 +66,11 @@ Use if you would like to login with Paramount+
 |---|---|---|---|
 | PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
 
-#### FloSports
-Use if you would like to login with FloSports
+#### NFL+
+Use if you would like to login with NFL+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
-| FLOSPORTS | Set if you would like FloSports events | False | False |
+| NFLPLUS | Set if you would like NFL+ events | False | False |
 
 #### B1G+
 Use if you would like to login with your B1G+ account
@@ -80,6 +80,20 @@ Use if you would like to login with your B1G+ account
 | B1GPLUS_USER | B1G+ Username | False |
 | B1GPLUS_PASS | B1G+ Password | False |
 
+#### MSG+
+Use if you would like to login with your MSG+ account
+| Environment Variable | Description | Default |
+|---|---|---|
+| MSGPLUS | Set if you would like to use MSG+ | False |
+| MSGPLUS_USER | MSG+ Username | False |
+| MSGPLUS_PASS | MSG+ Password | False |
+
+#### FloSports
+Use if you would like to login with FloSports
+| Environment Variable | Description | Required? | Default |
+|---|---|---|---|
+| FLOSPORTS | Set if you would like FloSports events | False | False |
+
 #### MLB.tv
 Use if you would like to login with your MLB.tv account
 | Environment Variable | Description | Default |
@@ -88,14 +102,6 @@ Use if you would like to login with your MLB.tv account
 | MLBTV_USER | MLB.tv Username | False |
 | MLBTV_PASS | MLB.tv Password | False |
 | MLBTV_ONLY_FREE | Only schedule free games | False |
-
-#### MSG+
-Use if you would like to login with your MSG+ account
-| Environment Variable | Description | Default |
-|---|---|---|
-| MSGPLUS | Set if you would like to use MSG+ | False |
-| MSGPLUS_USER | MSG+ Username | False |
-| MSGPLUS_PASS | MSG+ Password | False |
 
 ## Volumes
 | Volume Name | Description | Required? |

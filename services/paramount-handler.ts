@@ -140,7 +140,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
         continue;
       }
 
-      const categories = ['CBS Sports', 'Paramount+', 'Sports', 'HD', event.channelName];
+      const categories = ['CBS Sports', 'Paramount+', event.channelName];
 
       console.log('Adding event: ', event.title);
 

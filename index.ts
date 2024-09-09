@@ -12,6 +12,7 @@ import {mlbHandler} from './services/mlb-handler';
 import {b1gHandler} from './services/b1g-handler';
 import {floSportsHandler} from './services/flo-handler';
 import {paramountHandler} from './services/paramount-handler';
+import {nflHandler} from './services/nfl-handler';
 import {msgHandler} from './services/msg-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
@@ -36,6 +37,7 @@ const schedule = async () => {
   await mlbHandler.getSchedule();
   await b1gHandler.getSchedule();
   await floSportsHandler.getSchedule();
+  await nflHandler.getSchedule();
   await paramountHandler.getSchedule();
   await msgHandler.getSchedule();
 
@@ -219,6 +221,9 @@ process.on('SIGINT', shutDown);
   await floSportsHandler.initialize();
   await floSportsHandler.refreshTokens();
 
+  await nflHandler.initialize();
+  await nflHandler.refreshTokens();
+
   await paramountHandler.initialize();
   await paramountHandler.refreshTokens();
 
@@ -243,6 +248,7 @@ setInterval(async () => {
   await mlbHandler.refreshTokens();
   await b1gHandler.refreshTokens();
   await floSportsHandler.refreshTokens();
+  await nflHandler.refreshTokens();
   await paramountHandler.refreshTokens();
   await msgHandler.refreshTokens();
 }, 1000 * 60 * 30);

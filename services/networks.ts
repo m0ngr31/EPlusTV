@@ -24,6 +24,8 @@ export const useParamountPlus = process.env.PARAMOUNTPLUS?.toLowerCase() === 'tr
 
 export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;
 
+export const useNflPlus = process.env.NFLPLUS?.toLowerCase() === 'true' ? true : false;
+
 export const requiresEspnProvider =
   useEspn1 ||
   useEspn2 ||

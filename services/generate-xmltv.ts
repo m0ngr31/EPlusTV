@@ -7,6 +7,8 @@ import {usesMultiple} from './networks';
 import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {IEntry} from './shared-interfaces';
 
+const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
+
 const formatEntryName = (entry: IEntry) => {
   let entryName = entry.name;
 
@@ -26,7 +28,7 @@ const formatEntryName = (entry: IEntry) => {
 };
 
 const formatCategories = (categories: string[] = []) =>
-  _.uniq(['Sports', 'Sports event', 'HD', ...categories]).map(category => ({
+  [...new Set([...baseCategories, ...categories])].map(category => ({
     category: [
       {
         _attr: {
@@ -105,6 +107,11 @@ export const generateXml = async (): Promise<xml> => {
             },
             entryName,
           ],
+        },
+        {
+          video: {
+            quality: 'HDTV',
+          },
         },
         {
           desc: [
