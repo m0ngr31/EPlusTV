@@ -14,6 +14,7 @@ import {floSportsHandler} from './services/flo-handler';
 import {paramountHandler} from './services/paramount-handler';
 import {nflHandler} from './services/nfl-handler';
 import {msgHandler} from './services/msg-handler';
+import {mwHandler} from './services/mw-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
@@ -38,6 +39,7 @@ const schedule = async () => {
   await mlbHandler.getSchedule();
   await b1gHandler.getSchedule();
   await floSportsHandler.getSchedule();
+  await mwHandler.getSchedule();
   await nflHandler.getSchedule();
   await paramountHandler.getSchedule();
   await msgHandler.getSchedule();

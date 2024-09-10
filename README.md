@@ -2,10 +2,10 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.0.1**
+Current version: **3.1.0**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
@@ -98,6 +98,12 @@ Use if you would like to login with FloSports
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | FLOSPORTS | Set if you would like FloSports events | False | False |
+
+#### Mountain West
+Use if you would like to use Mountain West
+| Environment Variable | Description | Required? | Default |
+|---|---|---|---|
+| MTNWEST | Set if you would like Mountain West events | False | False |
 
 #### MLB.tv
 Use if you would like to login with your MLB.tv account

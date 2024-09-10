@@ -29,6 +29,8 @@ export const useNflPlus = process.env.NFLPLUS?.toLowerCase() === 'true' ? true :
 export const useNflNetwork = process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false;
 export const useNflRedZone = process.env.NFLREDZONE?.toLowerCase() === 'true' ? true : false;
 
+export const useMountainWest = process.env.MTNWEST?.toLowerCase() === 'true' ? true : false;
+
 export const requiresEspnProvider =
   useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useAccNx || useEspnews;
 
