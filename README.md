@@ -73,9 +73,7 @@ Use if you would like to login with Paramount+
 Use if you would like to login with NFL+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
-| NFLPLUS | Set if you would like NFL+ events | False | False |
-| NFLNETWORK* | Set if you would like the NFL Network channel (only available with LINEAR_CHANNELS) | False | False |
-| NFLREDZONE*** | Set if you would like NFL+ events | False | False |
+| NFLPLUS** | Set if you would like NFL+ events<br><br>  ** Please note: NFL Network will only be scheduled as a linear channel. NFL RedZone can be either one depending on what `LINEAR_CHANNELS` is set to, but requires NFL+ Premium| False | False |
 
 #### B1G+
 Use if you would like to login with your B1G+ account
@@ -110,7 +108,7 @@ Use if you would like to login with your MLB.tv account
 ### Notes
 `*`: Dedicated linear channel - Will only schedule when `LINEAR_CHANNELS` is set
 
-`**`: Some events are on linear channels and some aren't. If you use `LINEAR_CHANNELS`, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
+`**`: Some events are on linear channels and some aren't. If you're using `LINEAR_CHANNELS`: For FOX Sports, FOX events will be scheduled normally, everything else will be on the linear channels. For NFL+, NFL Network and NFL RedZone will be scheduled as linear channels, while all games are scheduled as normal.
 
 `***`: Will create a dedicated linear channel if requested, if not, will schedule events normally
 
