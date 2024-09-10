@@ -18,8 +18,8 @@ The server exposes 2 main endpoints:
 |---|---|
 | /channels.m3u | The channel list you'll import into your client |
 | /xmltv.xml | The schedule that you'll import into your client |
-| /linear-channels.m3u | The linear channel list you'll import into your client (only used with LINEAR_CHANNELS) |
-| /linear-xmltv.xml | The linear schedule that you'll import into your client  (only used with LINEAR_CHANNELS)|
+| /linear-channels.m3u | The linear channel list you'll import into your client (only used when using `LINEAR_CHANNELS` variable) |
+| /linear-xmltv.xml | The linear schedule that you'll import into your client (only used when using `LINEAR_CHANNELS` variable) |
 
 # Running
 The recommended way of running is to pull the image from [Docker Hub](https://hub.docker.com/r/m0ngr31/eplustv).
