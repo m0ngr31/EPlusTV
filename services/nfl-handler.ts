@@ -7,7 +7,7 @@ import jwt_decode from 'jwt-decode';
 
 import {okHttpUserAgent} from './user-agent';
 import {configPath} from './config';
-import {useNflPlus} from './networks';
+import {useNflNetwork, useNflPlus, useNflRedZone} from './networks';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
@@ -186,7 +186,9 @@ class NflHandler {
 
     const {dmaCode, plans}: {dmaCode: string; plans: {plan: string; status: string}[]} = jwt_decode(this.access_token);
 
-    const redZoneAccess = plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1;
+    const redZoneAccess =
+      plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1 && useNflRedZone;
+    const nflNetworkAccess = useLinear && useNflNetwork;
 
     if (!dmaCode) {
       console.log('DMA Code not found for NFL+. Not searching for events');
@@ -222,7 +224,7 @@ class NflHandler {
           redZoneAccess
         ) {
           events.push(i);
-        } else if (i.callSign === 'NFLNETWORK' && moment(i.startTime).isBefore(endSchedule) && useLinear) {
+        } else if (i.callSign === 'NFLNETWORK' && moment(i.startTime).isBefore(endSchedule) && nflNetworkAccess) {
           events.push(i);
         }
       });

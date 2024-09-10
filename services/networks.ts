@@ -26,6 +26,8 @@ export const useGolazo = process.env.GOLAZO?.toLowerCase() === 'true' ? true : f
 export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;
 
 export const useNflPlus = process.env.NFLPLUS?.toLowerCase() === 'true' ? true : false;
+export const useNflNetwork = process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false;
+export const useNflRedZone = process.env.NFLREDZONE?.toLowerCase() === 'true' ? true : false;
 
 export const requiresEspnProvider =
   useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useAccNx || useEspnews;

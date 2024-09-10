@@ -54,7 +54,16 @@ export const scheduleEntries = async (): Promise<void> => {
     console.log('====================================================================');
     console.log('');
 
+    // Remove schedule
     await db.schedule.remove({}, {multi: true});
+
+    // Remove all dedicated linear channel entries
+    await db.entries.remove(
+      {$or: [{channel: 'cbssportshq'}, {channel: 'golazo'}, {channel: 'NFLNETWORK'}]},
+      {multi: true},
+    );
+
+    // Remove channel and linear props from existing entries
     await db.entries.update<IEntry>({}, {$unset: {channel: true, linear: true}}, {multi: true});
 
     return await scheduleEntries();

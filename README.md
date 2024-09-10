@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.0.0**
+Current version: **3.0.1**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -66,14 +66,16 @@ Use if you would like to login with Paramount+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
-| CBSSPORTSHQ* | Set if you would like the CBS Sports HQ channel (only available with LINEAR_CHANNELS) | False | False |
-| GOLAZO* | Set if you would like the Golazo Network channel (only available with LINEAR_CHANNELS) | False | False |
+| CBSSPORTSHQ* | Set if you would like the CBS Sports HQ channel (only available with `LINEAR_CHANNELS`) | False | False |
+| GOLAZO* | Set if you would like the Golazo Network channel (only available with `LINEAR_CHANNELS`) | False | False |
 
 #### NFL+
 Use if you would like to login with NFL+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
-| NFLPLUS** | Set if you would like NFL+ events<br><br>  ** Please note: NFL Network will only be scheduled as a linear channel. NFL RedZone can be either one depending on what `LINEAR_CHANNELS` is set to, but requires NFL+ Premium| False | False |
+| NFLPLUS | Set if you would like NFL+ events | False | False |
+| NFLNETWORK* | Set if you would like the NFL Network channel (only available with `LINEAR_CHANNELS`) | False | False |
+| NFLREDZONE*** | Set if you would like NFL RedZone (have to have NFL+ Premium) | False | False |
 
 #### B1G+
 Use if you would like to login with your B1G+ account
@@ -108,7 +110,7 @@ Use if you would like to login with your MLB.tv account
 ### Notes
 `*`: Dedicated linear channel - Will only schedule when `LINEAR_CHANNELS` is set
 
-`**`: Some events are on linear channels and some aren't. If you're using `LINEAR_CHANNELS`: For FOX Sports, FOX events will be scheduled normally, everything else will be on the linear channels. For NFL+, NFL Network and NFL RedZone will be scheduled as linear channels, while all games are scheduled as normal.
+`**`: Some events are on linear channels and some aren't. If you use `LINEAR_CHANNELS`, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
 
 `***`: Will create a dedicated linear channel if requested, if not, will schedule events normally
 
