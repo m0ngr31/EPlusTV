@@ -130,7 +130,7 @@ class FloSportsHandler {
       const events: IFloEvent[] = [];
       const limit = 100;
 
-      const endSchedule = moment().add(3, 'days');
+      const endSchedule = moment().add(2, 'days');
 
       while (hasNextPage) {
         const url = [

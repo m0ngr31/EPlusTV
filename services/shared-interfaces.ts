@@ -48,6 +48,7 @@ export interface IEntry {
   channel?: string | number;
   sport?: string;
   linear?: boolean;
+  replay?: boolean;
 }
 
 export interface IChannel {

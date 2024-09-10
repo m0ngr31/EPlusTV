@@ -11,6 +11,7 @@ import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
 import {removeChannelStatus} from './shared-helpers';
+import {calculateChannelNumber} from './channels';
 
 const checkingStream = {};
 
@@ -59,6 +60,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
 
     if (!url) {
       console.log('Failed to parse the stream');
+
+      // Reset channel state
+      removeChannelStatus(channelId);
     } else {
       appStatus.channels[channelId].player = new PlaylistHandler(headers, appUrl, channelId, playingNow.from);
 
@@ -66,7 +70,8 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
         await appStatus.channels[channelId].player.initialize(url);
         await checkNextStream(channelId);
       } catch (e) {
-        appStatus.channels[channelId].player = undefined;
+        // Reset channel state
+        removeChannelStatus(channelId);
       }
     }
   }
@@ -75,12 +80,15 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
 };
 
 export const launchChannel = async (channelId: string, appUrl: string): Promise<void> => {
+  const channelNum = calculateChannelNumber(channelId);
+  const isNumber = Number.isFinite(parseInt(`${channelNum}`, 10));
+
   if (appStatus.channels[channelId].player || checkingStream[channelId]) {
     return;
   }
 
   const now = new Date().valueOf();
-  const channel = parseInt(channelId, 10);
+  const channel = isNumber ? parseInt(`${channelNum}`, 10) : channelNum;
   const playingNow = await db.entries.findOne<IEntry>({
     channel,
     end: {$gt: now},
@@ -91,6 +99,9 @@ export const launchChannel = async (channelId: string, appUrl: string): Promise<
     console.log(`Channel #${channelId} has an active event (${playingNow.name}). Going to start the stream.`);
     appStatus.channels[channelId].current = playingNow.id;
     await startChannelStream(channelId, appUrl);
+  } else {
+    // Reset channel state
+    removeChannelStatus(channelId);
   }
 };
 

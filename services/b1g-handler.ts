@@ -176,7 +176,7 @@ class B1GHandler {
           '&language=en',
           `&metadata_id=${encodeURIComponent('159283,167702')}`,
           `&date_time_from=${encodeURIComponent(moment().format())}`,
-          `&date_time_to=${encodeURIComponent(moment().add(3, 'days').format())}`,
+          `&date_time_to=${encodeURIComponent(moment().add(2, 'days').format())}`,
           page > 1 ? `&page=${page}` : '',
         ].join('');
 

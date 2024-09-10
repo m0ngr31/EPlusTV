@@ -17,6 +17,7 @@ import {msgHandler} from './services/msg-handler';
 import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
+import {useLinear} from './services/channels';
 
 import {version} from './package.json';
 
@@ -64,8 +65,46 @@ app.get('/channels.m3u', (req, res) => {
   res.end(m3uFile, 'utf-8');
 });
 
+app.get('/linear-channels.m3u', (req, res) => {
+  if (!useLinear) {
+    notFound(req, res);
+    return;
+  }
+
+  const m3uFile = generateM3u(`${req.protocol}://${req.headers.host}`, true);
+
+  if (!m3uFile) {
+    notFound(req, res);
+    return;
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'application/x-mpegurl',
+  });
+  res.end(m3uFile, 'utf-8');
+});
+
 app.get('/xmltv.xml', async (req, res) => {
   const xmlFile = await generateXml();
+
+  if (!xmlFile) {
+    notFound(req, res);
+    return;
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'application/xml',
+  });
+  res.end(xmlFile, 'utf-8');
+});
+
+app.get('/linear-xmltv.xml', async (req, res) => {
+  if (!useLinear) {
+    notFound(req, res);
+    return;
+  }
+
+  const xmlFile = await generateXml(true);
 
   if (!xmlFile) {
     notFound(req, res);
@@ -85,9 +124,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
   // Channel data needs initial object
   if (!appStatus.channels[id]) {
-    appStatus.channels[id] = {
-      heartbeat: new Date(),
-    };
+    appStatus.channels[id] = {};
   }
 
   const uri = `${req.protocol}://${req.headers.host}`;

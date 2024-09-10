@@ -2,15 +2,12 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import axios from 'axios';
-import jwt_decode from 'jwt-decode';
 import moment from 'moment';
-import crypto from 'crypto';
 
-import {okHttpUserAgent, userAgent, oktaUserAgent} from './user-agent';
+import {okHttpUserAgent, userAgent, androidMlbUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useMLBtv} from './networks';
-import {getRandomUUID} from './shared-helpers';
-import {IEntry, IHeaders, IJWToken} from './shared-interfaces';
+import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
 
 interface IGameContent {
@@ -85,23 +82,23 @@ const CLIENT_ID = [
   '0',
   'o',
   'a',
-  'p',
-  '7',
-  'w',
-  'a',
-  '8',
-  '5',
-  '7',
-  'j',
-  'c',
-  'v',
-  'P',
-  'l',
-  'Z',
-  '5',
+  '3',
+  'e',
+  '1',
+  'n',
+  'u',
+  't',
+  'A',
+  '1',
+  'H',
+  'L',
+  'z',
+  'A',
+  'K',
+  'G',
   '3',
   '5',
-  '5',
+  '6',
 ].join('');
 
 const generateThumb = (home: ITeam, away: ITeam): string =>
@@ -156,18 +153,6 @@ const parseAirings = async (events: ICombinedGame) => {
   }
 };
 
-const willAuthTokenExpire = (token?: string): boolean => {
-  if (!token) return true;
-
-  try {
-    const decoded: IJWToken = jwt_decode(token);
-    // Will the token expire in the next 5 hours?
-    return Math.floor(new Date().valueOf() / 1000) + 3600 * 5 > decoded.exp;
-  } catch (e) {
-    return true;
-  }
-};
-
 const COMMON_HEADERS = {
   'cache-control': 'no-cache',
   origin: 'https://www.mlb.com',
@@ -185,14 +170,10 @@ const COMMON_HEADERS = {
 
 class MLBHandler {
   public device_id?: string;
-  public code_verifier?: string;
+  public refresh_token?: string;
+  public expires_at?: number;
   public access_token?: string;
-  public password_id?: string;
   public session_id?: string;
-  public interaction_handle?: string;
-  public interaction_code?: string;
-  public introspect_state_handle?: string;
-  public identify_state_handle?: string;
 
   public initialize = async () => {
     if (!useMLBtv) {
@@ -202,13 +183,9 @@ class MLBHandler {
     // Load tokens from local file and make sure they are valid
     this.load();
 
-    if (!this.device_id) {
-      this.device_id = getRandomUUID();
-      this.save();
-    }
-
-    if (!this.access_token || willAuthTokenExpire(this.access_token)) {
-      await this.login();
+    if (!this.access_token || !this.expires_at) {
+      await this.startProviderAuthFlow();
+      await this.refreshToken();
     }
   };
 
@@ -217,8 +194,8 @@ class MLBHandler {
       return;
     }
 
-    if (willAuthTokenExpire(this.access_token)) {
-      await this.login();
+    if (!this.expires_at || moment(this.expires_at).isBefore(moment().add(30, 'minutes'))) {
+      await this.refreshToken();
     }
   };
 
@@ -374,223 +351,122 @@ class MLBHandler {
     }
   };
 
-  private getInteractionHandle = async (): Promise<void> => {
-    try {
-      const url = 'https://ids.mlb.com/oauth2/aus1m088yK07noBfh356/v1/interact';
-      const headers = {
-        accept: 'application/json',
-        'accept-language': 'en',
-        'content-type': 'application/x-www-form-urlencoded',
-        'x-okta-user-agent-extended': oktaUserAgent,
-      };
-
-      if (!this.code_verifier) {
-        this.code_verifier = crypto.randomBytes(22).toString('hex').slice(0, -1);
-        this.save();
-      }
-
-      // Generate code challenge
-      const codeChallenge = crypto
-        .createHash('sha256')
-        .update(this.code_verifier)
-        .digest()
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-      const params = new URLSearchParams({
-        client_id: CLIENT_ID,
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-        nonce: crypto.randomBytes(32).toString('base64url'),
-        redirect_uri: 'https://www.mlb.com/login',
-        scope: 'openid email',
-        state: crypto.randomBytes(32).toString('base64url'),
-      });
-
-      const {data} = await axios.post(url, params, {
-        headers: {
-          ...COMMON_HEADERS,
-          ...headers,
-        },
-      });
-
-      this.interaction_handle = data.interaction_handle;
-    } catch (e) {
-      console.error(e);
-      console.log('Could not get interaction handle!');
-    }
-  };
-
-  private getIntrospectStateHandle = async (): Promise<void> => {
-    await this.getInteractionHandle();
-
-    try {
-      const url = 'https://ids.mlb.com/idp/idx/introspect';
-      const headers = {
-        accept: 'application/ion+json; okta-version=1.0.0',
-        'accept-language': 'en',
-        'content-type': 'application/ion+json; okta-version=1.0.0',
-        'x-okta-user-agent-extended': oktaUserAgent,
-      };
-
-      const params = {
-        interactionHandle: this.interaction_handle,
-      };
-
-      const {data} = await axios.post(url, params, {
-        headers: {
-          ...COMMON_HEADERS,
-          ...headers,
-        },
-      });
-
-      this.introspect_state_handle = data.stateHandle;
-    } catch (e) {
-      console.error(e);
-      console.log('Could not get introspect state handle!');
-    }
-  };
-
-  private getIdentifyStateHandle = async (): Promise<void> => {
-    await this.getIntrospectStateHandle();
-
-    try {
-      const url = 'https://ids.mlb.com/idp/idx/identify';
-      const headers = {
-        accept: 'application/ion+json; okta-version=1.0.0',
-        'accept-language': 'en',
-        'content-type': 'application/json',
-        'x-okta-user-agent-extended': oktaUserAgent,
-      };
-
-      const params = {
-        identifier: process.env.MLBTV_USER,
-        rememberMe: true,
-        stateHandle: this.introspect_state_handle,
-      };
-
-      const {data} = await axios.post(url, params, {
-        headers: {
-          ...COMMON_HEADERS,
-          ...headers,
-        },
-      });
-
-      this.identify_state_handle = data.stateHandle;
-
-      data.authenticators.value.forEach((authenticator: {type: string; id: string}) => {
-        if (authenticator.type === 'password') {
-          this.password_id = authenticator.id;
-        }
-      });
-    } catch (e) {
-      console.error(e);
-      console.log('Could not get identify');
-    }
-  };
-
-  private getChallenge = async (): Promise<void> => {
-    await this.getIdentifyStateHandle();
-
-    try {
-      const url = 'https://ids.mlb.com/idp/idx/challenge';
-      const headers = {
-        accept: 'application/ion+json; okta-version=1.0.0',
-        'accept-language': 'en',
-        'content-type': 'application/json',
-        'x-okta-user-agent-extended': oktaUserAgent,
-      };
-
-      const params = {
-        authenticator: {
-          id: this.password_id,
-        },
-        stateHandle: this.identify_state_handle,
-      };
-
-      await axios.post(url, params, {
-        headers: {
-          ...COMMON_HEADERS,
-          ...headers,
-        },
-      });
-    } catch (e) {
-      console.error(e);
-      console.log('Could not get challenge');
-    }
-  };
-
-  private getAnswer = async (): Promise<void> => {
-    await this.getChallenge();
-
-    try {
-      const url = 'https://ids.mlb.com/idp/idx/challenge/answer';
-      const headers = {
-        accept: 'application/ion+json; okta-version=1.0.0',
-        'accept-language': 'en',
-        'content-type': 'application/json',
-        'x-okta-user-agent-extended': oktaUserAgent,
-      };
-
-      const params = {
-        credentials: {
-          passcode: process.env.MLBTV_PASS,
-        },
-        stateHandle: this.identify_state_handle,
-      };
-
-      const {data} = await axios.post(url, params, {
-        headers: {
-          ...COMMON_HEADERS,
-          ...headers,
-        },
-      });
-
-      data.successWithInteractionCode.value.forEach((code: {name: string; value: string}) => {
-        if (code.name === 'interaction_code') {
-          this.interaction_code = code.value;
-        }
-      });
-    } catch (e) {
-      console.error(e);
-      console.log('Could not get answer');
-    }
-  };
-
-  private login = async (): Promise<void> => {
-    await this.getAnswer();
-
+  private refreshToken = async (): Promise<void> => {
     try {
       const url = 'https://ids.mlb.com/oauth2/aus1m088yK07noBfh356/v1/token';
       const headers = {
-        accept: 'application/json',
+        'User-Agent': androidMlbUserAgent,
         'accept-language': 'en',
         'content-type': 'application/x-www-form-urlencoded',
-        'x-okta-user-agent-extended': oktaUserAgent,
       };
 
       const params = new URLSearchParams({
         client_id: CLIENT_ID,
-        code_verifier: this.code_verifier,
-        grant_type: 'interaction_code',
-        interaction_code: this.interaction_code,
-        redirect_uri: 'https://www.mlb.com/login',
+        grant_type: 'refresh_token',
+        refresh_token: this.refresh_token,
+        scope: 'offline_access openid profile',
       });
 
       const {data} = await axios.post(url, params, {
-        headers: {
-          ...COMMON_HEADERS,
-          ...headers,
-        },
+        headers,
       });
 
       this.access_token = data.access_token;
+      this.expires_at = moment().add(data.expires_in, 'seconds').valueOf();
+      this.refresh_token = data.refresh_token;
       this.save();
     } catch (e) {
       console.error(e);
-      console.log('Could not login');
+      console.log('Could not get refresh token for MLB.tv');
+    }
+  };
+
+  private authenticateRegCode = async (): Promise<boolean> => {
+    try {
+      const url = 'https://ids.mlb.com/oauth2/aus1m088yK07noBfh356/v1/token';
+      const headers = {
+        'User-Agent': androidMlbUserAgent,
+        'accept-language': 'en',
+        'content-type': 'application/x-www-form-urlencoded',
+      };
+
+      const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        device_code: this.device_id,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      });
+
+      const {data} = await axios.post(url, params, {
+        headers,
+      });
+
+      this.access_token = data.access_token;
+      this.expires_at = moment().add(data.expires_in, 'seconds').valueOf();
+      this.refresh_token = data.refresh_token;
+      this.save();
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  private startProviderAuthFlow = async (): Promise<void> => {
+    try {
+      const url = 'https://ids.mlb.com/oauth2/aus1m088yK07noBfh356/v1/device/authorize';
+      const headers = {
+        'User-Agent': androidMlbUserAgent,
+        'accept-language': 'en',
+        'content-type': 'application/x-www-form-urlencoded',
+      };
+
+      const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        scope: 'openid profile offline_access',
+      });
+
+      const {data} = await axios.post(url, params, {
+        headers,
+      });
+
+      this.device_id = data.device_code;
+      this.save();
+
+      console.log('=== MLB.tv Auth ===');
+      console.log('Please open a browser window and go to: https://ids.mlb.com/activate');
+      console.log('Enter code: ', data.user_code);
+      console.log('App will continue when login has completed...');
+
+      return new Promise(async (resolve, reject) => {
+        // Reg code expires in 5 minutes
+        const maxNumOfReqs = 30;
+
+        let numOfReqs = 0;
+
+        const authenticate = async () => {
+          if (numOfReqs < maxNumOfReqs) {
+            const res = await this.authenticateRegCode();
+            numOfReqs += 1;
+
+            if (res) {
+              clearInterval(regInterval);
+              resolve();
+            }
+          } else {
+            clearInterval(regInterval);
+            reject();
+          }
+        };
+
+        const regInterval = setInterval(() => {
+          authenticate();
+        }, 10 * 1000);
+
+        await authenticate();
+      });
+    } catch (e) {
+      console.error(e);
+      console.log('Could not start the authentication process for MLB.tv');
     }
   };
 
@@ -647,11 +523,14 @@ class MLBHandler {
 
   private load = () => {
     if (fs.existsSync(path.join(configPath, 'mlb_tokens.json'))) {
-      const {device_id, access_token, code_verifier} = fsExtra.readJSONSync(path.join(configPath, 'mlb_tokens.json'));
+      const {device_id, access_token, expires_at, refresh_token} = fsExtra.readJSONSync(
+        path.join(configPath, 'mlb_tokens.json'),
+      );
 
       this.device_id = device_id;
       this.access_token = access_token;
-      this.code_verifier = code_verifier;
+      this.expires_at = expires_at;
+      this.refresh_token = refresh_token;
     }
   };
 }

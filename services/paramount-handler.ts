@@ -7,10 +7,11 @@ import moment from 'moment';
 import crypto from 'crypto';
 
 import {configPath} from './config';
-import {useParamountPlus} from './networks';
+import {useCbsSportsHq, useGolazo, useParamountPlus} from './networks';
 import {getRandomHex} from './shared-helpers';
 import {db} from './database';
 import {IEntry, IHeaders} from './shared-interfaces';
+import {useLinear} from './channels';
 
 const BASE_THUMB_URL = 'https://wwwimage-us.pplusstatic.com/thumbnails/photos/w370-q80/';
 const BASE_URL = 'https://www.paramountplus.com';
@@ -106,6 +107,8 @@ interface IParamountEvent {
   channelName: string;
   title: string;
   filePathThumb: string;
+  linear?: boolean;
+  linearChannel?: string;
 }
 
 interface IDma {
@@ -134,7 +137,11 @@ const parseAirings = async (events: IParamountEvent[]) => {
 
     if (!entryExists) {
       const start = moment(event.startTimestamp);
-      const end = moment(event.endTimestamp).add(1, 'hour');
+      const end = moment(event.endTimestamp);
+
+      if (!event.linear) {
+        end.add(1, 'hour');
+      }
 
       if (end.isBefore(now) || start.isAfter(inTwoDays)) {
         continue;
@@ -153,8 +160,15 @@ const parseAirings = async (events: IParamountEvent[]) => {
         image: `${BASE_THUMB_URL}${event.filePathThumb?.replace('files/', '')}`,
         name: event.title,
         network: 'Paramount+',
-        sport: event.channelName,
         start: start.valueOf(),
+        ...(event.linear
+          ? {
+              channel: event.linearChannel,
+              linear: true,
+            }
+          : {
+              sport: event.channelName,
+            }),
       });
     }
   }
@@ -263,22 +277,39 @@ class ParamountHandler {
             },
           );
 
-          (data.listing || []).forEach(e => {
-            if (ALLOWED_LOCAL_SPORTS.includes(e.title)) {
+          if (c.local) {
+            (data.listing || []).forEach(e => {
+              if (ALLOWED_LOCAL_SPORTS.includes(e.title)) {
+                const transformedEvent: IParamountEvent = {
+                  channelName: e.title,
+                  endTimestamp: e.endTimestamp,
+                  filePathThumb: e.filePathThumb,
+                  startTimestamp: e.startTimestamp,
+                  title: e.episodeTitle || e.title,
+                  videoContentId: e.videoContentId.startsWith('_')
+                    ? `${e.endTimestamp}----${e.videoContentId}`
+                    : e.videoContentId,
+                };
+
+                events.push(transformedEvent);
+              }
+            });
+          } else {
+            (data.listing || []).forEach(e => {
               const transformedEvent: IParamountEvent = {
                 channelName: e.title,
                 endTimestamp: e.endTimestamp,
                 filePathThumb: e.filePathThumb,
+                linear: true,
+                linearChannel: c.slug,
                 startTimestamp: e.startTimestamp,
                 title: e.episodeTitle || e.title,
-                videoContentId: e.videoContentId.startsWith('_')
-                  ? `${e.endTimestamp}----${e.videoContentId}`
-                  : e.videoContentId,
+                videoContentId: `${e.endTimestamp}::::${e.videoContentId}`,
               };
 
               events.push(transformedEvent);
-            }
-          });
+            });
+          }
         } catch (e) {
           console.error(e);
           console.log('Could not get EPG for: ', c.channelName);
@@ -324,10 +355,16 @@ class ParamountHandler {
           streamingUrl: this.dma.tokenDetails.playback_url,
         };
       } else {
+        let contentId = id;
+
+        if (id.indexOf('::::') > -1) {
+          contentId = id.split('::::')[1];
+        }
+
         const {data} = await instance.get(
           `/apps-api/v3.1/androidphone/irdeto-control/session-token.json?${new URLSearchParams({
             at: TOKEN,
-            contentId: id,
+            contentId,
             locale: 'en-us',
           })}`,
           {
@@ -372,6 +409,16 @@ class ParamountHandler {
       data.carousel.forEach(c => {
         if (c.local) {
           channels.push(c);
+        }
+
+        if (useLinear) {
+          if (useCbsSportsHq && c.channelName === 'CBS Sports HQ') {
+            channels.push(c);
+          }
+
+          if (useGolazo && c.channelName === 'CBS Sports Golazo Network') {
+            channels.push(c);
+          }
         }
       });
 

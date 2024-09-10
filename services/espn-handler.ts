@@ -20,7 +20,6 @@ import {
   useEspn2,
   useEspn3,
   useEspnU,
-  useLonghorn,
   useSec,
   useSecPlus,
   useEspnPpv,
@@ -30,6 +29,7 @@ import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHead
 import {getRandomHex} from './shared-helpers';
 import {IEntry, IHeaders, IJWToken} from './shared-interfaces';
 import {db} from './database';
+import {useLinear} from './channels';
 
 global.WebSocket = ws;
 
@@ -141,6 +141,8 @@ const BAM_API_KEY = 'ZXNwbiZicm93c2VyJjEuMC4w.ptUt7QxsteaRruuPmGZFaJByOoqKvDP2a5
 const BAM_APP_CONFIG =
   'https://bam-sdk-configs.bamgrid.com/bam-sdk/v2.0/espn-a9b93989/browser/v3.4/linux/chrome/prod.json';
 
+const LINEAR_NETWORKS = ['espn1', 'espn2', 'espnu', 'sec', 'acc', 'espnews'];
+
 const urlBuilder = (endpoint: string, provider: string) =>
   `${DISNEY_ROOT_URL}${endpoint}`.replace('{id-provider}', provider);
 
@@ -246,9 +248,6 @@ const getNetworkInfo = (network?: string) => {
   } else if (network === 'accnx') {
     networks = '["9f538e0b-a896-3325-a417-79034e03a248"]';
     packages = 'null';
-  } else if (network === 'longhorn') {
-    networks = '["5c1fd0f3-1022-3bc4-8af9-f785847baaf9"]';
-    packages = 'null';
   } else if (network === 'espnews') {
     networks = '["1e760a1c-c204-339d-8317-8e615c9cc0e0"]';
     packages = 'null';
@@ -279,8 +278,14 @@ const parseAirings = async events => {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
+      const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.find(n => n === event.network?.id);
+
       const start = moment(event.startDateTime);
       const end = moment(event.startDateTime).add(event.duration, 'seconds').add(1, 'hour');
+
+      if (!isLinear) {
+        end.add(1, 'hour');
+      }
 
       if (end.isBefore(now)) {
         continue;
@@ -301,6 +306,10 @@ const parseAirings = async events => {
         sport: event.subcategory?.name,
         start: start.valueOf(),
         url: event.source?.url,
+        ...(isLinear && {
+          channel: event.network?.id,
+          linear: true,
+        }),
       });
     }
   }
@@ -403,10 +412,6 @@ class EspnHandler {
         const liveEntries = await this.getLiveEvents('accnx');
         entries = [...entries, ...liveEntries];
       }
-      if (useLonghorn) {
-        const liveEntries = await this.getLiveEvents('longhorn');
-        entries = [...entries, ...liveEntries];
-      }
       if (useEspnews) {
         const liveEntries = await this.getLiveEvents('espnews');
         entries = [...entries, ...liveEntries];
@@ -459,10 +464,6 @@ class EspnHandler {
         }
         if (useAccNx) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accnx');
-          entries = [...entries, ...upcomingEntries];
-        }
-        if (useLonghorn) {
-          const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'longhorn');
           entries = [...entries, ...upcomingEntries];
         }
         if (useEspnews) {

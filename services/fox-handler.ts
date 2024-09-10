@@ -12,6 +12,7 @@ import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
+import {useLinear} from './channels';
 
 interface IAppConfig {
   api: {
@@ -107,15 +108,21 @@ const parseCategories = (event: IFoxEvent) => {
 
 const parseAirings = async (events: IFoxEvent[]) => {
   const now = moment();
+  const inTwoDays = moment().add(2, 'days').endOf('day');
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
       const start = moment(event.startDate);
-      const end = moment(event.endDate).add(1, 'hour');
+      const end = moment(event.endDate);
+      const isLinear = event.network !== 'fox' && useLinear;
 
-      if (end.isBefore(now)) {
+      if (!isLinear) {
+        end.add(1, 'hour');
+      }
+
+      if (end.isBefore(now) || start.isAfter(inTwoDays)) {
         continue;
       }
 
@@ -137,12 +144,16 @@ const parseAirings = async (events: IFoxEvent[]) => {
         name: event.name,
         network: event.callSign,
         start: start.valueOf(),
+        ...(isLinear && {
+          channel: event.network,
+          linear: true,
+          replay: event.airingType !== 'live',
+        }),
       });
     }
   }
 };
 
-const allowReplays = process.env.FOXSPORTS_ALLOW_REPLAYS?.toLowerCase() === 'true' ? true : false;
 const maxRes = getMaxRes();
 
 const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
@@ -359,9 +370,11 @@ class FoxHandler {
             m.endDate &&
             m.id
           ) {
-            if (m.airingType === 'live' || m.airingType === 'new') {
-              events.push(m);
-            } else if (allowReplays && m.airingType !== 'live') {
+            if (!useLinear) {
+              if (m.airingType === 'live' || m.airingType === 'new') {
+                events.push(m);
+              }
+            } else {
               events.push(m);
             }
           }

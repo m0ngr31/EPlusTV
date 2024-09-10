@@ -11,6 +11,7 @@ import {useNflPlus} from './networks';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
+import {useLinear} from './channels';
 
 interface INFLRes {
   data: {
@@ -21,6 +22,7 @@ interface INFLRes {
 interface INFLEvent {
   title: string;
   startTime: string;
+  endTime: string;
   preferredImage: string;
   externalId: string;
   duration: number;
@@ -33,41 +35,41 @@ interface INFLEvent {
 }
 
 const CLIENT_KEY = [
-  'A',
-  '3',
-  'b',
-  '7',
-  '4',
-  'w',
-  'O',
-  'i',
-  'S',
-  'D',
-  'M',
-  'r',
-  'h',
-  'J',
-  'K',
-  'e',
-  'X',
-  'A',
-  'E',
-  'I',
+  '0',
   'q',
-  'g',
-  'R',
-  'I',
-  'C',
-  'B',
-  'i',
-  'B',
+  '1',
+  'p',
+  '5',
+  'K',
+  'S',
+  's',
+  'v',
+  't',
+  'u',
+  '2',
+  'V',
+  'J',
+  'f',
+  'k',
+  '5',
+  'v',
+  'Q',
+  '5',
+  'E',
+  'd',
+  'p',
+  'm',
   'N',
-  'o',
+  'N',
+  'G',
+  'r',
+  'C',
+  'G',
+  'U',
   '7',
-  'o',
 ].join('');
 
-const CLIENT_SECRET = ['u', 'o', 'C', 'y', 'y', 'k', 'y', 'U', 'w', 'D', 'b', 'f', 'Q', 'Z', 'r', '2'].join('');
+const CLIENT_SECRET = ['q', 'G', 'h', 'E', 'v', '1', 'R', 't', 'I', '2', 'S', 'f', 'R', 'Q', 'O', 'e'].join('');
 
 const DEVICE_INFO = {
   capabilities: {},
@@ -100,6 +102,12 @@ const parseAirings = async (events: INFLEvent[]) => {
       const start = moment(event.startTime);
       const end = moment(start).add(event.duration, 'seconds');
 
+      const isLinear = useLinear && (event.callSign === 'NFLNETWORK' || event.callSign === 'NFLNRZ');
+
+      if (!isLinear) {
+        end.add(1, 'hour');
+      }
+
       if (end.isBefore(now)) {
         continue;
       }
@@ -125,6 +133,11 @@ const parseAirings = async (events: INFLEvent[]) => {
         network: 'NFL+',
         sport: 'NFL',
         start: start.valueOf(),
+        ...(isLinear && {
+          channel: event.callSign,
+          linear: true,
+          replay: event.callSign === 'NFLNETWORK',
+        }),
       });
     }
   }
@@ -184,7 +197,7 @@ class NflHandler {
     const events: INFLEvent[] = [];
 
     try {
-      const endSchedule = moment().add(3, 'days');
+      const endSchedule = moment().add(2, 'days');
 
       const url = ['https://', 'api.nfl.com', '/experience/v1/livestreams'].join('');
 
@@ -203,15 +216,13 @@ class NflHandler {
         ) {
           events.push(i);
         } else if (
-          i.contentType === 'SPORTSNON-EVENT' &&
+          i.callSign === 'NFLNRZ' &&
           i.title === 'NFL RedZone' &&
           moment(i.startTime).isBefore(endSchedule) &&
           redZoneAccess
         ) {
-          i.linear = true;
           events.push(i);
-        } else if (i.callSign === 'NFLNETWORK' && moment(i.startTime).isBefore(endSchedule)) {
-          i.linear = true;
+        } else if (i.callSign === 'NFLNETWORK' && moment(i.startTime).isBefore(endSchedule) && useLinear) {
           events.push(i);
         }
       });

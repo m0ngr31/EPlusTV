@@ -1,4 +1,4 @@
-import {NUM_OF_CHANNELS, START_CHANNEL} from './channels';
+import {NUM_OF_CHANNELS, START_CHANNEL, useLinear} from './channels';
 import {db, IDocument} from './database';
 import {IChannel, IEntry} from './shared-interfaces';
 
@@ -32,6 +32,34 @@ const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): P
 };
 
 export const scheduleEntries = async (): Promise<void> => {
+  let needReschedule = false;
+
+  if (!useLinear) {
+    const linearEntries = await db.entries.count({linear: {$exists: true}});
+
+    if (linearEntries > 0) {
+      needReschedule = true;
+    }
+  }
+
+  if (needReschedule) {
+    console.log('');
+    console.log('====================================================================');
+    console.log('===                                                              ===');
+    console.log('===   Need to rebuild the schedule because the LINEAR_CHANNELS   ===');
+    console.log('===            variable is no longer being used.                 ===');
+    console.log('===                                                              ===');
+    console.log('====================================================================');
+    console.log('===  THIS WILL BREAK SCHEDULED RECORDINGS IN YOUR DVR SOFTWARE   ===');
+    console.log('====================================================================');
+    console.log('');
+
+    await db.schedule.remove({}, {multi: true});
+    await db.entries.update<IEntry>({}, {$unset: {channel: true, linear: true}}, {multi: true});
+
+    return await scheduleEntries();
+  }
+
   const unscheduledEntries = await db.entries.find<IEntry>({channel: {$exists: false}}).sort({start: 1});
 
   unscheduledEntries.length > 0 && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
