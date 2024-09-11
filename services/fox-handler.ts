@@ -146,11 +146,11 @@ const parseAirings = async (events: IFoxEvent[]) => {
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD || event.images.seriesList?.FHD,
         name: event.name,
         network: event.callSign,
+        replay: event.airingType !== 'live',
         start: start.valueOf(),
         ...(isLinear && {
           channel: event.network,
           linear: true,
-          replay: event.airingType !== 'live',
         }),
       });
     }

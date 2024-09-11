@@ -12,7 +12,7 @@ export const generateM3u = (uri: string, linear = false): string => {
       }
 
       const channelNum = parseInt(key, 10) + LINEAR_START_CHANNEL;
-      m3uFile = `${m3uFile}\n#EXTINF:0 tvg-id="${channelNum}.eplustv" channel-id="${val.name} channel-number="${channelNum}" tvg-chno="${channelNum}" tvg-name="${val.tvgName}" tvc-guide-stationid="${val.stationId}" group-title="EPlusTV", ${val.name}`;
+      m3uFile = `${m3uFile}\n#EXTINF:0 tvg-id="${channelNum}.eplustv" channel-id="${val.name}" channel-number="${channelNum}" tvg-chno="${channelNum}" tvg-name="${val.tvgName}" tvc-guide-stationid="${val.stationId}" group-title="EPlusTV", ${val.name}`;
       m3uFile = `${m3uFile}\n${uri}/channels/${channelNum}.m3u8\n`;
     });
   } else {
