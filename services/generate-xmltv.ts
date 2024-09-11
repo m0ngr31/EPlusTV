@@ -52,6 +52,10 @@ export const generateXml = async (linear = false): Promise<xml> => {
 
   if (linear) {
     _.forOwn(CHANNEL_MAP, (val, key) => {
+      if (!val.canUse) {
+        return;
+      }
+
       const channelNum = parseInt(key, 10) + LINEAR_START_CHANNEL;
 
       wrap.tv.push({

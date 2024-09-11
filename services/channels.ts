@@ -1,4 +1,17 @@
 import _ from 'lodash';
+import {
+  useAccN,
+  useCbsSportsHq,
+  useEspn1,
+  useEspn2,
+  useEspnews,
+  useEspnU,
+  useFoxSports,
+  useGolazo,
+  useNflNetwork,
+  useNflRedZone,
+  useSec,
+} from './networks';
 
 let startChannel = _.toNumber(process.env.START_CHANNEL);
 if (_.isNaN(startChannel)) {
@@ -35,6 +48,7 @@ export const useLinear = process.env.LINEAR_CHANNELS?.toLowerCase() === 'true' ?
 /* eslint-disable sort-keys-custom-order-fix/sort-keys-custom-order-fix */
 export const CHANNEL_MAP = {
   0: {
+    canUse: useEspn1,
     id: 'espn1',
     logo: 'https://tmsimg.fancybits.co/assets/s32645_h3_aa.png?w=360&h=270',
     name: 'ESPN',
@@ -42,6 +56,7 @@ export const CHANNEL_MAP = {
     tvgName: 'ESPNHD',
   },
   1: {
+    canUse: useEspn2,
     id: 'espn2',
     logo: 'https://tmsimg.fancybits.co/assets/s45507_ll_h15_aa.png?w=360&h=270',
     name: 'ESPN2',
@@ -49,6 +64,7 @@ export const CHANNEL_MAP = {
     tvgName: 'ESPN2HD',
   },
   2: {
+    canUse: useEspnU,
     id: 'espnu',
     logo: 'https://tmsimg.fancybits.co/assets/s60696_ll_h15_aa.png?w=360&h=270',
     name: 'ESPNU',
@@ -56,6 +72,7 @@ export const CHANNEL_MAP = {
     tvgName: 'ESPNUHD',
   },
   3: {
+    canUse: useSec,
     id: 'sec',
     logo: 'https://tmsimg.fancybits.co/assets/s89714_ll_h15_aa.png?w=360&h=270',
     name: 'SEC Network',
@@ -63,6 +80,7 @@ export const CHANNEL_MAP = {
     tvgName: 'SECH',
   },
   4: {
+    canUse: useAccN,
     id: 'acc',
     logo: 'https://tmsimg.fancybits.co/assets/s111871_ll_h15_ac.png?w=360&h=270',
     name: 'ACC Network',
@@ -70,6 +88,7 @@ export const CHANNEL_MAP = {
     tvgName: 'ACC',
   },
   5: {
+    canUse: useEspnews,
     id: 'espnews',
     logo: 'https://tmsimg.fancybits.co/assets/s59976_ll_h15_aa.png?w=360&h=270',
     name: 'ESPNews',
@@ -77,6 +96,7 @@ export const CHANNEL_MAP = {
     tvgName: 'ESPNWHD',
   },
   10: {
+    canUse: useFoxSports,
     id: 'fs1',
     logo: 'https://tmsimg.fancybits.co/assets/s82547_ll_h15_aa.png?w=360&h=270',
     name: 'FS1',
@@ -84,6 +104,7 @@ export const CHANNEL_MAP = {
     tvgName: 'FS1HD',
   },
   11: {
+    canUse: useFoxSports,
     id: 'fs2',
     logo: 'https://tmsimg.fancybits.co/assets/s59305_ll_h15_aa.png?w=360&h=270',
     name: 'FS2',
@@ -91,6 +112,7 @@ export const CHANNEL_MAP = {
     tvgName: 'FS2HD',
   },
   12: {
+    canUse: useFoxSports,
     id: 'btn',
     logo: 'https://tmsimg.fancybits.co/assets/s58321_ll_h15_ac.png?w=360&h=270',
     name: 'B1G Network',
@@ -98,6 +120,7 @@ export const CHANNEL_MAP = {
     tvgName: 'BIG10HD',
   },
   13: {
+    canUse: useFoxSports,
     id: 'fox-soccer-plus',
     logo: 'https://tmsimg.fancybits.co/assets/s66880_ll_h15_aa.png?w=360&h=270',
     name: 'FOX Soccer Plus',
@@ -105,6 +128,7 @@ export const CHANNEL_MAP = {
     tvgName: 'FSCPLHD',
   },
   20: {
+    canUse: useCbsSportsHq,
     id: 'cbssportshq',
     logo: 'https://tmsimg.fancybits.co/assets/s108919_ll_h15_aa.png?w=360&h=270',
     name: 'CBS Sports HQ',
@@ -112,6 +136,7 @@ export const CHANNEL_MAP = {
     tvgName: 'CBSSPHQ',
   },
   21: {
+    canUse: useGolazo,
     id: 'golazo',
     logo: 'https://tmsimg.fancybits.co/assets/s133691_ll_h15_aa.png?w=360&h=270',
     name: 'GOLAZO Network',
@@ -119,6 +144,7 @@ export const CHANNEL_MAP = {
     tvgName: 'GOLAZO',
   },
   30: {
+    canUse: useNflNetwork,
     id: 'NFLNETWORK',
     logo: 'https://tmsimg.fancybits.co/assets/s45399_ll_h15_aa.png?w=360&h=270',
     name: 'NFL Network',
@@ -126,6 +152,7 @@ export const CHANNEL_MAP = {
     tvgName: 'NFLHD',
   },
   31: {
+    canUse: useNflRedZone,
     id: 'NFLNRZ',
     logo: 'https://tmsimg.fancybits.co/assets/s65025_ll_h9_aa.png?w=360&h=270',
     name: 'NFL RedZone',

@@ -64,6 +64,9 @@ interface IFoxEvent {
     seriesDetail?: {
       FHD: string;
     };
+    seriesList?: {
+      FHD: string;
+    };
   };
   contentSKUResolved?: {
     baseId: string;
@@ -140,7 +143,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
         end: end.valueOf(),
         from: 'foxsports',
         id: event.id,
-        image: event.images.logo?.FHD || event.images.seriesDetail?.FHD,
+        image: event.images.logo?.FHD || event.images.seriesDetail?.FHD || event.images.seriesList?.FHD,
         name: event.name,
         network: event.callSign,
         start: start.valueOf(),
