@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import {
   useAccN,
+  useBigInning,
   useCbsSportsHq,
   useEspn1,
   useEspn2,
@@ -158,6 +159,14 @@ export const CHANNEL_MAP = {
     name: 'NFL RedZone',
     stationId: '65025',
     tvgName: 'NFLNRZD',
+  },
+  40: {
+    canUse: useBigInning,
+    id: 'MLBTVBI',
+    logo: 'https://i.imgur.com/8JHoeFA.png',
+    name: 'MLB Big Inning',
+    stationId: '119153',
+    tvgName: 'MLBTVBI',
   },
 };
 /* eslint-enable sort-keys-custom-order-fix/sort-keys-custom-order-fix */

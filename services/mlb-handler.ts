@@ -2,13 +2,15 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import axios from 'axios';
-import moment from 'moment';
+import * as cheerio from 'cheerio';
+import moment, {Moment} from 'moment-timezone';
 
 import {okHttpUserAgent, userAgent, androidMlbUserAgent} from './user-agent';
 import {configPath} from './config';
-import {useMLBtv} from './networks';
+import {useBigInning, useMLBtv} from './networks';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
+import {useLinear} from './channels';
 
 interface IGameContent {
   media: {
@@ -101,6 +103,21 @@ const CLIENT_ID = [
   '6',
 ].join('');
 
+const parseDateAndTime = (dateString: string, timeString: string): Moment => {
+  // Combine date and time strings
+  const dateTimeString = `${dateString} ${timeString}`;
+
+  // Parse the combined string and set the time zone to Eastern
+  const dateTime = moment.tz(dateTimeString, 'M/DD/YYYY h:mm A', 'America/New_York');
+
+  // Check if the parsed date is valid
+  if (!dateTime.isValid()) {
+    throw new Error('Invalid date or time format');
+  }
+
+  return dateTime;
+};
+
 const generateThumb = (home: ITeam, away: ITeam): string =>
   `https://img.mlbstatic.com/mlb-photos/image/upload/ar_167:215,c_crop/fl_relative,l_team:${home.team.id}:fill:spot.png,w_1.0,h_1,x_0.5,y_0,fl_no_overflow,e_distort:100p:0:200p:0:200p:100p:0:100p/fl_relative,l_team:${away.team.id}:logo:spot:current,w_0.38,x_-0.25,y_-0.16/fl_relative,l_team:${home.team.id}:logo:spot:current,w_0.38,x_0.25,y_0.16/w_750/team/${away.team.id}/fill/spot.png`;
 
@@ -150,6 +167,41 @@ const parseAirings = async (events: ICombinedGame) => {
         }
       }
     }
+  }
+};
+
+const parseBigInnings = async (dates: Moment[][]) => {
+  const now = moment();
+  const endDate = moment().add(2, 'days');
+
+  for (const day of dates) {
+    const [start, end] = day;
+    const gameName = `Big Inning - ${start.format('dddd, MMMM Do YYYY')}`;
+
+    const entryExists = await db.entries.findOne<IEntry>({id: gameName});
+
+    if (start.isAfter(endDate) || end.isBefore(now) || entryExists) {
+      continue;
+    }
+
+    console.log('Adding event: ', gameName);
+
+    await db.entries.insert<IEntry>({
+      categories: ['Baseball', 'MLB', 'Big Inning'],
+      duration: end.diff(start, 'seconds'),
+      end: end.valueOf(),
+      from: 'mlbtv',
+      id: gameName,
+      image: 'https://i.imgur.com/8JHoeFA.png',
+      name: gameName,
+      network: 'MLBTVBI',
+      sport: 'MLB',
+      start: start.valueOf(),
+      ...(useLinear && {
+        channel: 'MLBTVBI',
+        linear: true,
+      }),
+    });
   }
 };
 
@@ -234,6 +286,11 @@ class MLBHandler {
         };
       }
 
+      if (useBigInning) {
+        const bigInnings = await this.getBigInnings();
+        await parseBigInnings(bigInnings);
+      }
+
       await parseAirings(combinedEntries);
     } catch (e) {
       console.error(e);
@@ -244,6 +301,13 @@ class MLBHandler {
   public getEventData = async (mediaId: string): Promise<[string, IHeaders]> => {
     try {
       await this.getSession();
+
+      if (mediaId.indexOf('Big Inning - ') > -1) {
+        const streamInfoUrl = await this.getBigInningInfo();
+        const streamUrl = await this.getBigInningStream(streamInfoUrl);
+
+        return [streamUrl, {}];
+      }
 
       const url = 'https://media-gateway.mlb.com/graphql';
       const headers = {
@@ -293,6 +357,82 @@ class MLBHandler {
     } catch (e) {
       console.error(e);
       console.log('Could not start playback');
+    }
+  };
+
+  private getBigInningInfo = async (): Promise<string> => {
+    try {
+      const url = ['https://', 'dapi.mlbinfra.com', '/v2', '/content', '/en-us', '/vsmcontents', '/big-inning'].join(
+        '',
+      );
+
+      const {data} = await axios.get(url, {
+        headers: {
+          'User-Agent': androidMlbUserAgent,
+        },
+      });
+
+      if (data.references?.video.length > 0) {
+        return data.references.video[0].fields.url;
+      } else {
+        throw new Error('Big Inning data not ready yet');
+      }
+    } catch (e) {
+      console.error(e);
+      console.log('Big Inning data not ready yet');
+    }
+  };
+
+  private getBigInningStream = async (url: string): Promise<string> => {
+    try {
+      const {data} = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${this.access_token}`,
+          'User-Agent': androidMlbUserAgent,
+        },
+      });
+
+      return data.data[0].value;
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get Big Inning stream info');
+    }
+  };
+
+  private getBigInnings = async (): Promise<Moment[][]> => {
+    const bigInnings: Moment[][] = [];
+
+    try {
+      const {data} = await axios.get(
+        'https://www.mlb.com/live-stream-games/help-center/subscription-access-big-inning',
+      );
+
+      const $ = cheerio.load(data);
+      const table = $('table');
+
+      table.find('tr').each((_, row) => {
+        const rowData = [];
+
+        $(row)
+          .find('td')
+          .each((_, cell) => {
+            rowData.push($(cell).text().trim());
+          });
+
+        if (rowData.length > 0) {
+          const [dateString, startTimeString, endTimeString] = rowData;
+
+          const startDateTime = parseDateAndTime(dateString, startTimeString);
+          const endDateTime = parseDateAndTime(dateString, endTimeString);
+
+          bigInnings.push([startDateTime, endDateTime]);
+        }
+      });
+
+      return bigInnings;
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get Big Inning data');
     }
   };
 

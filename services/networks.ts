@@ -14,6 +14,7 @@ export const useFoxSports = process.env.FOXSPORTS?.toLowerCase() === 'true' ? tr
 export const useFoxOnly4k = process.env.FOX_ONLY_4K?.toLowerCase() === 'true' ? true : false;
 
 export const useMLBtv = process.env.MLBTV?.toLowerCase() === 'true' ? true : false;
+export const useBigInning = process.env.BIGINNING?.toLowerCase() === 'true' ? true : false;
 
 export const useB1GPlus = process.env.B1GPLUS?.toLowerCase() === 'true' ? true : false;
 

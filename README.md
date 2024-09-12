@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.1.1**
+Current version: **3.1.2**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -111,6 +111,7 @@ Use if you would like to login with your MLB.tv account
 |---|---|---|
 | MLBTV | Set if you would like to use MLB.tv | False |
 | MLBTV_ONLY_FREE | Only schedule free games | False |
+| BIGINNING*** | Schedule Big Inning? | False |
 
 
 ### Notes
