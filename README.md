@@ -24,7 +24,7 @@ The server exposes 2 main endpoints:
 # Running
 The recommended way of running is to pull the image from [Docker Hub](https://hub.docker.com/r/m0ngr31/eplustv).
 
-## Environement Variables
+## Environment Variables
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | START_CHANNEL | What the first channel number should be. | No | 1 |
