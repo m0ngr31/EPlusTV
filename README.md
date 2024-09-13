@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.1.3**
+Current version: **3.1.4**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -71,11 +71,13 @@ Use if you would like to login with Paramount+
 
 #### NFL+
 Use if you would like to login with NFL+
+
+*** If you have access to NFL RedZone (NFL+ Premium), it will be scheduled. If `LINEAR_CHANNELS` is set, it will be on its own channel
+
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | NFLPLUS | Set if you would like NFL+ events | False | False |
 | NFLNETWORK* | Set if you would like the NFL Network channel (only available with `LINEAR_CHANNELS`) | False | False |
-| NFLREDZONE*** | Set if you would like NFL RedZone (have to have NFL+ Premium) | False | False |
 
 #### B1G+
 Use if you would like to login with your B1G+ account
@@ -107,11 +109,13 @@ Use if you would like to use Mountain West
 
 #### MLB.tv
 Use if you would like to login with your MLB.tv account
+
+*** If `LINEAR_CHANNELS` is set, Big Inning will be on its own channel
+
 | Environment Variable | Description | Default |
 |---|---|---|
 | MLBTV | Set if you would like to use MLB.tv | False |
 | MLBTV_ONLY_FREE | Only schedule free games | False |
-| BIGINNING*** | Schedule Big Inning? | False |
 
 
 ### Notes

@@ -7,7 +7,7 @@ import jwt_decode from 'jwt-decode';
 
 import {okHttpUserAgent} from './user-agent';
 import {configPath} from './config';
-import {useNflNetwork, useNflPlus, useNflRedZone} from './networks';
+import {useNfl} from './networks';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
@@ -152,7 +152,7 @@ class NflHandler {
   public uid?: string;
 
   public initialize = async () => {
-    if (!useNflPlus) {
+    if (!useNfl.plus) {
       return;
     }
 
@@ -170,7 +170,7 @@ class NflHandler {
   };
 
   public refreshTokens = async () => {
-    if (!useNflPlus) {
+    if (!useNfl.plus) {
       return;
     }
 
@@ -180,15 +180,14 @@ class NflHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useNflPlus) {
+    if (!useNfl.plus) {
       return;
     }
 
-    const {dmaCode, plans}: {dmaCode: string; plans: {plan: string; status: string}[]} = jwt_decode(this.access_token);
+    const {dmaCode}: {dmaCode: string; plans: {plan: string; status: string}[]} = jwt_decode(this.access_token);
 
-    const redZoneAccess =
-      plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1 && useNflRedZone;
-    const nflNetworkAccess = useLinear && useNflNetwork;
+    const redZoneAccess = this.checkRedZoneAccess();
+    const nflNetworkAccess = useLinear && useNfl.network;
 
     if (!dmaCode) {
       console.log('DMA Code not found for NFL+. Not searching for events');
@@ -261,6 +260,19 @@ class NflHandler {
     }
   };
 
+  private checkRedZoneAccess = (): boolean => {
+    try {
+      const {plans}: {dmaCode: string; plans: {plan: string; status: string}[]} = jwt_decode(this.access_token);
+
+      if (plans) {
+        useNfl.redZone =
+          plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1 ? true : false;
+      }
+    } catch (e) {}
+
+    return useNfl.redZone;
+  };
+
   private extendToken = async (uidSignature?: string, signatureTimestamp?: string): Promise<void> => {
     try {
       const url = ['https://', 'api.nfl.com', '/identity/v3/token/refresh'].join('');
@@ -291,6 +303,8 @@ class NflHandler {
       this.refresh_token = data.refreshToken;
       this.expires_at = data.expiresIn;
       this.save();
+
+      this.checkRedZoneAccess();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh token for NFL+');

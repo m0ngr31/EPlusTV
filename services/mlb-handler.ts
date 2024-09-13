@@ -7,7 +7,7 @@ import moment, {Moment} from 'moment-timezone';
 
 import {okHttpUserAgent, userAgent, androidMlbUserAgent} from './user-agent';
 import {configPath} from './config';
-import {useBigInning, useMLBtv} from './networks';
+import {useMLBtv} from './networks';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
@@ -286,12 +286,10 @@ class MLBHandler {
         };
       }
 
-      if (useBigInning) {
-        const bigInnings = await this.getBigInnings();
-        await parseBigInnings(bigInnings);
-      }
+      const bigInnings = await this.getBigInnings();
 
       await parseAirings(combinedEntries);
+      await parseBigInnings(bigInnings);
     } catch (e) {
       console.error(e);
       console.log('Could not parse MLB.tv events');

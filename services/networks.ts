@@ -14,21 +14,39 @@ export const useFoxSports = process.env.FOXSPORTS?.toLowerCase() === 'true' ? tr
 export const useFoxOnly4k = process.env.FOX_ONLY_4K?.toLowerCase() === 'true' ? true : false;
 
 export const useMLBtv = process.env.MLBTV?.toLowerCase() === 'true' ? true : false;
-export const useBigInning = process.env.BIGINNING?.toLowerCase() === 'true' ? true : false;
 
 export const useB1GPlus = process.env.B1GPLUS?.toLowerCase() === 'true' ? true : false;
 
 export const useFloSports = process.env.FLOSPORTS?.toLowerCase() === 'true' ? true : false;
 
-export const useParamountPlus = process.env.PARAMOUNTPLUS?.toLowerCase() === 'true' ? true : false;
-export const useCbsSportsHq = process.env.CBSSPORTSHQ?.toLowerCase() === 'true' ? true : false;
-export const useGolazo = process.env.GOLAZO?.toLowerCase() === 'true' ? true : false;
+export const useParamount = {
+  _cbsSportsHq: process.env.CBSSPORTSHQ?.toLowerCase() === 'true' ? true : false,
+  _golazo: process.env.GOLAZO?.toLowerCase() === 'true' ? true : false,
+  get cbsSportsHq(): boolean {
+    return this._cbsSportsHq && this.plus;
+  },
+  get golazo(): boolean {
+    return this._golazo && this.plus;
+  },
+  plus: process.env.PARAMOUNTPLUS?.toLowerCase() === 'true' ? true : false,
+};
 
 export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;
 
-export const useNflPlus = process.env.NFLPLUS?.toLowerCase() === 'true' ? true : false;
-export const useNflNetwork = process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false;
-export const useNflRedZone = process.env.NFLREDZONE?.toLowerCase() === 'true' ? true : false;
+export const useNfl = {
+  _network: process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false,
+  _redZone: true,
+  get network(): boolean {
+    return this._network && this.plus;
+  },
+  plus: process.env.NFLPLUS?.toLowerCase() === 'true' ? true : false,
+  get redZone(): boolean {
+    return this._redZone && this.plus;
+  },
+  set redZone(value: boolean) {
+    this._redZone = value;
+  },
+};
 
 export const useMountainWest = process.env.MTNWEST?.toLowerCase() === 'true' ? true : false;
 
@@ -36,6 +54,6 @@ export const requiresEspnProvider =
   useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useAccNx || useEspnews;
 
 export const usesMultiple =
-  ((useFoxSports || useMLBtv || useParamountPlus || useB1GPlus || useFloSports || useMsgPlus || useNflPlus) &&
+  ((useFoxSports || useMLBtv || useParamount.plus || useB1GPlus || useFloSports || useMsgPlus || useNfl.plus) &&
     (requiresEspnProvider || useEspnPlus)) ||
   (requiresEspnProvider && useEspnPlus);

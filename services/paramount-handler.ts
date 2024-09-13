@@ -7,7 +7,7 @@ import moment from 'moment';
 import crypto from 'crypto';
 
 import {configPath} from './config';
-import {useCbsSportsHq, useGolazo, useParamountPlus} from './networks';
+import {useParamount} from './networks';
 import {getRandomHex} from './shared-helpers';
 import {db} from './database';
 import {IEntry, IHeaders} from './shared-interfaces';
@@ -188,7 +188,7 @@ class ParamountHandler {
   private dma: IDma;
 
   public initialize = async () => {
-    if (!useParamountPlus || isParamountDisabled) {
+    if (!useParamount.plus || isParamountDisabled) {
       return;
     }
 
@@ -221,7 +221,7 @@ class ParamountHandler {
   };
 
   public refreshTokens = async () => {
-    if (!useParamountPlus || isParamountDisabled) {
+    if (!useParamount.plus || isParamountDisabled) {
       return;
     }
 
@@ -231,7 +231,7 @@ class ParamountHandler {
   };
 
   public getSchedule = async () => {
-    if (!useParamountPlus || isParamountDisabled) {
+    if (!useParamount.plus || isParamountDisabled) {
       return;
     }
 
@@ -412,11 +412,11 @@ class ParamountHandler {
         }
 
         if (useLinear) {
-          if (useCbsSportsHq && c.channelName === 'CBS Sports HQ') {
+          if (useParamount.cbsSportsHq && c.channelName === 'CBS Sports HQ') {
             channels.push(c);
           }
 
-          if (useGolazo && c.channelName === 'CBS Sports Golazo Network') {
+          if (useParamount.golazo && c.channelName === 'CBS Sports Golazo Network') {
             channels.push(c);
           }
         }

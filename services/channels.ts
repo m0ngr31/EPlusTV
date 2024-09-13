@@ -1,16 +1,13 @@
 import _ from 'lodash';
 import {
   useAccN,
-  useBigInning,
-  useCbsSportsHq,
   useEspn1,
   useEspn2,
   useEspnews,
   useEspnU,
   useFoxSports,
-  useGolazo,
-  useNflNetwork,
-  useNflRedZone,
+  useNfl,
+  useParamount,
   useSec,
 } from './networks';
 
@@ -129,7 +126,7 @@ export const CHANNEL_MAP = {
     tvgName: 'FSCPLHD',
   },
   20: {
-    canUse: useCbsSportsHq,
+    canUse: useParamount.cbsSportsHq,
     id: 'cbssportshq',
     logo: 'https://tmsimg.fancybits.co/assets/s108919_ll_h15_aa.png?w=360&h=270',
     name: 'CBS Sports HQ',
@@ -137,7 +134,7 @@ export const CHANNEL_MAP = {
     tvgName: 'CBSSPHQ',
   },
   21: {
-    canUse: useGolazo,
+    canUse: useParamount.golazo,
     id: 'golazo',
     logo: 'https://tmsimg.fancybits.co/assets/s133691_ll_h15_aa.png?w=360&h=270',
     name: 'GOLAZO Network',
@@ -145,7 +142,7 @@ export const CHANNEL_MAP = {
     tvgName: 'GOLAZO',
   },
   30: {
-    canUse: useNflNetwork,
+    canUse: useNfl.network,
     id: 'NFLNETWORK',
     logo: 'https://tmsimg.fancybits.co/assets/s45399_ll_h15_aa.png?w=360&h=270',
     name: 'NFL Network',
@@ -153,7 +150,7 @@ export const CHANNEL_MAP = {
     tvgName: 'NFLHD',
   },
   31: {
-    canUse: useNflRedZone,
+    canUse: useNfl.redZone,
     id: 'NFLNRZ',
     logo: 'https://tmsimg.fancybits.co/assets/s65025_ll_h9_aa.png?w=360&h=270',
     name: 'NFL RedZone',
@@ -161,7 +158,7 @@ export const CHANNEL_MAP = {
     tvgName: 'NFLNRZD',
   },
   40: {
-    canUse: useBigInning,
+    canUse: true,
     id: 'MLBTVBI',
     logo: 'https://i.imgur.com/8JHoeFA.png',
     name: 'MLB Big Inning',
