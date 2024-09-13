@@ -6,6 +6,7 @@ import {
   useEspnews,
   useEspnU,
   useFoxSports,
+  useMLBtv,
   useNfl,
   useParamount,
   useSec,
@@ -158,7 +159,7 @@ export const CHANNEL_MAP = {
     tvgName: 'NFLNRZD',
   },
   40: {
-    canUse: true,
+    canUse: useMLBtv,
     id: 'MLBTVBI',
     logo: 'https://i.imgur.com/8JHoeFA.png',
     name: 'MLB Big Inning',
