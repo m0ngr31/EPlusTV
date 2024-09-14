@@ -8,6 +8,7 @@ import {msgHandler} from './msg-handler';
 import {floSportsHandler} from './flo-handler';
 import {nflHandler} from './nfl-handler';
 import {mwHandler} from './mw-handler';
+import {nesnHandler} from './nesn-handler';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
@@ -56,6 +57,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'mountain-west':
           [url, headers] = await mwHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'nesn':
+          [url, headers] = await nesnHandler.getEventData(appStatus.channels[channelId].current);
           break;
         default:
           [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);

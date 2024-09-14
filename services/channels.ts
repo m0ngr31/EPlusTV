@@ -7,6 +7,7 @@ import {
   useEspnU,
   useFoxSports,
   useMLBtv,
+  useNesn,
   useNfl,
   useParamount,
   useSec,
@@ -161,10 +162,26 @@ export const CHANNEL_MAP = {
   40: {
     canUse: useMLBtv,
     id: 'MLBTVBI',
-    logo: 'https://i.imgur.com/8JHoeFA.png',
+    logo: 'https://tmsimg.fancybits.co/assets/s119153_ll_h15_aa.png?w=360&h=270',
     name: 'MLB Big Inning',
     stationId: '119153',
     tvgName: 'MLBTVBI',
+  },
+  50: {
+    canUse: useNesn,
+    id: 'NESN',
+    logo: 'https://tmsimg.fancybits.co/assets/s35038_ll_h15_ac.png?w=360&h=270',
+    name: 'New England Sports Network HD',
+    stationId: '35038',
+    tvgName: 'NESNHD',
+  },
+  51: {
+    canUse: useNesn,
+    id: 'NESN+',
+    logo: 'https://tmsimg.fancybits.co/assets/s63198_ll_h15_ac.png?w=360&h=270',
+    name: 'New England Sports Network Plus HD',
+    stationId: '63516',
+    tvgName: 'NESNPLD',
   },
 };
 /* eslint-enable sort-keys-custom-order-fix/sort-keys-custom-order-fix */

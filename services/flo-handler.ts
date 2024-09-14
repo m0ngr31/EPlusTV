@@ -4,7 +4,7 @@ import path from 'path';
 import axios from 'axios';
 import moment from 'moment';
 
-import {flowSportsUserAgent} from './user-agent';
+import {floSportsUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useFloSports} from './networks';
 import {IEntry, IHeaders} from './shared-interfaces';
@@ -197,7 +197,7 @@ class FloSportsHandler {
         {
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': flowSportsUserAgent,
+            'User-Agent': floSportsUserAgent,
             authorization: `Bearer ${this.access_token}`,
           },
         },
@@ -221,7 +221,7 @@ class FloSportsHandler {
         },
         {
           headers: {
-            'User-Agent': flowSportsUserAgent,
+            'User-Agent': floSportsUserAgent,
           },
         },
       );
@@ -246,7 +246,7 @@ class FloSportsHandler {
         {},
         {
           headers: {
-            'User-Agent': flowSportsUserAgent,
+            'User-Agent': floSportsUserAgent,
           },
         },
       );
@@ -297,7 +297,7 @@ class FloSportsHandler {
 
       const {data} = await axios.get(url, {
         headers: {
-          'User-Agent': flowSportsUserAgent,
+          'User-Agent': floSportsUserAgent,
         },
       });
 

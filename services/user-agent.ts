@@ -12,7 +12,7 @@ export const androidFoxUserAgent =
 
 export const okHttpUserAgent = 'okhttp/4.11.0';
 
-export const flowSportsUserAgent =
+export const floSportsUserAgent =
   'Dalvik/2.1.0 (Linux; U; Android 9; sdk_google_atv_x86 Build/PSR1.180720.121) FloSports/2.11.0-2220530';
 
 export const oktaUserAgent = 'okta-auth-js/7.0.2 okta-signin-widget-7.14.0';
@@ -21,6 +21,9 @@ export const b1gUserAgent = 'Ktor client';
 
 export const androidMlbUserAgent =
   'com.bamnetworks.mobile.android.gameday.atbat/7.36.0.23 (Android 9;en_US;sdk_google_atv_x86;Build/PSR1.180720.121)';
+
+export const adobeNesnUserAgent =
+  'Mozilla/5.0 (Linux; Android 10; sdk_google_atv_x86 Build/QTU1.200805.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/83.0.4103.101 Mobile Safari/537.36 AdobePassNativeClient/3.6.1';
 
 // Will generate one random User Agent for the session
 export const userAgent = (() => userAgents[Math.floor(Math.random() * userAgents.length)])();
