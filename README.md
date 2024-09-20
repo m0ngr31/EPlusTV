@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.1.5**
+Current version: **3.2.0**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -81,6 +81,8 @@ Use if you would like to login with NFL+
 
 #### NESN
 Use if you would like to login with NESN. Will get NESN and NESN+ programming
+
+4K events (home Red Sox and Bruins games will be scheduled normally)
 | Environment Variable | Description | Default |
 |---|---|---|
 | NESN*** | Set if you would like to use NESN | False |
@@ -129,7 +131,7 @@ Use if you would like to login with your MLB.tv account
 
 `**`: Some events are on linear channels and some aren't. If you use `LINEAR_CHANNELS`, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
 
-`***`: Will create a dedicated linear channel if requested, if not, will schedule events normally
+`***`: Will create a dedicated linear channel(s) if requested, if not, will schedule events normally
 
 ## Volumes
 | Volume Name | Description | Required? |
