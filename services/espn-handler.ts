@@ -273,6 +273,7 @@ const parseCategories = event => {
 
 const parseAirings = async events => {
   const now = moment();
+  const endSchedule = moment().add(2, 'days').endOf('day');
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
@@ -287,7 +288,7 @@ const parseAirings = async events => {
         end.add(1, 'hour');
       }
 
-      if (end.isBefore(now)) {
+      if (end.isBefore(now) || start.isAfter(endSchedule)) {
         continue;
       }
 

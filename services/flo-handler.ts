@@ -48,6 +48,7 @@ interface IFloEvent {
 
 const parseAirings = async (events: IFloEvent[]) => {
   const now = moment();
+  const endSchedule = moment().add(2, 'days').endOf('day');
 
   for (const event of events) {
     for (const stream of event.live_event_metadata.streams) {
@@ -57,7 +58,7 @@ const parseAirings = async (events: IFloEvent[]) => {
         const start = moment(event.label_1_parts.start_date_time);
         const end = moment(event.label_1_parts.start_date_time).add(4, 'hours');
 
-        if (end.isBefore(now)) {
+        if (end.isBefore(now) || start.isAfter(endSchedule)) {
           continue;
         }
 
@@ -130,7 +131,7 @@ class FloSportsHandler {
       const events: IFloEvent[] = [];
       const limit = 100;
 
-      const endSchedule = moment().add(2, 'days');
+      const endSchedule = moment().add(2, 'days').endOf('day');
 
       while (hasNextPage) {
         const url = [

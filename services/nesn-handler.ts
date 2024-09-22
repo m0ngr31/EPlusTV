@@ -323,7 +323,7 @@ class NesnHandler {
     const entries: INesnEvent[] = [];
 
     const now = moment();
-    const end = moment().add(2, 'days');
+    const end = moment().add(2, 'days').endOf('day');
 
     try {
       for (const schedule of SCHEDULES) {

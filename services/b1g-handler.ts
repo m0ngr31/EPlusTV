@@ -88,6 +88,7 @@ const getEventData = (event: IB1GEvent): IGameData => {
 
 const parseAirings = async (events: IB1GEvent[]) => {
   const now = moment();
+  const endDate = moment().add(2, 'days').endOf('day');
 
   for (const event of events) {
     if (!event || !event.id) {
@@ -103,7 +104,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
         const start = moment(event.startTime);
         const end = moment(event.startTime).add(4, 'hours');
 
-        if (end.isBefore(now) || content.enableDrmProtection) {
+        if (end.isBefore(now) || start.isAfter(endDate) || content.enableDrmProtection) {
           continue;
         }
 
@@ -176,7 +177,7 @@ class B1GHandler {
           '&language=en',
           `&metadata_id=${encodeURIComponent('159283,167702')}`,
           `&date_time_from=${encodeURIComponent(moment().format())}`,
-          `&date_time_to=${encodeURIComponent(moment().add(2, 'days').format())}`,
+          `&date_time_to=${encodeURIComponent(moment().add(2, 'days').endOf('day').format())}`,
           page > 1 ? `&page=${page}` : '',
         ].join('');
 

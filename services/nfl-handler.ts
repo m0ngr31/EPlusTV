@@ -94,6 +94,7 @@ const DEFAULT_CATEGORIES = ['NFL', 'NFL+', 'Football'];
 
 const parseAirings = async (events: INFLEvent[]) => {
   const now = moment();
+  const endDate = moment().add(2, 'days').endOf('day');
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.externalId});
@@ -108,7 +109,7 @@ const parseAirings = async (events: INFLEvent[]) => {
         end.add(1, 'hour');
       }
 
-      if (end.isBefore(now)) {
+      if (end.isBefore(now) || start.isAfter(endDate)) {
         continue;
       }
 
@@ -198,7 +199,7 @@ class NflHandler {
     const events: INFLEvent[] = [];
 
     try {
-      const endSchedule = moment().add(2, 'days');
+      const endSchedule = moment().add(2, 'days').endOf('day');
 
       const url = ['https://', 'api.nfl.com', '/experience/v1/livestreams'].join('');
 

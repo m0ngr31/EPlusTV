@@ -21,7 +21,7 @@ interface IMWEvent {
 
 const parseAirings = async (events: IMWEvent[]) => {
   const now = moment();
-  const endSchedule = moment().add(2, 'days');
+  const endSchedule = moment().add(2, 'days').endOf('day');
 
   for (const event of events) {
     if (!event || !event.id) {

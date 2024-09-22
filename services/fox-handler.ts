@@ -53,6 +53,7 @@ interface IFoxEvent {
   name: string;
   longDescription: string;
   seriesType: string;
+  sportTag?: string;
   startDate: string;
   endDate: string;
   network: string;
@@ -95,11 +96,15 @@ const getMaxRes = _.memoize(() => {
 });
 
 const parseCategories = (event: IFoxEvent) => {
-  const categories = ['FOX Sports'];
+  const categories = ['FOX Sports', 'FOX'];
   for (const classifier of [...(event.categoryTags || []), ...(event.genres || [])]) {
     if (classifier !== null) {
       categories.push(classifier);
     }
+  }
+
+  if (event.sportTag) {
+    categories.push(event.sportTag);
   }
 
   if (event.streamTypes?.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
@@ -135,7 +140,9 @@ const parseAirings = async (events: IFoxEvent[]) => {
         continue;
       }
 
-      console.log('Adding event: ', event.name);
+      const eventName = `${event.sportTag === 'NFL' ? `${event.sportTag} - ` : ''}${event.name}`;
+
+      console.log('Adding event: ', eventName);
 
       await db.entries.insert<IEntry>({
         categories,
@@ -144,7 +151,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
         from: 'foxsports',
         id: event.id,
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD || event.images.seriesList?.FHD,
-        name: event.name,
+        name: eventName,
         network: event.callSign,
         replay: event.airingType !== 'live',
         start: start.valueOf(),
@@ -387,6 +394,7 @@ class FoxHandler {
       console.log(e);
     }
 
+    // console.log(events);
     return events;
   };
 

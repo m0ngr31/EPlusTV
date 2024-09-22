@@ -123,6 +123,7 @@ const generateThumb = (home: ITeam, away: ITeam): string =>
 
 const parseAirings = async (events: ICombinedGame) => {
   const now = moment();
+  const endDate = moment().add(2, 'days').endOf('day');
 
   for (const pk in events) {
     if (!events[pk].feed || !events[pk].entry) {
@@ -144,7 +145,7 @@ const parseAirings = async (events: ICombinedGame) => {
           const start = moment(event.gameDate);
           const end = moment(event.gameDate).add(5, 'hours');
 
-          if (end.isBefore(now)) {
+          if (end.isBefore(now) || start.isAfter(endDate)) {
             continue;
           }
 
@@ -172,7 +173,7 @@ const parseAirings = async (events: ICombinedGame) => {
 
 const parseBigInnings = async (dates: Moment[][]) => {
   const now = moment();
-  const endDate = moment().add(2, 'days');
+  const endDate = moment().add(2, 'days').endOf('day');
 
   for (const day of dates) {
     const [start, end] = day;
