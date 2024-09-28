@@ -69,6 +69,7 @@ interface IFoxEvent {
       FHD: string;
     };
   };
+  isUHD: boolean;
   contentSKUResolved?: {
     baseId: string;
   }[];
@@ -107,7 +108,7 @@ const parseCategories = (event: IFoxEvent) => {
     categories.push(event.sportTag);
   }
 
-  if (event.streamTypes?.find(resolution => resolution === 'HDR' || resolution === 'SDR')) {
+  if (event.streamTypes?.find(resolution => resolution === 'HDR' || resolution === 'SDR') || event.isUHD) {
     categories.push('4K');
   }
 
@@ -317,6 +318,7 @@ class FoxHandler {
         const {data} = await axios.post(
           this.appConfig.api.content.watch,
           {
+            capabilities: ['fsdk/yo/v3'],
             deviceHeight: 2160,
             deviceWidth: 3840,
             maxRes: streamOrder[a],
@@ -338,7 +340,7 @@ class FoxHandler {
         break;
       } catch (e) {
         console.log(
-          `Could not get stream data for ${streamOrder[a]}.${
+          `Could not get stream data for ${streamOrder[a]}. ${
             streamOrder[a + 1] ? `Trying to get ${streamOrder[a + 1]} next...` : ''
           }`,
         );
@@ -394,7 +396,6 @@ class FoxHandler {
       console.log(e);
     }
 
-    // console.log(events);
     return events;
   };
 
