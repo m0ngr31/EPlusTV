@@ -160,6 +160,14 @@ export const CHANNEL_MAP = {
     stationId: '65025',
     tvgName: 'NFLNRZD',
   },
+  32: {
+    canUse: useNfl.channel,
+    id: 'NFLDIGITAL1_OO_v3',
+    logo: 'https://tmsimg.fancybits.co/assets/s121705_ll_h15_aa.png?w=360&h=270',
+    name: 'NFL Channel',
+    stationId: '121705',
+    tvgName: 'NFLDC1',
+  },
   40: {
     canUse: useMLBtv,
     id: 'MLBTVBI',

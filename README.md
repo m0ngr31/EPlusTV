@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.2.4**
+Current version: **3.2.5**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -78,6 +78,7 @@ Use if you would like to login with NFL+
 |---|---|---|---|
 | NFLPLUS | Set if you would like NFL+ events | False | False |
 | NFLNETWORK* | Set if you would like the NFL Network channel (only available with `LINEAR_CHANNELS`) | False | False |
+| NFLCHANNEL* | Set if you would like the NFL Channel (only available with `LINEAR_CHANNELS`) | False | False |
 
 #### NESN
 Use if you would like to login with NESN. Will get NESN and NESN+ programming

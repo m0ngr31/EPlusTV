@@ -255,7 +255,7 @@ class ParamountHandler {
         },
       );
 
-      data.listings.forEach(e => events.push(e));
+      data.listings?.forEach(e => events.push(e));
 
       const channels = await this.getLiveChannels();
 

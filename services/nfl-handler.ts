@@ -19,6 +19,10 @@ interface INFLRes {
   };
 }
 
+interface INFLChannelRes {
+  items: INFLEvent[];
+}
+
 interface INFLEvent {
   title: string;
   startTime: string;
@@ -69,7 +73,44 @@ const CLIENT_KEY = [
   '7',
 ].join('');
 
+const TV_CLIENT_KEY = [
+  'A',
+  '3',
+  'b',
+  '7',
+  '4',
+  'w',
+  'O',
+  'i',
+  'S',
+  'D',
+  'M',
+  'r',
+  'h',
+  'J',
+  'K',
+  'e',
+  'X',
+  'A',
+  'E',
+  'I',
+  'q',
+  'g',
+  'R',
+  'I',
+  'C',
+  'B',
+  'i',
+  'B',
+  'N',
+  'o',
+  '7',
+  'o',
+].join('');
+
 const CLIENT_SECRET = ['q', 'G', 'h', 'E', 'v', '1', 'R', 't', 'I', '2', 'S', 'f', 'R', 'Q', 'O', 'e'].join('');
+
+const TV_CLIENT_SECRET = ['u', 'o', 'C', 'y', 'y', 'k', 'y', 'U', 'w', 'D', 'b', 'f', 'Q', 'Z', 'r', '2'].join('');
 
 const DEVICE_INFO = {
   capabilities: {},
@@ -90,7 +131,28 @@ const DEVICE_INFO = {
   versionName: '59.0.29.1346644',
 };
 
+const TV_DEVICE_INFO = {
+  capabilities: {},
+  ctvDevice: 'AndroidTV',
+  diskCapacity: 6964142080,
+  displayHeight: 2160,
+  displayWidth: 3840,
+  idfv: 'unknown',
+  isLocationEnabled: true,
+  manufacturer: 'onn',
+  memory: 2063581184,
+  model: 'onn. 4K Streaming Box',
+  networkType: 'wifi',
+  osName: 'Android',
+  osVersion: '12',
+  vendor: 'onn',
+  version: 'goldfish',
+  versionName: '18.0.65.101385778',
+};
+
 const DEFAULT_CATEGORIES = ['NFL', 'NFL+', 'Football'];
+
+type TOtherAuth = 'paramount' | 'tve';
 
 const parseAirings = async (events: INFLEvent[]) => {
   const now = moment();
@@ -103,7 +165,9 @@ const parseAirings = async (events: INFLEvent[]) => {
       const start = moment(event.startTime);
       const end = moment(start).add(event.duration, 'seconds');
 
-      const isLinear = useLinear && (event.callSign === 'NFLNETWORK' || event.callSign === 'NFLNRZ');
+      const isLinear =
+        useLinear &&
+        (event.callSign === 'NFLNETWORK' || event.callSign === 'NFLNRZ' || event.callSign === 'NFLDIGITAL1_OO_v3');
 
       if (!isLinear) {
         end.add(1, 'hour');
@@ -137,7 +201,7 @@ const parseAirings = async (events: INFLEvent[]) => {
         ...(isLinear && {
           channel: event.callSign,
           linear: true,
-          replay: event.callSign === 'NFLNETWORK',
+          replay: event.callSign === 'NFLNETWORK' || event.callSign === 'NFLDIGITAL1_OO_v3',
         }),
       });
     }
@@ -151,6 +215,16 @@ class NflHandler {
   public device_id?: string;
   public device_info?: string;
   public uid?: string;
+  public tv_access_token?: string;
+  public tv_refresh_token?: string;
+  public tv_expires_at?: number;
+
+  // Supplemental Auth
+  // public paramountPlusUserId?: string;
+  // public paramountPlusUUID?: string;
+  // public mvpdIdp?: string;
+  // public mvpdUserId?: string;
+  // public mvpdUUID?: string;
 
   public initialize = async () => {
     if (!useNfl.plus) {
@@ -168,6 +242,14 @@ class NflHandler {
     if (!this.expires_at || !this.access_token) {
       await this.startProviderAuthFlow();
     }
+
+    // if (useNfl.paramount && (!this.paramountPlusUserId || !this.paramountPlusUUID)) {
+    //   await this.startProviderAuthFlow('paramount');
+    // }
+
+    // if (useNfl.tve && (!this.mvpdIdp || !this.mvpdUserId || !this.mvpdUUID)) {
+    //   await this.startProviderAuthFlow('tve');
+    // }
   };
 
   public refreshTokens = async () => {
@@ -176,7 +258,7 @@ class NflHandler {
     }
 
     if (!this.expires_at || moment(this.expires_at).isBefore(moment().add(30, 'minutes'))) {
-      await this.extendToken();
+      await this.extendTokens();
     }
   };
 
@@ -199,6 +281,7 @@ class NflHandler {
     const events: INFLEvent[] = [];
 
     try {
+      const now = moment().subtract(12, 'hours');
       const endSchedule = moment().add(2, 'days').endOf('day');
 
       const url = ['https://', 'api.nfl.com', '/experience/v1/livestreams'].join('');
@@ -229,6 +312,26 @@ class NflHandler {
         }
       });
 
+      if (useNfl.channel) {
+        const url = [
+          'https://',
+          'api.nfl.com',
+          '/live/v1/nflchannel',
+          '?starttime=',
+          now.toISOString(),
+          '&endtime=',
+          endSchedule.toISOString(),
+        ].join('');
+
+        const {data: nflChannelData} = await axios.get<INFLChannelRes>(url, {
+          headers: {
+            Authorization: `Bearer ${this.access_token}`,
+          },
+        });
+
+        nflChannelData.items.forEach(i => events.push(i));
+      }
+
       await parseAirings(events);
     } catch (e) {
       console.error(e);
@@ -238,7 +341,12 @@ class NflHandler {
 
   public getEventData = async (id: string): Promise<[string, IHeaders]> => {
     try {
-      await this.extendToken();
+      await this.extendTokens();
+
+      const event = await db.entries.findOne<IEntry>({id});
+
+      const isGame =
+        event.channel !== 'NFLNETWORK' && event.channel !== 'NFLDIGITAL1_OO_v3' && event.channel !== 'NFLNRZ';
 
       const url = ['https://', 'api.nfl.com/', 'play/v1/asset/', id].join('');
 
@@ -249,7 +357,7 @@ class NflHandler {
           headers: {
             'Content-Type': 'application/json',
             'User-Agent': okHttpUserAgent,
-            authorization: `Bearer ${this.access_token}`,
+            authorization: `Bearer ${isGame ? this.access_token : this.tv_access_token}`,
           },
         },
       );
@@ -274,6 +382,11 @@ class NflHandler {
     return useNfl.redZone;
   };
 
+  private extendTokens = async (): Promise<void> => {
+    await this.extendToken();
+    await this.extendTvToken();
+  };
+
   private extendToken = async (uidSignature?: string, signatureTimestamp?: string): Promise<void> => {
     try {
       const url = ['https://', 'api.nfl.com', '/identity/v3/token/refresh'].join('');
@@ -292,6 +405,15 @@ class NflHandler {
             signatureTimestamp,
             uidSignature,
           }),
+          // ...(this.mvpdIdp && {
+          //   mvpdIdp: this.mvpdIdp,
+          //   mvpdUUID: this.mvpdUUID,
+          //   mvpdUserId: this.mvpdUserId,
+          // }),
+          // ...(this.paramountPlusUserId && {
+          //   paramountPlusUUID: this.paramountPlusUUID,
+          //   paramountPlusUserId: this.paramountPlusUserId,
+          // }),
         },
         {
           headers: {
@@ -310,6 +432,58 @@ class NflHandler {
       console.error(e);
       console.log('Could not refresh token for NFL+');
     }
+  };
+
+  private extendTvToken = async (uidSignature?: string, signatureTimestamp?: string): Promise<void> => {
+    try {
+      const url = ['https://', 'api.nfl.com', '/identity/v3/token/refresh'].join('');
+
+      const {data} = await axios.post(
+        url,
+        {
+          clientKey: TV_CLIENT_KEY,
+          clientSecret: TV_CLIENT_SECRET,
+          deviceId: this.device_id,
+          deviceInfo: Buffer.from(JSON.stringify(TV_DEVICE_INFO), 'utf-8').toString('base64'),
+          networkType: 'wifi',
+          refreshToken: this.refresh_token,
+          uid: this.uid,
+          ...(uidSignature && {
+            signatureTimestamp,
+            uidSignature,
+          }),
+          // ...(this.mvpdIdp && {
+          //   mvpdIdp: this.mvpdIdp,
+          //   mvpdUUID: this.mvpdUUID,
+          //   mvpdUserId: this.mvpdUserId,
+          // }),
+          // ...(this.paramountPlusUserId && {
+          //   paramountPlusUUID: this.paramountPlusUUID,
+          //   paramountPlusUserId: this.paramountPlusUserId,
+          // }),
+        },
+        {
+          headers: {
+            'User-Agent': okHttpUserAgent,
+          },
+        },
+      );
+
+      this.tv_access_token = data.accessToken;
+      this.tv_refresh_token = data.refreshToken;
+      this.tv_expires_at = data.expiresIn;
+      this.save();
+
+      this.checkRedZoneAccess();
+    } catch (e) {
+      console.error(e);
+      console.log('Could not refresh token for NFL+');
+    }
+  };
+
+  private getTokens = async (): Promise<void> => {
+    await this.getToken();
+    await this.getTvToken();
   };
 
   private getToken = async (): Promise<void> => {
@@ -345,9 +519,42 @@ class NflHandler {
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
+  private getTvToken = async (): Promise<void> => {
     try {
-      await this.getToken();
+      const url = ['https://', 'api.nfl.com', '/identity/v3/token'].join('');
+
+      const {data} = await axios.post(
+        url,
+        {
+          clientKey: TV_CLIENT_KEY,
+          clientSecret: TV_CLIENT_SECRET,
+          deviceId: this.device_id,
+          deviceInfo: Buffer.from(JSON.stringify(TV_DEVICE_INFO), 'utf-8').toString('base64'),
+          networkType: 'wifi',
+        },
+        {
+          headers: {
+            'User-Agent': okHttpUserAgent,
+          },
+        },
+      );
+
+      this.tv_access_token = data.accessToken;
+      this.tv_refresh_token = data.refreshToken;
+
+      if (this.uid) {
+        this.tv_expires_at = data.expiresIn;
+        this.save();
+      }
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get TV token for NFL+');
+    }
+  };
+
+  private startProviderAuthFlow = async (otherAuth?: TOtherAuth): Promise<void> => {
+    try {
+      await this.getTokens();
 
       const url = ['https://', 'api.nfl.com', '/utilities/v1/regcode'].join('');
       const {data} = await axios.get(url, {
@@ -366,12 +573,22 @@ class NflHandler {
         putUrl,
         {
           ctvDevice: 'AndroidTV',
-          deviceId: '15942c3b-e487-4a95-bb9a-361ca08fd385',
+          deviceId: this.device_id,
           expiresIn: 600,
-          nflAccount: true,
-          nflToken: true,
           platform: 'ctv',
           regCode: code,
+          ...(!otherAuth && {
+            nflAccount: true,
+            nflToken: true,
+          }),
+          // ...(otherAuth === 'paramount' && {
+          //   idp: 'PARAMOUNT_PLUS',
+          //   nflAccount: false,
+          // }),
+          // ...(otherAuth === 'tve' && {
+          //   idp: 'TV_PROVIDER',
+          //   nflAccount: false,
+          // }),
         },
         {
           headers: {
@@ -383,7 +600,7 @@ class NflHandler {
       );
 
       console.log('=== NFL+ Auth ===');
-      console.log('Please open a browser window and go to: https://id.nfl.com/account/activate?platform=androidtv');
+      console.log('Please open a browser window and go to: https://id.nfl.com/account/activate');
       console.log('Enter code: ', code);
       console.log('App will continue when login has completed...');
 
@@ -395,7 +612,7 @@ class NflHandler {
 
         const authenticate = async () => {
           if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(code);
+            const res = await this.authenticateRegCode(code, otherAuth);
             numOfReqs += 1;
 
             if (res) {
@@ -420,7 +637,7 @@ class NflHandler {
     }
   };
 
-  private authenticateRegCode = async (code: string): Promise<boolean> => {
+  private authenticateRegCode = async (code: string, otherAuth?: TOtherAuth): Promise<boolean> => {
     try {
       const url = ['https://', 'api.nfl.com', '/keystore/v1/mvpd/', code].join('');
 
@@ -431,13 +648,39 @@ class NflHandler {
         },
       });
 
-      if (!data || !data.uidSignature) {
+      if (!data) {
         return false;
       }
 
-      this.uid = data.uid;
+      if (otherAuth) {
+        if (!data.userId) {
+          return false;
+        }
 
-      await this.extendToken(data.uidSignature, data.signatureTimestamp);
+        if (otherAuth === 'tve') {
+          // this.mvpdIdp = data.idp;
+          // this.mvpdUserId = data.userId;
+          // this.mvpdUUID = data.uuid;
+          // this.save();
+        } else if (otherAuth === 'paramount') {
+          // this.paramountPlusUserId = data.userId;
+          // this.paramountPlusUUID = data.uuid;
+          // this.save();
+        }
+
+        await this.extendToken();
+        await this.extendTvToken();
+      } else {
+        if (!data.uidSignature) {
+          return false;
+        }
+
+        this.uid = data.uid;
+
+        await this.extendToken(data.uidSignature, data.signatureTimestamp);
+        await this.extendTvToken(data.uidSignature, data.signatureTimestamp);
+      }
+
       return true;
     } catch (e) {
       return false;
@@ -450,15 +693,37 @@ class NflHandler {
 
   private load = () => {
     if (fs.existsSync(path.join(configPath, 'nfl_tokens.json'))) {
-      const {device_id, access_token, expires_at, refresh_token, uid} = fsExtra.readJSONSync(
-        path.join(configPath, 'nfl_tokens.json'),
-      );
+      const {
+        device_id,
+        access_token,
+        expires_at,
+        refresh_token,
+        uid,
+        tv_access_token,
+        tv_expires_at,
+        tv_refresh_token,
+        // paramountPlusUserId,
+        // paramountPlusUUID,
+        // mvpdIdp,
+        // mvpdUserId,
+        // mvpdUUID,
+      } = fsExtra.readJSONSync(path.join(configPath, 'nfl_tokens.json'));
 
       this.device_id = device_id;
       this.access_token = access_token;
       this.expires_at = expires_at;
       this.refresh_token = refresh_token;
+      this.tv_access_token = tv_access_token;
+      this.tv_expires_at = tv_expires_at;
+      this.tv_refresh_token = tv_refresh_token;
       this.uid = uid;
+
+      // Supplemental Auth
+      // this.paramountPlusUserId = paramountPlusUserId;
+      // this.paramountPlusUUID = paramountPlusUUID;
+      // this.mvpdIdp = mvpdIdp;
+      // this.mvpdUserId = mvpdUserId;
+      // this.mvpdUUID = mvpdUUID;
     }
   };
 }

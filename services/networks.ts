@@ -36,11 +36,20 @@ export const useParamount = {
 export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;
 
 export const useNfl = {
+  _channel: process.env.NFLCHANNEL?.toLowerCase() === 'true' ? true : false,
   _network: process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false,
+  // _paramount: process.env.NFL_PARAMOUNT?.toLowerCase() === 'true' ? true : false,
   _redZone: true,
+  // _tve: process.env.NFL_TVE?.toLowerCase() === 'true' ? true : false,
+  get channel(): boolean {
+    return this._channel && this.plus;
+  },
   get network(): boolean {
     return this._network && this.plus;
   },
+  // get paramount(): boolean {
+  //   return this._paramount && this.plus;
+  // },
   plus: process.env.NFLPLUS?.toLowerCase() === 'true' ? true : false,
   get redZone(): boolean {
     return this._redZone && this.plus;
@@ -48,6 +57,9 @@ export const useNfl = {
   set redZone(value: boolean) {
     this._redZone = value;
   },
+  // get tve(): boolean {
+  //   return this._tve && this.plus;
+  // },
 };
 
 export const useMountainWest = process.env.MTNWEST?.toLowerCase() === 'true' ? true : false;
