@@ -128,10 +128,23 @@ export class PlaylistHandler {
       const realManifestUrl = request.res.responseUrl;
       const urlParams = this.network === 'foxsports' ? new URL(realManifestUrl).search : '';
 
-      const clonedManifest = updateVersion(manifest);
-      let updatedManifest = clonedManifest;
+      const playlist = HLS.parse(manifest);
 
-      const playlist = HLS.parse(clonedManifest);
+      /** Sort playlist so highest resolution is first in list (EMBY workaround) */
+      playlist.variants.sort((v1, v2) => {
+        if (v1.bandwidth > v2.bandwidth) {
+          return -1;
+        }
+
+        if (v1.bandwidth < v2.bandwidth) {
+          return 1;
+        }
+
+        return 0;
+      });
+
+      const clonedManifest = updateVersion(HLS.stringify(playlist));
+      let updatedManifest = clonedManifest;
 
       if (this.network !== 'foxsports') {
         const audioTracks = [...manifest.matchAll(reAudioTrack)];
