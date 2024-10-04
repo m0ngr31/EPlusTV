@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.2.2**
+Current version: **3.2.3**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -99,7 +99,7 @@ Use if you would like to login with your B1G+ account
 Use if you would like to login with your MSG+ account
 | Environment Variable | Description | Default |
 |---|---|---|
-| MSGPLUS | Set if you would like to use MSG+ | False |
+| MSGPLUS*** | Set if you would like to use MSG+ | False |
 | MSGPLUS_USER | MSG+ Username | False |
 | MSGPLUS_PASS | MSG+ Password | False |
 

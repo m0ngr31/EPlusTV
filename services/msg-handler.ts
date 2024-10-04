@@ -12,6 +12,7 @@ import {getRandomUUID} from './shared-helpers';
 import {db} from './database';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {okHttpUserAgent} from './user-agent';
+import {useLinear} from './channels';
 
 const API_KEY = [
   'c',
@@ -108,8 +109,12 @@ const parseAirings = async (events: any[]) => {
     const entryExists = await db.entries.findOne<IEntry>({id: `${event.contentId}`});
 
     if (!entryExists) {
-      const start = moment(event.start).subtract(30, 'minutes'); // For Pregrame
+      const start = moment(event.start);
       const end = moment(event.end);
+
+      if (!useLinear) {
+        start.subtract(30, 'minutes'); // For Pre-game
+      }
 
       if (end.isBefore(now) || start.isAfter(inTwoDays)) {
         continue;
@@ -128,6 +133,10 @@ const parseAirings = async (events: any[]) => {
         network: event.network,
         sport: event.sport,
         start: start.valueOf(),
+        ...(event.linear && {
+          channel: event.channel,
+          linear: true,
+        }),
       });
     }
   }
@@ -239,17 +248,34 @@ class MSGHandler {
 
           (data.data || []).forEach(channel => {
             (channel.airing || []).forEach(airing => {
-              if (airing.ev_live === 'true' && airing.ca_ty === 'game') {
+              const eventName = airing.pgm.lon[0].n.replace(/\n/g, '');
+
+              if (useLinear && eventName !== 'NO PROGRAMMING - OFF AIR') {
                 entries.push({
                   artwork: `https://image-resizer-cloud-cdn.api.msgncms.quickplay.com/image/${airing.cid}/3-16x9.png?width=400`,
                   categories: ['MSG', 'MSG+', 'HD', 'Sports', airing?.pgm?.spt_lg, airing?.pgm?.spt_ty],
+                  channel: channel.cs.split('_')[1],
                   contentId: `${airing.id}----${airing.cid}`,
                   end: airing.sc_ed_dt,
+                  linear: true,
                   network: airing.net,
                   sport: airing.pgm?.spt_lg,
                   start: airing.sc_st_dt,
-                  title: airing.pgm.lon[0].n,
+                  title: eventName,
                 });
+              } else {
+                if (airing.ev_live === 'true' && (airing.ca_ty === 'game' || airing.pgm.lon[0].n.indexOf(' vs') > -1)) {
+                  entries.push({
+                    artwork: `https://image-resizer-cloud-cdn.api.msgncms.quickplay.com/image/${airing.cid}/3-16x9.png?width=400`,
+                    categories: ['MSG', 'MSG+', 'HD', 'Sports', airing?.pgm?.spt_lg, airing?.pgm?.spt_ty],
+                    contentId: `${airing.id}----${airing.cid}`,
+                    end: airing.sc_ed_dt,
+                    network: airing.net,
+                    sport: airing.pgm?.spt_lg,
+                    start: airing.sc_st_dt,
+                    title: eventName,
+                  });
+                }
               }
             });
           });
