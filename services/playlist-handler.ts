@@ -130,7 +130,7 @@ export class PlaylistHandler {
 
       const playlist = HLS.parse(manifest);
 
-      /** Sort playlist so highest resolution is first in list (EMBY workaround) */
+      /** Sort playlist so highest resolution is first in list (Emby workaround) */
       playlist.variants.sort((v1, v2) => {
         if (v1.bandwidth > v2.bandwidth) {
           return -1;
