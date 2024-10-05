@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import {db} from './database';
 import {usesMultiple} from './networks';
-import {calculateChannelFromName, CHANNEL_MAP, LINEAR_START_CHANNEL, NUM_OF_CHANNELS, START_CHANNEL} from './channels';
+import {calculateChannelFromName, CHANNELS, LINEAR_START_CHANNEL, NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {IEntry} from './shared-interfaces';
 
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
@@ -51,7 +51,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
   };
 
   if (linear) {
-    _.forOwn(CHANNEL_MAP, (val, key) => {
+    _.forOwn(CHANNELS.MAP, (val, key) => {
       if (!val.canUse) {
         return;
       }

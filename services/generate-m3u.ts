@@ -1,12 +1,12 @@
 import _ from 'lodash';
 
-import {NUM_OF_CHANNELS, START_CHANNEL, CHANNEL_MAP, LINEAR_START_CHANNEL} from './channels';
+import {NUM_OF_CHANNELS, START_CHANNEL, CHANNELS, LINEAR_START_CHANNEL} from './channels';
 
 export const generateM3u = (uri: string, linear = false): string => {
   let m3uFile = '#EXTM3U';
 
   if (linear) {
-    _.forOwn(CHANNEL_MAP, (val, key) => {
+    _.forOwn(CHANNELS.MAP, (val, key) => {
       if (!val.canUse) {
         return;
       }

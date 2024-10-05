@@ -38,28 +38,35 @@ export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true :
 export const useNfl = {
   _channel: process.env.NFLCHANNEL?.toLowerCase() === 'true' ? true : false,
   _network: process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false,
-  // _paramount: process.env.NFL_PARAMOUNT?.toLowerCase() === 'true' ? true : false,
-  _redZone: true,
-  // _tve: process.env.NFL_TVE?.toLowerCase() === 'true' ? true : false,
+  _peacock: process.env.NFL_PEACOCK?.toLowerCase() === 'true' ? true : false,
+  _prime: process.env.NFL_PRIME?.toLowerCase() === 'true' ? true : false,
+  _redZone: false,
+  _tve: process.env.NFL_TVE?.toLowerCase() === 'true' ? true : false,
   get channel(): boolean {
     return this._channel && this.plus;
   },
   get network(): boolean {
     return this._network && this.plus;
   },
-  // get paramount(): boolean {
-  //   return this._paramount && this.plus;
-  // },
+  set network(value: boolean) {
+    this._network = value;
+  },
+  get peacock(): boolean {
+    return this._peacock && this.plus;
+  },
   plus: process.env.NFLPLUS?.toLowerCase() === 'true' ? true : false,
+  get prime(): boolean {
+    return this._prime && this.plus;
+  },
   get redZone(): boolean {
     return this._redZone && this.plus;
   },
   set redZone(value: boolean) {
     this._redZone = value;
   },
-  // get tve(): boolean {
-  //   return this._tve && this.plus;
-  // },
+  get tve(): boolean {
+    return this._tve && this.plus;
+  },
 };
 
 export const useMountainWest = process.env.MTNWEST?.toLowerCase() === 'true' ? true : false;

@@ -24,6 +24,9 @@ interface INFLChannelRes {
 }
 
 interface INFLEvent {
+  authorizations: {
+    [key: string]: any;
+  };
   title: string;
   startTime: string;
   endTime: string;
@@ -36,6 +39,7 @@ interface INFLEvent {
   description: string;
   callSign: string;
   linear: boolean;
+  networks: string[];
 }
 
 const CLIENT_KEY = [
@@ -152,7 +156,13 @@ const TV_DEVICE_INFO = {
 
 const DEFAULT_CATEGORIES = ['NFL', 'NFL+', 'Football'];
 
-type TOtherAuth = 'paramount' | 'tve';
+type TOtherAuth = 'prime' | 'tve' | 'peacock';
+
+interface INFLJwt {
+  dmaCode: string;
+  plans: {plan: string; status: string}[];
+  networks?: {[key: string]: string};
+}
 
 const parseAirings = async (events: INFLEvent[]) => {
   const now = moment();
@@ -191,6 +201,7 @@ const parseAirings = async (events: INFLEvent[]) => {
         categories: [...new Set(categories)],
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
+        feed: event.networks?.[0],
         from: 'nfl+',
         id: event.externalId,
         image: event.preferredImage,
@@ -220,11 +231,13 @@ class NflHandler {
   public tv_expires_at?: number;
 
   // Supplemental Auth
-  // public paramountPlusUserId?: string;
-  // public paramountPlusUUID?: string;
-  // public mvpdIdp?: string;
-  // public mvpdUserId?: string;
-  // public mvpdUUID?: string;
+  public mvpdIdp?: string;
+  public mvpdUserId?: string;
+  public mvpdUUID?: string;
+  public amazonPrimeUserId?: string;
+  public amazonPrimeUUID?: string;
+  public peacockUserId?: string;
+  public peacockUUID?: string;
 
   public initialize = async () => {
     if (!useNfl.plus) {
@@ -243,13 +256,17 @@ class NflHandler {
       await this.startProviderAuthFlow();
     }
 
-    // if (useNfl.paramount && (!this.paramountPlusUserId || !this.paramountPlusUUID)) {
-    //   await this.startProviderAuthFlow('paramount');
-    // }
+    if (useNfl.tve && (!this.mvpdIdp || !this.mvpdUserId || !this.mvpdUUID)) {
+      await this.startProviderAuthFlow('tve');
+    }
 
-    // if (useNfl.tve && (!this.mvpdIdp || !this.mvpdUserId || !this.mvpdUUID)) {
-    //   await this.startProviderAuthFlow('tve');
-    // }
+    if (useNfl.peacock && (!this.peacockUserId || !this.peacockUUID)) {
+      await this.startProviderAuthFlow('peacock');
+    }
+
+    if (useNfl.prime && (!this.amazonPrimeUserId || !this.amazonPrimeUUID)) {
+      await this.startProviderAuthFlow('prime');
+    }
   };
 
   public refreshTokens = async () => {
@@ -267,10 +284,11 @@ class NflHandler {
       return;
     }
 
-    const {dmaCode}: {dmaCode: string; plans: {plan: string; status: string}[]} = jwt_decode(this.access_token);
+    const {dmaCode}: INFLJwt = jwt_decode(this.access_token);
 
     const redZoneAccess = this.checkRedZoneAccess();
-    const nflNetworkAccess = useLinear && useNfl.network;
+    const nflNetworkAccess = this.checkNetworkAccess();
+    const hasPlus = this.checkPlusAccess();
 
     if (!dmaCode) {
       console.log('DMA Code not found for NFL+. Not searching for events');
@@ -293,26 +311,38 @@ class NflHandler {
       });
 
       data.data.items.forEach(i => {
-        if (
-          i.contentType === 'GAME' &&
-          moment(i.startTime).isBefore(endSchedule) &&
-          i.dmaCodes.find(dc => dc === `${dmaCode}`) &&
-          i.language.find(l => l === 'en')
-        ) {
-          events.push(i);
-        } else if (
-          i.callSign === 'NFLNRZ' &&
-          i.title === 'NFL RedZone' &&
-          moment(i.startTime).isBefore(endSchedule) &&
-          redZoneAccess
-        ) {
-          events.push(i);
-        } else if (i.callSign === 'NFLNETWORK' && moment(i.startTime).isBefore(endSchedule) && nflNetworkAccess) {
-          events.push(i);
+        if (moment(i.startTime).isBefore(endSchedule)) {
+          if (
+            i.contentType === 'GAME' &&
+            i.dmaCodes.find(dc => dc === `${dmaCode}`) &&
+            i.language.find(l => l === 'en')
+          ) {
+            if (
+              // If you have NFL+, you get the game
+              hasPlus ||
+              // TVE
+              this.checkTVEEventAccess(i) ||
+              // Peacock
+              (i.authorizations.peacock && this.checkPeacockAccess()) ||
+              // Prime
+              (i.authorizations.amazon_prime && this.checkPrimeAccess())
+            ) {
+              events.push(i);
+            }
+          } else if (
+            i.callSign === 'NFLNRZ' &&
+            i.title === 'NFL RedZone' &&
+            // NFL+ Premium or TVE supports RedZone
+            redZoneAccess
+          ) {
+            events.push(i);
+          } else if (i.callSign === 'NFLNETWORK' && nflNetworkAccess) {
+            events.push(i);
+          }
         }
       });
 
-      if (useNfl.channel) {
+      if (useNfl.channel && useLinear) {
         const url = [
           'https://',
           'api.nfl.com',
@@ -352,7 +382,22 @@ class NflHandler {
 
       const {data} = await axios.post(
         url,
-        {},
+        {
+          ...(this.checkTVEAccess() && {
+            idp: this.mvpdIdp,
+            mvpdUUID: this.mvpdUUID,
+            mvpdUserId: this.mvpdUserId,
+            networks: event.feed,
+          }),
+          ...(this.checkPrimeAccess() && {
+            amazonPrimeUUID: this.amazonPrimeUUID,
+            amazonPrimeUserId: this.amazonPrimeUserId,
+          }),
+          ...(this.checkPeacockAccess() && {
+            peacockUUID: this.amazonPrimeUUID,
+            peacockUserId: this.amazonPrimeUserId,
+          }),
+        },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -371,15 +416,67 @@ class NflHandler {
 
   private checkRedZoneAccess = (): boolean => {
     try {
-      const {plans}: {dmaCode: string; plans: {plan: string; status: string}[]} = jwt_decode(this.access_token);
+      const {plans, networks}: INFLJwt = jwt_decode(this.access_token);
 
       if (plans) {
         useNfl.redZone =
-          plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1 ? true : false;
+          plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1 || networks?.NFLRZ
+            ? true
+            : false;
       }
     } catch (e) {}
 
     return useNfl.redZone;
+  };
+
+  private checkNetworkAccess = (): boolean => {
+    try {
+      const {plans, networks}: INFLJwt = jwt_decode(this.access_token);
+
+      if (plans) {
+        const hasPlus = (this.checkPlusAccess() || networks?.NFLN) && useLinear ? true : false;
+        useNfl.network = hasPlus;
+      }
+    } catch (e) {}
+
+    return useNfl.network;
+  };
+
+  private checkPlusAccess = (): boolean => {
+    let hasPlus = false;
+
+    try {
+      const {plans}: INFLJwt = jwt_decode(this.access_token);
+
+      if (plans) {
+        hasPlus =
+          plans.findIndex(p => (p.plan === 'NFL_PLUS' || p.plan === 'NFL_PLUS_PREMIUM') && p.status === 'ACTIVE') > -1
+            ? true
+            : false;
+      }
+    } catch (e) {}
+
+    return hasPlus;
+  };
+
+  private checkTVEAccess = (): boolean => (this.mvpdIdp && useNfl.tve ? true : false);
+  private checkPeacockAccess = (): boolean => (this.peacockUserId && useNfl.peacock ? true : false);
+  private checkPrimeAccess = (): boolean => (this.amazonPrimeUserId && useNfl.prime ? true : false);
+
+  private checkTVEEventAccess = (event: INFLEvent): boolean => {
+    let hasChannel = false;
+
+    try {
+      const {networks}: INFLJwt = jwt_decode(this.access_token);
+
+      event.networks.forEach(n => {
+        if (networks[n]) {
+          hasChannel = true;
+        }
+      });
+    } catch (e) {}
+
+    return hasChannel;
   };
 
   private extendTokens = async (): Promise<void> => {
@@ -405,15 +502,19 @@ class NflHandler {
             signatureTimestamp,
             uidSignature,
           }),
-          // ...(this.mvpdIdp && {
-          //   mvpdIdp: this.mvpdIdp,
-          //   mvpdUUID: this.mvpdUUID,
-          //   mvpdUserId: this.mvpdUserId,
-          // }),
-          // ...(this.paramountPlusUserId && {
-          //   paramountPlusUUID: this.paramountPlusUUID,
-          //   paramountPlusUserId: this.paramountPlusUserId,
-          // }),
+          ...(this.mvpdIdp && {
+            mvpdIdp: this.mvpdIdp,
+            mvpdUUID: this.mvpdUUID,
+            mvpdUserId: this.mvpdUserId,
+          }),
+          ...(this.amazonPrimeUserId && {
+            amazonPrimeUUID: this.amazonPrimeUUID,
+            amazonPrimeUserId: this.amazonPrimeUserId,
+          }),
+          ...(this.peacockUserId && {
+            peacockUUID: this.peacockUUID,
+            peacockUserId: this.peacockUserId,
+          }),
         },
         {
           headers: {
@@ -425,9 +526,21 @@ class NflHandler {
       this.access_token = data.accessToken;
       this.refresh_token = data.refreshToken;
       this.expires_at = data.expiresIn;
+
+      if (data.additionalInfo) {
+        data.additionalInfo.forEach(ai => {
+          if (ai.data) {
+            if (ai.data.idp === 'amazon') {
+              this.amazonPrimeUUID = ai.data.newUUID;
+            }
+          }
+        });
+      }
+
       this.save();
 
       this.checkRedZoneAccess();
+      this.checkNetworkAccess();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh token for NFL+');
@@ -452,15 +565,19 @@ class NflHandler {
             signatureTimestamp,
             uidSignature,
           }),
-          // ...(this.mvpdIdp && {
-          //   mvpdIdp: this.mvpdIdp,
-          //   mvpdUUID: this.mvpdUUID,
-          //   mvpdUserId: this.mvpdUserId,
-          // }),
-          // ...(this.paramountPlusUserId && {
-          //   paramountPlusUUID: this.paramountPlusUUID,
-          //   paramountPlusUserId: this.paramountPlusUserId,
-          // }),
+          ...(this.mvpdIdp && {
+            mvpdIdp: this.mvpdIdp,
+            mvpdUUID: this.mvpdUUID,
+            mvpdUserId: this.mvpdUserId,
+          }),
+          ...(this.amazonPrimeUserId && {
+            amazonPrimeUUID: this.amazonPrimeUUID,
+            amazonPrimeUserId: this.amazonPrimeUserId,
+          }),
+          ...(this.peacockUserId && {
+            peacockUUID: this.peacockUUID,
+            peacockUserId: this.peacockUserId,
+          }),
         },
         {
           headers: {
@@ -474,7 +591,18 @@ class NflHandler {
       this.tv_expires_at = data.expiresIn;
       this.save();
 
+      if (data.additionalInfo) {
+        data.additionalInfo.forEach(ai => {
+          if (ai.data) {
+            if (ai.data.idp === 'amazon') {
+              this.amazonPrimeUUID = ai.data.newUUID;
+            }
+          }
+        });
+      }
+
       this.checkRedZoneAccess();
+      this.checkNetworkAccess();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh token for NFL+');
@@ -581,14 +709,18 @@ class NflHandler {
             nflAccount: true,
             nflToken: true,
           }),
-          // ...(otherAuth === 'paramount' && {
-          //   idp: 'PARAMOUNT_PLUS',
-          //   nflAccount: false,
-          // }),
-          // ...(otherAuth === 'tve' && {
-          //   idp: 'TV_PROVIDER',
-          //   nflAccount: false,
-          // }),
+          ...(otherAuth === 'tve' && {
+            idp: 'TV_PROVIDER',
+            nflAccount: false,
+          }),
+          ...(otherAuth === 'prime' && {
+            idp: 'AMAZON',
+            nflAccount: false,
+          }),
+          ...(otherAuth === 'peacock' && {
+            idp: 'PEACOCK',
+            nflAccount: false,
+          }),
         },
         {
           headers: {
@@ -599,8 +731,17 @@ class NflHandler {
         },
       );
 
-      console.log('=== NFL+ Auth ===');
-      console.log('Please open a browser window and go to: https://id.nfl.com/account/activate');
+      const otherAuthName =
+        otherAuth === 'tve'
+          ? '(TV Provider) '
+          : otherAuth === 'prime'
+          ? '(Amazon Prime) '
+          : otherAuth === 'peacock'
+          ? '(Peacock) '
+          : '';
+
+      console.log(`=== NFL+ Auth ${otherAuthName}===`);
+      console.log(`Please open a browser window and go to: https://id.nfl.com/account/activate?regCode=${code}`);
       console.log('Enter code: ', code);
       console.log('App will continue when login has completed...');
 
@@ -658,15 +799,18 @@ class NflHandler {
         }
 
         if (otherAuth === 'tve') {
-          // this.mvpdIdp = data.idp;
-          // this.mvpdUserId = data.userId;
-          // this.mvpdUUID = data.uuid;
-          // this.save();
-        } else if (otherAuth === 'paramount') {
-          // this.paramountPlusUserId = data.userId;
-          // this.paramountPlusUUID = data.uuid;
-          // this.save();
+          this.mvpdIdp = data.idp;
+          this.mvpdUserId = data.userId;
+          this.mvpdUUID = data.uuid;
+        } else if (otherAuth === 'prime') {
+          this.amazonPrimeUserId = data.userId;
+          this.amazonPrimeUUID = data.uuid;
+        } else if (otherAuth === 'peacock') {
+          this.peacockUserId = data.userId;
+          this.peacockUUID = data.uuid;
         }
+
+        this.save();
 
         await this.extendToken();
         await this.extendTvToken();
@@ -702,11 +846,13 @@ class NflHandler {
         tv_access_token,
         tv_expires_at,
         tv_refresh_token,
-        // paramountPlusUserId,
-        // paramountPlusUUID,
-        // mvpdIdp,
-        // mvpdUserId,
-        // mvpdUUID,
+        mvpdIdp,
+        mvpdUserId,
+        mvpdUUID,
+        amazonPrimeUserId,
+        amazonPrimeUUID,
+        peacockUserId,
+        peacockUUID,
       } = fsExtra.readJSONSync(path.join(configPath, 'nfl_tokens.json'));
 
       this.device_id = device_id;
@@ -719,11 +865,13 @@ class NflHandler {
       this.uid = uid;
 
       // Supplemental Auth
-      // this.paramountPlusUserId = paramountPlusUserId;
-      // this.paramountPlusUUID = paramountPlusUUID;
-      // this.mvpdIdp = mvpdIdp;
-      // this.mvpdUserId = mvpdUserId;
-      // this.mvpdUUID = mvpdUUID;
+      this.mvpdIdp = mvpdIdp;
+      this.mvpdUserId = mvpdUserId;
+      this.mvpdUUID = mvpdUUID;
+      this.amazonPrimeUUID = amazonPrimeUUID;
+      this.amazonPrimeUserId = amazonPrimeUserId;
+      this.peacockUserId = peacockUserId;
+      this.peacockUUID = peacockUUID;
     }
   };
 }
