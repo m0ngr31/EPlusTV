@@ -40,6 +40,7 @@ interface INFLEvent {
   callSign: string;
   linear: boolean;
   networks: string[];
+  broadcastAiringType?: string;
 }
 
 const CLIENT_KEY = [
@@ -212,7 +213,7 @@ const parseAirings = async (events: INFLEvent[]) => {
         ...(isLinear && {
           channel: event.callSign,
           linear: true,
-          replay: event.callSign === 'NFLNETWORK' || event.callSign === 'NFLDIGITAL1_OO_v3',
+          replay: event.callSign === 'NFLDIGITAL1_OO_v3' || event.broadcastAiringType === 'REAIR',
         }),
       });
     }
@@ -336,7 +337,7 @@ class NflHandler {
             redZoneAccess
           ) {
             events.push(i);
-          } else if (i.callSign === 'NFLNETWORK' && nflNetworkAccess) {
+          } else if (i.callSign === 'NFLNETWORK' && nflNetworkAccess && i.contentType !== 'AUDIO') {
             events.push(i);
           }
         }
@@ -387,7 +388,7 @@ class NflHandler {
             idp: this.mvpdIdp,
             mvpdUUID: this.mvpdUUID,
             mvpdUserId: this.mvpdUserId,
-            networks: event.feed,
+            networks: event.feed || 'NFLN',
           }),
           ...(this.checkPrimeAccess() && {
             amazonPrimeUUID: this.amazonPrimeUUID,
