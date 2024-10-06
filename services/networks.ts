@@ -41,6 +41,7 @@ export const useNfl = {
   _peacock: process.env.NFL_PEACOCK?.toLowerCase() === 'true' ? true : false,
   _prime: process.env.NFL_PRIME?.toLowerCase() === 'true' ? true : false,
   _redZone: false,
+  _sunday_ticket: process.env.NFL_SUNDAY_TICKET?.toLowerCase() === 'true' ? true : false,
   _tve: process.env.NFL_TVE?.toLowerCase() === 'true' ? true : false,
   get channel(): boolean {
     return this._channel && this.plus;
@@ -63,6 +64,9 @@ export const useNfl = {
   },
   set redZone(value: boolean) {
     this._redZone = value;
+  },
+  get sundayTicket(): boolean {
+    return this._sunday_ticket && this.plus;
   },
   get tve(): boolean {
     return this._tve && this.plus;

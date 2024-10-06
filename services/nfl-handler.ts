@@ -157,7 +157,7 @@ const TV_DEVICE_INFO = {
 
 const DEFAULT_CATEGORIES = ['NFL', 'NFL+', 'Football'];
 
-type TOtherAuth = 'prime' | 'tve' | 'peacock';
+type TOtherAuth = 'prime' | 'tve' | 'peacock' | 'sunday_ticket';
 
 interface INFLJwt {
   dmaCode: string;
@@ -239,6 +239,8 @@ class NflHandler {
   public amazonPrimeUUID?: string;
   public peacockUserId?: string;
   public peacockUUID?: string;
+  public youTubeUserId?: string;
+  public youTubeUUID?: string;
 
   public initialize = async () => {
     if (!useNfl.plus) {
@@ -267,6 +269,10 @@ class NflHandler {
 
     if (useNfl.prime && (!this.amazonPrimeUserId || !this.amazonPrimeUUID)) {
       await this.startProviderAuthFlow('prime');
+    }
+
+    if (useNfl.sundayTicket && (!this.youTubeUserId || !this.youTubeUUID)) {
+      await this.startProviderAuthFlow('sunday_ticket');
     }
   };
 
@@ -338,6 +344,14 @@ class NflHandler {
           ) {
             events.push(i);
           } else if (i.callSign === 'NFLNETWORK' && nflNetworkAccess && i.contentType !== 'AUDIO') {
+            events.push(i);
+          } else if (
+            // Sunday Ticket
+            i.contentType === 'GAME' &&
+            i.language.find(l => l === 'en') &&
+            i.authorizations.sunday_ticket &&
+            this.checkSundayTicket()
+          ) {
             events.push(i);
           }
         }
@@ -463,6 +477,7 @@ class NflHandler {
   private checkTVEAccess = (): boolean => (this.mvpdIdp && useNfl.tve ? true : false);
   private checkPeacockAccess = (): boolean => (this.peacockUserId && useNfl.peacock ? true : false);
   private checkPrimeAccess = (): boolean => (this.amazonPrimeUserId && useNfl.prime ? true : false);
+  private checkSundayTicket = (): boolean => (this.youTubeUserId && useNfl.sundayTicket ? true : false);
 
   private checkTVEEventAccess = (event: INFLEvent): boolean => {
     let hasChannel = false;
@@ -515,6 +530,10 @@ class NflHandler {
           ...(this.peacockUserId && {
             peacockUUID: this.peacockUUID,
             peacockUserId: this.peacockUserId,
+          }),
+          ...(this.youTubeUserId && {
+            youTubeUUID: this.youTubeUUID,
+            youTubeUserId: this.youTubeUserId,
           }),
         },
         {
@@ -578,6 +597,10 @@ class NflHandler {
           ...(this.peacockUserId && {
             peacockUUID: this.peacockUUID,
             peacockUserId: this.peacockUserId,
+          }),
+          ...(this.youTubeUserId && {
+            youTubeUUID: this.youTubeUUID,
+            youTubeUserId: this.youTubeUserId,
           }),
         },
         {
@@ -722,6 +745,10 @@ class NflHandler {
             idp: 'PEACOCK',
             nflAccount: false,
           }),
+          ...(otherAuth === 'sunday_ticket' && {
+            idp: 'YOUTUBE',
+            nflAccount: false,
+          }),
         },
         {
           headers: {
@@ -739,6 +766,8 @@ class NflHandler {
           ? '(Amazon Prime) '
           : otherAuth === 'peacock'
           ? '(Peacock) '
+          : otherAuth === 'sunday_ticket'
+          ? '(Youtube) '
           : '';
 
       console.log(`=== NFL+ Auth ${otherAuthName}===`);
@@ -809,6 +838,9 @@ class NflHandler {
         } else if (otherAuth === 'peacock') {
           this.peacockUserId = data.userId;
           this.peacockUUID = data.uuid;
+        } else if (otherAuth === 'sunday_ticket') {
+          this.youTubeUserId = data.userId;
+          this.youTubeUUID = data.uuid;
         }
 
         this.save();
@@ -854,6 +886,8 @@ class NflHandler {
         amazonPrimeUUID,
         peacockUserId,
         peacockUUID,
+        youTubeUserId,
+        youTubeUUID,
       } = fsExtra.readJSONSync(path.join(configPath, 'nfl_tokens.json'));
 
       this.device_id = device_id;
@@ -873,6 +907,8 @@ class NflHandler {
       this.amazonPrimeUserId = amazonPrimeUserId;
       this.peacockUserId = peacockUserId;
       this.peacockUUID = peacockUUID;
+      this.youTubeUUID = youTubeUUID;
+      this.youTubeUserId = youTubeUserId;
     }
   };
 }

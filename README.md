@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.2.7**
+Current version: **3.2.8**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -82,6 +82,7 @@ Please note that if you only have an NFL account, you can still get events from 
 | NFL_TVE | Set if you would like NFL games from your TV Provider (not needed with NFL+) | False | False |
 | NFL_PRIME | Set if you would like NFL games from Amazon Prime (not needed with NFL+) | False | False |
 | NFL_PEACOCK | Set if you would like NFL games from Peacock (not needed with NFL+) | False | False |
+| NFL_SUNDAY_TICKET | Set if you would like NFL games from Sunday Ticket | False | False |
 | NFLNETWORK* | Set if you would like the NFL Network channel (only available with `LINEAR_CHANNELS`). Must have NFL+ or TV Provider. | False | False |
 | NFLCHANNEL* | Set if you would like the NFL Channel (only available with `LINEAR_CHANNELS`) | False | False |
 
