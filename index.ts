@@ -124,7 +124,7 @@ app.get('/linear-xmltv.xml', async (req, res) => {
 app.get('/channels/:id.m3u8', async (req, res) => {
   const {id} = req.params;
 
-  let contents = null;
+  let contents: string | undefined;
 
   // Channel data needs initial object
   if (!appStatus.channels[id]) {
@@ -147,6 +147,9 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     console.log(
       `Could not get a playlist for channel #${id}. Please make sure there is an event scheduled and you have access to it.`,
     );
+
+    delete appStatus.channels[id];
+
     notFound(req, res);
     return;
   }
@@ -163,7 +166,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
   const {id, chunklistid} = req.params;
 
-  let contents = null;
+  let contents: string | null;
 
   if (!appStatus.channels[id]?.player?.playlist) {
     notFound(req, res);
@@ -191,10 +194,11 @@ app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
 
 app.get('/channels/:id/:part.key', async (req, res) => {
   const {id, part} = req.params;
-  let contents;
+
+  let contents: ArrayBuffer | undefined;
 
   try {
-    contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+    contents = await appStatus.channels[id].player?.getSegmentOrKey(part);
   } catch (e) {
     notFound(req, res);
     return;
@@ -216,10 +220,11 @@ app.get('/channels/:id/:part.key', async (req, res) => {
 
 app.get('/channels/:id/:part.ts', async (req, res) => {
   const {id, part} = req.params;
-  let contents;
+
+  let contents: ArrayBuffer | undefined;
 
   try {
-    contents = await appStatus.channels[id].player.getSegmentOrKey(part);
+    contents = await appStatus.channels[id].player?.getSegmentOrKey(part);
   } catch (e) {
     notFound(req, res);
     return;

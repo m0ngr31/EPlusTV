@@ -89,10 +89,8 @@ const getMaxRes = _.memoize(() => {
   switch (process.env.MAX_RESOLUTION) {
     case 'UHD/HDR':
       return 'UHD/HDR';
-    case '720p':
-      return '720p';
     default:
-      return 'UHD/SDR';
+      return '720p';
   }
 });
 
@@ -299,7 +297,7 @@ class FoxHandler {
   };
 
   private getSteamData = async (eventId: string): Promise<any> => {
-    const streamOrder = ['UHD/HDR', 'UHD/SDR', '720p'];
+    const streamOrder = ['UHD/HDR', '720p'];
 
     let resIndex = streamOrder.findIndex(i => i === maxRes);
 

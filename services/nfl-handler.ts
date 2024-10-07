@@ -404,14 +404,6 @@ class NflHandler {
             mvpdUserId: this.mvpdUserId,
             networks: event.feed || 'NFLN',
           }),
-          ...(this.checkPrimeAccess() && {
-            amazonPrimeUUID: this.amazonPrimeUUID,
-            amazonPrimeUserId: this.amazonPrimeUserId,
-          }),
-          ...(this.checkPeacockAccess() && {
-            peacockUUID: this.amazonPrimeUUID,
-            peacockUserId: this.amazonPrimeUserId,
-          }),
         },
         {
           headers: {

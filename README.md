@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.2.8**
+Current version: **3.2.9**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -58,7 +58,7 @@ Use if you would like to login with a TV provider and access various FOX Sports 
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
 | FOXSPORTS** | Set if your TV provider supports it | No | False |
-| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR`, `UHD/SDR`, and `720p` (Some events don't offer 4K and will attempt to play the highest framerate available for selected resolution). | No | UHD/SDR |
+| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR` and `720p` (Some events don't offer 4K and will attempt to play the highest framerate available for selected resolution). | No | 720p |
 | FOX_ONLY_4K | Only grab 4K events | No | False |
 
 #### Paramount+
