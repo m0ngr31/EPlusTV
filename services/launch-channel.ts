@@ -9,6 +9,7 @@ import {floSportsHandler} from './flo-handler';
 import {nflHandler} from './nfl-handler';
 import {mwHandler} from './mw-handler';
 import {nesnHandler} from './nesn-handler';
+import {cbsHandler} from './cbs-handler';
 import {IEntry, IHeaders} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
@@ -60,6 +61,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'nesn':
           [url, headers] = await nesnHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'cbssports':
+          [url, headers] = await cbsHandler.getEventData(appStatus.channels[channelId].current);
           break;
         default:
           [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);

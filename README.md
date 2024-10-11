@@ -2,10 +2,10 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.2.9**
+Current version: **3.3.0**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, CBS Sports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
@@ -68,6 +68,12 @@ Use if you would like to login with Paramount+
 | PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
 | CBSSPORTSHQ* | Set if you would like the CBS Sports HQ channel (only available with `LINEAR_CHANNELS`) | False | False |
 | GOLAZO* | Set if you would like the Golazo Network channel (only available with `LINEAR_CHANNELS`) | False | False |
+
+#### CBS Sports
+Use if you would like to login with a TV provider and access various CBS Sports events
+| Environment Variable | Description | Required? | Default |
+|---|---|---|---|
+| CBSSPORTS | Set if you would like CBS Sports events | False | False |
 
 #### NFL+
 Use if you would like to login with NFL+.

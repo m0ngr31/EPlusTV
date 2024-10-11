@@ -17,6 +17,8 @@ export const useMLBtv = process.env.MLBTV?.toLowerCase() === 'true' ? true : fal
 
 export const useB1GPlus = process.env.B1GPLUS?.toLowerCase() === 'true' ? true : false;
 
+export const useCBSSports = process.env.CBSSPORTS?.toLowerCase() === 'true' ? true : false;
+
 export const useFloSports = process.env.FLOSPORTS?.toLowerCase() === 'true' ? true : false;
 
 export const useNesn = process.env.NESN?.toLowerCase() === 'true' ? true : false;
