@@ -39,6 +39,7 @@ interface IEventContent {
 
 interface IB1GEvent {
   id: number;
+  title?: string;
   startTime: string;
   category1: IEventCategory;
   category2: IEventCategory;
@@ -72,16 +73,25 @@ const getEventData = (event: IB1GEvent): IGameData => {
     }
   });
 
-  const awayTeam = `${event.awayCompetitor.name} ${event.awayCompetitor.fullName}`;
-  const homeTeam = `${event.homeCompetitor.name} ${event.homeCompetitor.fullName}`;
+  let awayTeam: string;
+  let homeTeam: string;
 
-  categories.push(awayTeam);
-  categories.push(homeTeam);
+  try {
+    awayTeam = `${event.awayCompetitor.name} ${event.awayCompetitor.fullName}`;
+    categories.push(awayTeam);
+  } catch (e) {}
+
+  try {
+    homeTeam = `${event.homeCompetitor.name} ${event.homeCompetitor.fullName}`;
+    categories.push(homeTeam);
+  } catch (e) {}
+
+  const eventName = event.title ? event.title : `${awayTeam} at ${homeTeam}`;
 
   return {
     categories: [...new Set(categories)],
     image: `https://www.bigtenplus.com/image/original/${event.images[0].path}`,
-    name: `${awayTeam} vs ${homeTeam}`,
+    name: eventName,
     sport,
   };
 };
