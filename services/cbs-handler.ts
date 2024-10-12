@@ -386,6 +386,8 @@ class CBSHandler {
         const dma = await this.getDMACode();
         const token = this.generateTimedToken();
 
+        const network = event.feed === 'CBSSN' ? 'CBS_SPORTS_NETWORK' : 'CBS_ENTERTAINMENT';
+
         const url = [
           'https://',
           'www.cbssports.com',
@@ -393,7 +395,7 @@ class CBSHandler {
           '/video/syncbak/get-secure-url',
           '/1b3c727ca1164a19851a102ea650e49d/',
           token,
-          '/CBS_SPORTS_NETWORK/',
+          `/${network}/`,
           this.mvpd_id,
           '/8/',
           dma,
