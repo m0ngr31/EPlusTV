@@ -25,7 +25,7 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
 
   checkingStream[channelId] = true;
 
-  let url;
+  let url: string;
   let headers: IHeaders;
 
   const playingNow = await db.entries.findOne<IEntry>({

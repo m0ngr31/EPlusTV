@@ -281,7 +281,7 @@ class NflHandler {
       return;
     }
 
-    if (!this.expires_at || moment(this.expires_at).isBefore(moment().add(30, 'minutes'))) {
+    if (!this.expires_at || moment(this.expires_at * 1000).isBefore(moment())) {
       await this.extendTokens();
     }
   };
@@ -386,7 +386,7 @@ class NflHandler {
 
   public getEventData = async (id: string): Promise<[string, IHeaders]> => {
     try {
-      await this.extendTokens();
+      await this.refreshTokens();
 
       const event = await db.entries.findOne<IEntry>({id});
 
@@ -438,7 +438,7 @@ class NflHandler {
 
   private checkNetworkAccess = (): boolean => {
     try {
-      const {plans, networks}: INFLJwt = jwt_decode(this.access_token);
+      const {plans, networks}: INFLJwt = jwt_decode(this.tv_access_token);
 
       if (plans) {
         const hasPlus = (this.checkPlusAccess() || networks?.NFLN) && useLinear ? true : false;
@@ -571,7 +571,7 @@ class NflHandler {
           deviceId: this.device_id,
           deviceInfo: Buffer.from(JSON.stringify(TV_DEVICE_INFO), 'utf-8').toString('base64'),
           networkType: 'wifi',
-          refreshToken: this.refresh_token,
+          refreshToken: this.tv_refresh_token,
           uid: this.uid,
           ...(uidSignature && {
             signatureTimestamp,
@@ -605,7 +605,6 @@ class NflHandler {
       this.tv_access_token = data.accessToken;
       this.tv_refresh_token = data.refreshToken;
       this.tv_expires_at = data.expiresIn;
-      this.save();
 
       if (data.additionalInfo) {
         data.additionalInfo.forEach(ai => {
@@ -616,6 +615,8 @@ class NflHandler {
           }
         });
       }
+
+      this.save();
 
       this.checkRedZoneAccess();
       this.checkNetworkAccess();
