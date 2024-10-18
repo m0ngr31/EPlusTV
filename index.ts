@@ -58,7 +58,8 @@ const schedule = async () => {
 const app = express();
 
 app.get('/channels.m3u', (req, res) => {
-  const m3uFile = generateM3u(`${req.protocol}://${req.headers.host}`);
+  const uri = process.env.BASE_URL || `${req.protocol}://${req.headers.host}`;
+  const m3uFile = generateM3u(uri);
 
   if (!m3uFile) {
     notFound(req, res);
@@ -77,7 +78,8 @@ app.get('/linear-channels.m3u', (req, res) => {
     return;
   }
 
-  const m3uFile = generateM3u(`${req.protocol}://${req.headers.host}`, true);
+  const uri = process.env.BASE_URL || `${req.protocol}://${req.headers.host}`;
+  const m3uFile = generateM3u(uri, true);
 
   if (!m3uFile) {
     notFound(req, res);
@@ -133,7 +135,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     appStatus.channels[id] = {};
   }
 
-  const uri = `${req.protocol}://${req.headers.host}`;
+  const uri = process.env.BASE_URL || `${req.protocol}://${req.headers.host}`;
 
   if (!appStatus.channels[id].player?.playlist) {
     try {
