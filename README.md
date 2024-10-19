@@ -30,6 +30,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | START_CHANNEL | What the first channel number should be. | No | 1 |
 | NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is >= 200 if you are using ESPN+. | No | 200 |
 | LINEAR_CHANNELS | Break out dedicated linear channels (see Endpoints above to use) | No | False |
+| BASE_URL | If using a reverse proxy, m3u will be generated with this uri base. | No | - |
 | PROXY_SEGMENTS | Proxy keyed `*.ts` files. | No | False |
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No | - |
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No | - |
