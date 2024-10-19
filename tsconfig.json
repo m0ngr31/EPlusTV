@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "target": "es6",
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     "module": "commonjs",
     "rootDir": "./",
     "outDir": "./dist",
