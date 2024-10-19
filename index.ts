@@ -152,7 +152,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
       `Could not get a playlist for channel #${id}. Please make sure there is an event scheduled and you have access to it.`,
     );
 
-    delete appStatus.channels[id];
+    removeChannelStatus(id);
 
     notFound(req, res);
     return;
