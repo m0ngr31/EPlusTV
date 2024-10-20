@@ -235,6 +235,7 @@ app.get('/chunklist/:id/:chunklistid{.+\\.m3u8$}', async c => {
 
   if (!contents) {
     console.log(`Could not get chunklist for channel #${id}.`);
+    removeChannelStatus(id);
     return notFound(c);
   }
 
