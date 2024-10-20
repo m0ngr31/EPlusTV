@@ -92,8 +92,21 @@ nfl.get('/login/:code/:other', async c => {
   // Kickoff event scheduler
   scheduleEvents();
 
+  const otherAuthName =
+    otherAuth === 'tve'
+      ? ' (TV Provider)'
+      : otherAuth === 'prime'
+      ? ' (Amazon Prime)'
+      : otherAuth === 'peacock'
+      ? ' (Peacock)'
+      : otherAuth === 'sunday_ticket'
+      ? ' (Youtube)'
+      : '';
+
+  const message = `NFL${otherAuthName}`;
+
   return c.html(<NFLBody enabled={true} tokens={tokens} open={true} channels={linear_channels} />, 200, {
-    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled NFL"}}`,
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${message}"}}`,
   });
 });
 

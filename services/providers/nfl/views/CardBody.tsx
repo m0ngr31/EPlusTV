@@ -45,7 +45,7 @@ export const NFLBody: FC<INFLBodyProps> = ({enabled, tokens, open, channels}) =>
                   type="checkbox"
                   checked={c.enabled}
                   data-enabled={c.enabled ? 'true' : 'false'}
-                  disabled={!useLinear}
+                  disabled={!useLinear || c.id === 'NFLNRZ'}
                   hx-put={`/providers/nfl/channels/toggle/${c.id}`}
                   hx-trigger="change"
                   name="channel-enabled"
