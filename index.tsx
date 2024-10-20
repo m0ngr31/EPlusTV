@@ -45,6 +45,7 @@ import {MlbTv} from './services/providers/mlb/views';
 import {FoxSports} from './services/providers/fox/views';
 import {Nesn} from './services/providers/nesn/views';
 import {B1G} from './services/providers/b1g/views';
+import { NFL } from './services/providers/nfl/views';
 
 const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
   return c.text('404 not found', 404, {
@@ -104,6 +105,7 @@ app.get('/', async c => {
         <Main>
           <Links baseUrl={getUri(c)} />
           <Providers>
+            <NFL />
             <FoxSports />
             <MlbTv />
             <CBSSports />

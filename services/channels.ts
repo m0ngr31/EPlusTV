@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import {useAccN, useEspn1, useEspn2, useEspnews, useEspnU, useMsgPlus, useNfl, useSec} from './networks';
+import {useAccN, useEspn1, useEspn2, useEspnews, useEspnU, useMsgPlus, useSec} from './networks';
 import {db} from './database';
 import {IProvider} from './shared-interfaces';
 
@@ -156,7 +156,8 @@ export const CHANNELS = {
         tvgName: 'GOLAZO',
       },
       30: {
-        canUse: useNfl.network,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nfl', 'NFLNETWORK'),
         id: 'NFLNETWORK',
         logo: 'https://tmsimg.fancybits.co/assets/s45399_ll_h15_aa.png?w=360&h=270',
         name: 'NFL Network',
@@ -164,7 +165,8 @@ export const CHANNELS = {
         tvgName: 'NFLHD',
       },
       31: {
-        canUse: useNfl.redZone,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nfl', 'NFLNRZ'),
         id: 'NFLNRZ',
         logo: 'https://tmsimg.fancybits.co/assets/s65025_ll_h9_aa.png?w=360&h=270',
         name: 'NFL RedZone',
@@ -172,7 +174,8 @@ export const CHANNELS = {
         tvgName: 'NFLNRZD',
       },
       32: {
-        canUse: useNfl.channel,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nfl', 'NFLDIGITAL1_OO_v3'),
         id: 'NFLDIGITAL1_OO_v3',
         logo: 'https://tmsimg.fancybits.co/assets/s121705_ll_h15_aa.png?w=360&h=270',
         name: 'NFL Channel',
