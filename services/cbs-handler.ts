@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import {cbsSportsUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useCBSSports} from './networks';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 import {createAdobeAuthHeader} from './adobe-helpers';
@@ -223,6 +223,8 @@ const CHANNEL_MAP = {
   CBSSHQ: '9Lq0ERvoSR-z9AwvFS-xYA',
 } as const;
 
+const cbsConfigPath = path.join(configPath, 'cbs_tokens.json');
+
 const getEventData = (event: ICBSEvent): IGameData => {
   const sport = event.video.properties.sport;
   const categories: string[] = [
@@ -294,25 +296,49 @@ class CBSHandler {
   public mvpd_id?: string;
 
   public initialize = async () => {
-    if (!useCBSSports) {
+    const setup = (await db.providers.count({name: 'cbs'})) > 0 ? true : false;
+
+    // First time setup
+    if (!setup) {
+      const data: TCBSTokens = {};
+
+      if (useCBSSports) {
+        this.loadJSON();
+
+        data.device_id = this.device_id;
+        data.user_id = this.user_id;
+        data.mvpd_id = this.mvpd_id;
+      }
+
+      await db.providers.insert<IProvider<TCBSTokens>>({
+        enabled: useCBSSports,
+        name: 'cbs',
+        tokens: data,
+      });
+
+      if (fs.existsSync(cbsConfigPath)) {
+        fs.rmSync(cbsConfigPath);
+      }
+    }
+
+    if (useCBSSports) {
+      console.log('Using CBSSPORTS variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'cbs'});
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
-
-    if (!this.device_id) {
-      this.device_id = getRandomUUID();
-      this.save();
-    }
-
-    if (!this.user_id) {
-      await this.startProviderAuthFlow();
-    }
+    await this.load();
   };
 
   public refreshTokens = async () => {
-    if (!useCBSSports) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'cbs'});
+
+    if (!enabled) {
       return;
     }
 
@@ -320,7 +346,9 @@ class CBSHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useCBSSports) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'cbs'});
+
+    if (!enabled) {
       return;
     }
 
@@ -460,7 +488,9 @@ class CBSHandler {
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
+  public getAuthCode = async (): Promise<string> => {
+    this.device_id = getRandomUUID();
+
     try {
       const url = [
         'https://',
@@ -483,45 +513,14 @@ class CBSHandler {
         },
       });
 
-      console.log(`=== CBS Sports Auth ===`);
-      console.log('Please open a browser window and go to: https://www.cbssports.com/firetv/');
-      console.log('Enter code: ', data.code);
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 5 minutes
-        const maxNumOfReqs = 30;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(data.code);
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return data.code;
     } catch (e) {
       console.error(e);
       console.log('Could not login to CBS Sports');
     }
   };
 
-  private authenticateRegCode = async (code: string): Promise<boolean> => {
+  public authenticateRegCode = async (code: string): Promise<boolean> => {
     try {
       const url = ['https://', 'video-api.cbssports.com', '/vms/shortcode/v1', '/status?shortcode=', code].join('');
 
@@ -568,26 +567,37 @@ class CBSHandler {
       this.user_id = data.userId;
       this.mvpd_id = data.mvpd;
 
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not lauthenticate with Adobe');
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'cbs_tokens.json'), this, {spaces: 2});
+  private save = async (): Promise<void> => {
+    await db.providers.update({name: 'cbs'}, {$set: {tokens: this}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'cbs_tokens.json'))) {
-      const {device_id, user_id, mvpd_id} = fsExtra.readJSONSync(path.join(configPath, 'cbs_tokens.json'));
+  private loadJSON = () => {
+    if (fs.existsSync(cbsConfigPath)) {
+      const {device_id, user_id, mvpd_id} = fsExtra.readJSONSync(cbsConfigPath);
 
       this.device_id = device_id;
       this.user_id = user_id;
       this.mvpd_id = mvpd_id;
     }
   };
+
+  private load = async (): Promise<void> => {
+    const {tokens} = await db.providers.findOne<IProvider<TCBSTokens>>({name: 'cbs'});
+    const {device_id, user_id, mvpd_id} = tokens || {};
+
+    this.device_id = device_id;
+    this.user_id = user_id;
+    this.mvpd_id = mvpd_id;
+  };
 }
+
+export type TCBSTokens = ClassTypeWithoutMethods<CBSHandler>;
 
 export const cbsHandler = new CBSHandler();

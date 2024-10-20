@@ -51,9 +51,17 @@ export const generateXml = async (linear = false): Promise<xml> => {
   };
 
   if (linear) {
-    _.forOwn(CHANNELS.MAP, (val, key) => {
-      if (!val.canUse) {
-        return;
+    for (const key in CHANNELS.MAP) {
+      const val = CHANNELS.MAP[key];
+
+      if (val.checkChannelEnabled) {
+        const enabled = await val.checkChannelEnabled();
+
+        if (!enabled) {
+          continue;
+        }
+      } else if (!val.canUse) {
+        continue;
       }
 
       const channelNum = parseInt(key, 10) + LINEAR_START_CHANNEL;
@@ -86,7 +94,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
           },
         ],
       });
-    });
+    }
   } else {
     _.times(NUM_OF_CHANNELS, i => {
       const channelNum = START_CHANNEL + i;

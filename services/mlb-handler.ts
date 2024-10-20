@@ -7,8 +7,8 @@ import moment, {Moment} from 'moment-timezone';
 
 import {okHttpUserAgent, userAgent, androidMlbUserAgent} from './user-agent';
 import {configPath} from './config';
-import {useMLBtv} from './networks';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {useMLBtv, useMLBtvOnlyFree} from './networks';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
 
@@ -80,6 +80,10 @@ interface ICombinedGame {
   };
 }
 
+interface IProviderMeta {
+  onlyFree?: boolean;
+}
+
 const CLIENT_ID = [
   '0',
   'o',
@@ -125,6 +129,9 @@ const parseAirings = async (events: ICombinedGame) => {
   const now = moment();
   const endDate = moment().add(2, 'days').endOf('day');
 
+  const {meta} = await db.providers.findOne<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+  const onlyFree = meta?.onlyFree ?? false;
+
   for (const pk in events) {
     if (!events[pk].feed || !events[pk].entry) {
       continue;
@@ -138,7 +145,7 @@ const parseAirings = async (events: ICombinedGame) => {
         const entryExists = await db.entries.findOne<IEntry>({id: epg.mediaId});
 
         if (!entryExists) {
-          if (process.env.MLBTV_ONLY_FREE?.toLowerCase() === 'true' && !epg.freeGame) {
+          if (onlyFree && !epg.freeGame) {
             continue;
           }
 
@@ -221,6 +228,8 @@ const COMMON_HEADERS = {
   'user-agent': userAgent,
 };
 
+const mlbConfigPath = path.join(configPath, 'mlb_tokens.json');
+
 class MLBHandler {
   public device_id?: string;
   public refresh_token?: string;
@@ -229,21 +238,64 @@ class MLBHandler {
   public session_id?: string;
 
   public initialize = async () => {
-    if (!useMLBtv) {
+    const setup = (await db.providers.count({name: 'mlbtv'})) > 0 ? true : false;
+
+    if (!setup) {
+      const data: TMLBTokens = {};
+
+      if (useMLBtv) {
+        this.loadJSON();
+
+        data.access_token = this.access_token;
+        data.device_id = this.device_id;
+        data.expires_at = this.expires_at;
+        data.refresh_token = this.refresh_token;
+        data.session_id = this.session_id;
+      }
+
+      await db.providers.insert<IProvider<TMLBTokens, IProviderMeta>>({
+        enabled: useMLBtv,
+        linear_channels: [
+          {
+            enabled: useMLBtv && !useMLBtvOnlyFree,
+            id: 'MLBTVBI',
+            name: 'MLB Big Inning',
+            tmsId: '119153',
+          },
+        ],
+        meta: {
+          onlyFree: useMLBtvOnlyFree,
+        },
+        name: 'mlbtv',
+        tokens: data,
+      });
+
+      if (fs.existsSync(mlbConfigPath)) {
+        fs.rmSync(mlbConfigPath);
+      }
+    }
+
+    if (useMLBtv) {
+      console.log('Using MLBTV variable is no longer needed. Please use the UI going forward');
+    }
+    if (useMLBtvOnlyFree) {
+      console.log('Using MLBTV_ONLY_FREE variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
-
-    if (!this.access_token || !this.expires_at) {
-      await this.startProviderAuthFlow();
-      await this.refreshToken();
-    }
+    await this.load();
   };
 
   public refreshTokens = async () => {
-    if (!useMLBtv) {
+    const {enabled} = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+
+    if (!enabled) {
       return;
     }
 
@@ -253,7 +305,9 @@ class MLBHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useMLBtv) {
+    const {meta, enabled} = await db.providers.findOne<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+
+    if (!enabled) {
       return;
     }
 
@@ -287,10 +341,12 @@ class MLBHandler {
         };
       }
 
-      const bigInnings = await this.getBigInnings();
-
       await parseAirings(combinedEntries);
-      await parseBigInnings(bigInnings);
+
+      if (!meta.onlyFree) {
+        const bigInnings = await this.getBigInnings();
+        await parseBigInnings(bigInnings);
+      }
     } catch (e) {
       console.error(e);
       console.log('Could not parse MLB.tv events');
@@ -513,14 +569,15 @@ class MLBHandler {
       this.access_token = data.access_token;
       this.expires_at = moment().add(data.expires_in, 'seconds').valueOf();
       this.refresh_token = data.refresh_token;
-      this.save();
+
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not get refresh token for MLB.tv');
     }
   };
 
-  private authenticateRegCode = async (): Promise<boolean> => {
+  public authenticateRegCode = async (): Promise<boolean> => {
     try {
       const url = 'https://ids.mlb.com/oauth2/aus1m088yK07noBfh356/v1/token';
       const headers = {
@@ -542,7 +599,8 @@ class MLBHandler {
       this.access_token = data.access_token;
       this.expires_at = moment().add(data.expires_in, 'seconds').valueOf();
       this.refresh_token = data.refresh_token;
-      this.save();
+
+      await this.save();
 
       return true;
     } catch (e) {
@@ -550,7 +608,7 @@ class MLBHandler {
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
+  public getAuthCode = async (): Promise<string> => {
     try {
       const url = 'https://ids.mlb.com/oauth2/aus1m088yK07noBfh356/v1/device/authorize';
       const headers = {
@@ -569,40 +627,8 @@ class MLBHandler {
       });
 
       this.device_id = data.device_code;
-      this.save();
 
-      console.log('=== MLB.tv Auth ===');
-      console.log('Please open a browser window and go to: https://ids.mlb.com/activate');
-      console.log('Enter code: ', data.user_code);
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 5 minutes
-        const maxNumOfReqs = 30;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode();
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return data.user_code;
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process for MLB.tv');
@@ -656,15 +682,23 @@ class MLBHandler {
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'mlb_tokens.json'), this, {spaces: 2});
+  private save = async () => {
+    await db.providers.update({name: 'mlbtv'}, {$set: {tokens: this}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'mlb_tokens.json'))) {
-      const {device_id, access_token, expires_at, refresh_token} = fsExtra.readJSONSync(
-        path.join(configPath, 'mlb_tokens.json'),
-      );
+  private load = async (): Promise<void> => {
+    const {tokens} = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+    const {device_id, access_token, expires_at, refresh_token} = tokens;
+
+    this.device_id = device_id;
+    this.access_token = access_token;
+    this.expires_at = expires_at;
+    this.refresh_token = refresh_token;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(mlbConfigPath)) {
+      const {device_id, access_token, expires_at, refresh_token} = fsExtra.readJSONSync(mlbConfigPath);
 
       this.device_id = device_id;
       this.access_token = access_token;
@@ -673,5 +707,7 @@ class MLBHandler {
     }
   };
 }
+
+export type TMLBTokens = ClassTypeWithoutMethods<MLBHandler>;
 
 export const mlbHandler = new MLBHandler();

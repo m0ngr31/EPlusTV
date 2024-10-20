@@ -8,9 +8,9 @@ import moment from 'moment';
 import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useFoxOnly4k, useFoxSports} from './networks';
-import {IAdobeAuthFox, isAdobeFoxTokenValid} from './adobe-helpers';
+import {IAdobeAuthFox} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
 
@@ -85,14 +85,21 @@ interface IFoxEventsData {
   };
 }
 
-const getMaxRes = _.memoize(() => {
-  switch (process.env.MAX_RESOLUTION) {
+interface IFoxMeta {
+  only4k?: boolean;
+  uhd?: boolean;
+}
+
+const foxConfigPath = path.join(configPath, 'fox_tokens.json');
+
+const getMaxRes = (res: string) => {
+  switch (res) {
     case 'UHD/HDR':
       return 'UHD/HDR';
     default:
       return '720p';
   }
-});
+};
 
 const parseCategories = (event: IFoxEvent) => {
   const categories = ['FOX Sports', 'FOX'];
@@ -117,6 +124,8 @@ const parseAirings = async (events: IFoxEvent[]) => {
   const now = moment();
   const inTwoDays = moment().add(2, 'days').endOf('day');
 
+  const {meta} = await db.providers.findOne<IProvider<any, IFoxMeta>>({name: 'foxsports'});
+
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
@@ -135,7 +144,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
 
       const categories = parseCategories(event);
 
-      if (useFoxOnly4k && !_.some(categories, category => category === '4K')) {
+      if (meta.only4k && !_.some(categories, category => category === '4K')) {
         continue;
       }
 
@@ -163,8 +172,6 @@ const parseAirings = async (events: IFoxEvent[]) => {
   }
 };
 
-const maxRes = getMaxRes();
-
 const FOX_APP_CONFIG = 'https://config.foxdcg.com/foxsports/androidtv-native/3.42/info.json';
 
 // Will prelim token expire in the next month?
@@ -191,40 +198,86 @@ class FoxHandler {
   private appConfig: IAppConfig;
 
   public initialize = async () => {
-    if (!useFoxSports) {
+    const setup = (await db.providers.count({name: 'foxsports'})) > 0 ? true : false;
+
+    if (!setup) {
+      const data: TFoxTokens = {};
+
+      if (useFoxSports) {
+        this.loadJSON();
+
+        data.adobe_auth = this.adobe_auth;
+        data.adobe_device_id = this.adobe_device_id;
+        data.adobe_prelim_auth_token = this.adobe_prelim_auth_token;
+      }
+
+      await db.providers.insert<IProvider<TFoxTokens, IFoxMeta>>({
+        enabled: useFoxSports,
+        linear_channels: [
+          {
+            enabled: true,
+            id: 'fs1',
+            name: 'FS1',
+            tmsId: '82547',
+          },
+          {
+            enabled: true,
+            id: 'fs2',
+            name: 'FS2',
+            tmsId: '59305',
+          },
+          {
+            enabled: true,
+            id: 'btn',
+            name: 'B1G Network',
+            tmsId: '58321',
+          },
+          {
+            enabled: true,
+            id: 'fox-soccer-plus',
+            name: 'FOX Soccer Plus',
+            tmsId: '66880',
+          },
+        ],
+        meta: {
+          only4k: useFoxOnly4k,
+          uhd: getMaxRes(process.env.MAX_RESOLUTION) === 'UHD/HDR',
+        },
+        name: 'foxsports',
+        tokens: data,
+      });
+
+      if (fs.existsSync(foxConfigPath)) {
+        fs.rmSync(foxConfigPath);
+      }
+    }
+
+    if (useFoxSports) {
+      console.log('Using FOXSPORTS variable is no longer needed. Please use the UI going forward');
+    }
+    if (useFoxOnly4k) {
+      console.log('Using FOX_ONLY_4K variable is no longer needed. Please use the UI going forward');
+    }
+    if (process.env.MAX_RESOLUTION) {
+      console.log('Using MAX_RESOLUTION variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
-
-    if (!this.adobe_device_id) {
-      this.adobe_device_id = _.take(getRandomHex(), 16).join('');
-      this.save();
-    }
-
-    if (!this.appConfig) {
-      await this.getAppConfig();
-    }
-
-    if (!this.adobe_prelim_auth_token || !this.adobe_prelim_auth_token?.accessToken) {
-      await this.getPrelimToken();
-    }
-
-    if (!isAdobeFoxTokenValid(this.adobe_auth)) {
-      await this.startProviderAuthFlow();
-    }
-
-    if (willAuthTokenExpire(this.adobe_auth)) {
-      console.log('Refreshing TV Provider token (FOX Sports)');
-      await this.authenticateRegCode();
-    }
+    await this.load();
 
     await this.getEntitlements();
   };
 
   public refreshTokens = async () => {
-    if (!useFoxSports) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+
+    if (!enabled) {
       return;
     }
 
@@ -240,7 +293,9 @@ class FoxHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useFoxSports) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+
+    if (!enabled) {
       return;
     }
 
@@ -298,9 +353,12 @@ class FoxHandler {
   };
 
   private getSteamData = async (eventId: string): Promise<any> => {
+    const {meta} = await db.providers.findOne<IProvider<any, IFoxMeta>>({name: 'foxsports'});
+    const {uhd} = meta;
+
     const streamOrder = ['UHD/HDR', '720p'];
 
-    let resIndex = streamOrder.findIndex(i => i === maxRes);
+    let resIndex = streamOrder.findIndex(i => i === getMaxRes(uhd ? 'UHD/HDR' : ''));
 
     if (resIndex < 0) {
       resIndex = 1;
@@ -458,19 +516,24 @@ class FoxHandler {
       );
 
       this.adobe_prelim_auth_token = data;
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not get information to start Fox Sports login flow');
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
-    try {
-      if (!this.appConfig) {
-        await this.getAppConfig();
-      }
+  public getAuthCode = async (): Promise<string> => {
+    this.adobe_device_id = _.take(getRandomHex(), 16).join('');
+    this.adobe_auth = undefined;
 
+    if (!this.appConfig) {
+      await this.getAppConfig();
+    }
+
+    await this.getPrelimToken();
+
+    try {
       const {data} = await axios.post(
         this.appConfig.api.auth.accountRegCode,
         {
@@ -487,45 +550,14 @@ class FoxHandler {
         },
       );
 
-      console.log('=== TV Provider Auth ===');
-      console.log('Please open a browser window and go to: https://go.foxsports.com');
-      console.log('Enter code: ', data.code);
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 5 minutes
-        const maxNumOfReqs = 30;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(false);
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return data.code;
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process for Fox Sports!');
     }
   };
 
-  private authenticateRegCode = async (showAuthnError = true): Promise<boolean> => {
+  public authenticateRegCode = async (showAuthnError = true): Promise<boolean> => {
     try {
       if (!this.appConfig) {
         await this.getAppConfig();
@@ -543,7 +575,9 @@ class FoxHandler {
       });
 
       this.adobe_auth = data;
-      this.save();
+      await this.save();
+
+      await this.getEntitlements();
 
       return true;
     } catch (e) {
@@ -563,17 +597,22 @@ class FoxHandler {
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'fox_tokens.json'), _.omit(this, 'appConfig', 'entitlements'), {
-      spaces: 2,
-    });
+  private save = async () => {
+    await db.providers.update({name: 'foxsports'}, {$set: {tokens: _.omit(this, 'appConfig', 'entitlements')}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'fox_tokens.json'))) {
-      const {adobe_device_id, adobe_auth, adobe_prelim_auth_token} = fsExtra.readJSONSync(
-        path.join(configPath, 'fox_tokens.json'),
-      );
+  private load = async (): Promise<void> => {
+    const {tokens} = await db.providers.findOne<IProvider<TFoxTokens>>({name: 'foxsports'});
+    const {adobe_device_id, adobe_auth, adobe_prelim_auth_token} = tokens;
+
+    this.adobe_device_id = adobe_device_id;
+    this.adobe_auth = adobe_auth;
+    this.adobe_prelim_auth_token = adobe_prelim_auth_token;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(foxConfigPath)) {
+      const {adobe_device_id, adobe_auth, adobe_prelim_auth_token} = fsExtra.readJSONSync(foxConfigPath);
 
       this.adobe_device_id = adobe_device_id;
       this.adobe_auth = adobe_auth;
@@ -581,5 +620,7 @@ class FoxHandler {
     }
   };
 }
+
+export type TFoxTokens = ClassTypeWithoutMethods<FoxHandler>;
 
 export const foxHandler = new FoxHandler();

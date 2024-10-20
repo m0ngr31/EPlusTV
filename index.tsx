@@ -1,6 +1,8 @@
 import {Context, Hono} from 'hono';
 import {serve} from '@hono/node-server';
+import {serveStatic} from '@hono/node-server/serve-static';
 import {BlankEnv, BlankInput} from 'hono/types';
+import {html} from 'hono/html';
 import moment from 'moment';
 
 import {generateM3u} from './services/generate-m3u';
@@ -23,8 +25,26 @@ import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
 import {useLinear} from './services/channels';
+import { providers } from './services/providers';
 
 import {version} from './package.json';
+
+import { Layout } from './views/Layout';
+import { Header } from './views/Header';
+import { Main } from './views/Main';
+import { Links } from './views/Links';
+import { Style } from './views/Style';
+import { Providers } from './views/Providers';
+import { Script } from './views/Script';
+
+import {CBSSports} from './services/providers/cbs-sports/views';
+import { MntWest } from './services/providers/mw/views';
+import {Paramount} from './services/providers/paramount/views';
+import {FloSports} from './services/providers/flosports/views';
+import {MlbTv} from './services/providers/mlb/views';
+import {FoxSports} from './services/providers/fox/views';
+import {Nesn} from './services/providers/nesn/views';
+import {B1G} from './services/providers/b1g/views';
 
 const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
   return c.text('404 not found', 404, {
@@ -42,12 +62,12 @@ const getUri = (c: Context<BlankEnv, '', BlankInput>): string => {
   const protocol = c.req.header('x-forwarded-proto') || 'http';
   const host = c.req.header('host') || '';
 
-
   return `${protocol}://${host}`;
 };
 
 const schedule = async () => {
   console.log('=== Getting events ===');
+
   await espnHandler.getSchedule();
   await foxHandler.getSchedule();
   await mlbHandler.getSchedule();
@@ -61,16 +81,48 @@ const schedule = async () => {
   await cbsHandler.getSchedule();
 
   console.log('=== Done getting events ===');
-  await cleanEntries();
   console.log('=== Building the schedule ===');
+
+  await cleanEntries();
   await scheduleEntries();
+
   console.log('=== Done building the schedule ===');
 };
 
 const app = new Hono();
 
-app.get('/channels.m3u', c => {
-  const m3uFile = generateM3u(getUri(c));
+app.use('/node_modules/*', serveStatic({root: './'}));
+app.use('/favicon.ico', serveStatic({root: './'}));
+
+app.route('/', providers);
+
+app.get('/', async c => {
+  return c.html(
+    html`<!DOCTYPE html>${(
+      <Layout>
+        <Header />
+        <Main>
+          <Links baseUrl={getUri(c)} />
+          <Providers>
+            <FoxSports />
+            <MlbTv />
+            <CBSSports />
+            <Paramount />
+            <Nesn />
+            <B1G />
+            <MntWest />
+            <FloSports />
+          </Providers>
+        </Main>
+        <Style />
+        <Script />
+      </Layout>
+    )}`,
+  );
+});
+
+app.get('/channels.m3u', async c => {
+  const m3uFile = await generateM3u(getUri(c));
 
   if (!m3uFile) {
     return notFound(c);
@@ -81,12 +133,12 @@ app.get('/channels.m3u', c => {
   });
 });
 
-app.get('/linear-channels.m3u', c => {
+app.get('/linear-channels.m3u', async c => {
   if (!useLinear) {
     return notFound(c);
   }
 
-  const m3uFile = generateM3u(getUri(c), true);
+  const m3uFile = await generateM3u(getUri(c), true);
 
   if (!m3uFile) {
     return notFound(c);
@@ -278,14 +330,17 @@ process.on('SIGINT', shutDown);
   await cbsHandler.initialize();
   await cbsHandler.refreshTokens();
 
-  await schedule();
+  await mwHandler.initialize();
 
   serve(
     {
       fetch: app.fetch,
       port: SERVER_PORT,
     },
-    () => console.log(`Server started on port ${SERVER_PORT}`),
+    () => {
+      console.log(`Server started on port ${SERVER_PORT}`);
+      schedule();
+    },
   );
 })();
 

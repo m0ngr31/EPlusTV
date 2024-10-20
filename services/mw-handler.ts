@@ -3,7 +3,7 @@ import moment from 'moment';
 
 import {userAgent} from './user-agent';
 import {useMountainWest} from './networks';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 
 interface IMWEvent {
@@ -58,8 +58,32 @@ const parseAirings = async (events: IMWEvent[]) => {
 };
 
 class MountainWestHandler {
+  public initialize = async () => {
+    const setup = (await db.providers.count({name: 'mw'})) > 0 ? true : false;
+
+    // First time setup
+    if (!setup) {
+      await db.providers.insert<IProvider>({
+        enabled: useMountainWest,
+        name: 'mw',
+      });
+    }
+
+    if (useMountainWest) {
+      console.log('Using MTNWEST variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'mw'});
+
+    if (!enabled) {
+      return;
+    }
+  };
+
   public getSchedule = async (): Promise<void> => {
-    if (!useMountainWest) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'mw'});
+
+    if (!enabled) {
       return;
     }
 

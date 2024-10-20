@@ -9,7 +9,7 @@ import jwt_decode from 'jwt-decode';
 import {okHttpUserAgent, adobeNesnUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useNesn} from './networks';
-import {IEntry, IHeaders, IJWToken} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IJWToken, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {getRandomHex, getRandomUUID} from './shared-helpers';
 import {useLinear} from './channels';
@@ -262,6 +262,8 @@ const parseAirings = async (events: INesnEvent[]) => {
   }
 };
 
+const nesnConfigPath = path.join(configPath, 'nesn_tokens.json');
+
 class NesnHandler {
   public device_id?: string;
   public adobe_device_id?: string;
@@ -277,26 +279,63 @@ class NesnHandler {
   private adobe_auth_token?: string;
 
   public initialize = async () => {
-    if (!useNesn) {
+    const setup = (await db.providers.count({name: 'nesn'})) > 0 ? true : false;
+
+    if (!setup) {
+      const data: TNesnTokens = {};
+
+      if (useNesn) {
+        this.loadJSON();
+
+        data.adobe_device_id = this.adobe_device_id;
+        data.authz_token = this.authz_token;
+        data.cognito_access_token = this.cognito_access_token;
+        data.cognito_expires_at = this.cognito_expires_at;
+        data.cognito_id = this.cognito_id;
+        data.cognito_id_token = this.cognito_id_token;
+        data.cognito_refresh_token = this.cognito_refresh_token;
+        data.device_id = this.device_id;
+        data.mvpd_id = this.mvpd_id;
+        data.user_id = this.user_id;
+      }
+
+      await db.providers.insert<IProvider<TNesnTokens>>({
+        enabled: useNesn,
+        linear_channels: [
+          {
+            enabled: true,
+            id: 'NESN',
+            name: 'New England Sports Network HD',
+            tmsId: '35038',
+          },
+          {
+            enabled: true,
+            id: 'NESN+',
+            name: 'New England Sports Network Plus HD',
+            tmsId: '63516',
+          },
+        ],
+        name: 'nesn',
+        tokens: data,
+      });
+
+      if (fs.existsSync(nesnConfigPath)) {
+        fs.rmSync(nesnConfigPath);
+      }
+    }
+
+    if (useNesn) {
+      console.log('Using NESN variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'nesn'});
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
-
-    if (!this.device_id) {
-      this.device_id = getRandomUUID();
-      this.save();
-    }
-
-    if (!this.adobe_device_id) {
-      this.adobe_device_id = `${getRandomHex()}${getRandomHex()}`;
-      this.save();
-    }
-
-    if (!this.cognito_expires_at || !this.cognito_access_token) {
-      await this.startProviderAuthFlow();
-    }
+    await this.load();
 
     if (!this.user_id) {
       await this.getUserId();
@@ -304,7 +343,9 @@ class NesnHandler {
   };
 
   public refreshTokens = async () => {
-    if (!useNesn) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'nesn'});
+
+    if (!enabled) {
       return;
     }
 
@@ -314,7 +355,9 @@ class NesnHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useNesn) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'nesn'});
+
+    if (!enabled) {
       return;
     }
 
@@ -653,7 +696,7 @@ class NesnHandler {
       this.cognito_id_token = data.AuthenticationResult.IdToken;
       this.cognito_expires_at = moment().add(1, 'day').valueOf();
 
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh NESN token');
@@ -677,14 +720,17 @@ class NesnHandler {
       );
 
       this.user_id = data.Username;
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not get user ID');
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
+  public getAuthCode = async (): Promise<[string, string, string]> => {
+    this.device_id = getRandomUUID();
+    this.adobe_device_id = `${getRandomHex()}${getRandomHex()}`;
+
     try {
       const codeUrl = ['https://', 'nesn.com', '/wp-json/nesn/v1/device'].join('');
 
@@ -720,45 +766,14 @@ class NesnHandler {
 
       const authUrl = loginInfo.secureShortURL.toLowerCase();
 
-      console.log('=== NESN Auth ===');
-      console.log(`Please open a browser window and go to: ${authUrl}`);
-      console.log('MAKE SURE THAT YOU DON\'T CLICK "SKIP THIS STEP FOR NOW"');
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 30 minutes
-        const maxNumOfReqs = 180;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(code, adobeReggieCode);
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return [authUrl, code, adobeReggieCode];
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process for Fox Sports!');
     }
   };
 
-  private authenticateRegCode = async (code: string, adobeReggieCode: string): Promise<boolean> => {
+  public authenticateRegCode = async (code: string, adobeReggieCode: string): Promise<boolean> => {
     try {
       const url = ['https://', 'nesn.com', '/wp-json', '/nesn/v1/device/', code].join('');
 
@@ -780,30 +795,60 @@ class NesnHandler {
       this.mvpd_id = data.mvpdId;
       this.cognito_expires_at = moment().add(1, 'day').valueOf();
 
-      this.save();
+      await this.save();
 
       try {
         const authnToken = await this.getAdobeSessionDevice(adobeReggieCode);
         this.authz_token = await this.authorizeAdobeDevice(authnToken);
-        this.save();
+
+        await this.save();
       } catch (e) {
         console.error(e);
         console.log('Could not register adobe device');
       }
 
+      await this.getUserId();
+
       return true;
     } catch (e) {
-      console.log(e.response.status, e.config.url);
+      // console.log(e.response.status, e.config.url);
       return false;
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'nesn_tokens.json'), this, {spaces: 2});
+  private save = async (): Promise<void> => {
+    await db.providers.update({name: 'nesn'}, {$set: {tokens: this}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'nesn_tokens.json'))) {
+  private load = async (): Promise<void> => {
+    const {tokens} = await db.providers.findOne<IProvider<TNesnTokens>>({name: 'nesn'});
+    const {
+      cognito_access_token,
+      cognito_id,
+      cognito_refresh_token,
+      cognito_id_token,
+      cognito_expires_at,
+      mvpd_id,
+      device_id,
+      user_id,
+      adobe_device_id,
+      authz_token,
+    } = tokens;
+
+    this.device_id = device_id;
+    this.adobe_device_id = adobe_device_id;
+    this.cognito_access_token = cognito_access_token;
+    this.cognito_id = cognito_id;
+    this.cognito_refresh_token = cognito_refresh_token;
+    this.cognito_expires_at = cognito_expires_at;
+    this.cognito_id_token = cognito_id_token;
+    this.mvpd_id = mvpd_id;
+    this.user_id = user_id;
+    this.authz_token = authz_token;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(nesnConfigPath)) {
       const {
         cognito_access_token,
         cognito_id,
@@ -830,5 +875,7 @@ class NesnHandler {
     }
   };
 }
+
+export type TNesnTokens = ClassTypeWithoutMethods<NesnHandler>;
 
 export const nesnHandler = new NesnHandler();

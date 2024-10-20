@@ -8,7 +8,7 @@ import jwt_decode from 'jwt-decode';
 import {b1gUserAgent, okHttpUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useB1GPlus} from './networks';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 
 interface IEventCategory {
@@ -57,6 +57,13 @@ interface IGameData {
   image: string;
   categories: string[];
 }
+
+interface IB1GMeta {
+  username: string;
+  password: string;
+}
+
+const b1gConfigPath = path.join(configPath, 'b1g_tokens.json');
 
 const getEventData = (event: IB1GEvent): IGameData => {
   let sport = 'B1G+ Event';
@@ -142,20 +149,57 @@ class B1GHandler {
   public expires_at?: number;
 
   public initialize = async () => {
-    if (!useB1GPlus) {
+    const setup = (await db.providers.count({name: 'b1g'})) > 0 ? true : false;
+
+    if (!setup) {
+      const data: TB1GTokens = {};
+
+      if (useB1GPlus) {
+        this.loadJSON();
+
+        data.access_token = this.access_token;
+        data.expires_at = this.expires_at;
+      }
+
+      await db.providers.insert<IProvider<TB1GTokens, IB1GMeta>>({
+        enabled: useB1GPlus,
+        meta: {
+          password: process.env.B1GPLUS_PASS,
+          username: process.env.B1GPLUS_USER,
+        },
+        name: 'b1g',
+        tokens: data,
+      });
+
+      if (fs.existsSync(b1gConfigPath)) {
+        fs.rmSync(b1gConfigPath);
+      }
+    }
+
+    if (useB1GPlus) {
+      console.log('Using B1GPLUS variable is no longer needed. Please use the UI going forward');
+    }
+    if (process.env.B1GPLUS_USER) {
+      console.log('Using B1GPLUS_USER variable is no longer needed. Please use the UI going forward');
+    }
+    if (process.env.B1GPLUS_PASS) {
+      console.log('Using B1GPLUS_PASS variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'b1g'});
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
-
-    if (!this.expires_at || !this.access_token || moment(this.expires_at).isBefore(moment().add(100, 'days'))) {
-      await this.login();
-    }
+    await this.load();
   };
 
   public refreshTokens = async () => {
-    if (!useB1GPlus) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'b1g'});
+
+    if (!enabled) {
       return;
     }
 
@@ -165,7 +209,9 @@ class B1GHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useB1GPlus) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'b1g'});
+
+    if (!enabled) {
       return;
     }
 
@@ -231,7 +277,7 @@ class B1GHandler {
 
   private extendToken = async (): Promise<void> => {
     try {
-      const url = 'https://www.bigtenplus.com/api/v3/cleeng/extend_token';
+      const url = ['https://', 'www.bigtenplus.com', '/api/v3/cleeng/extend_token'].join('');
       const headers = {
         Authorization: `Bearer ${this.access_token}`,
         'User-Agent': b1gUserAgent,
@@ -249,7 +295,7 @@ class B1GHandler {
       this.access_token = data.token;
       this.expires_at = moment().add(399, 'days').valueOf();
 
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not extend token for B1G+');
@@ -314,18 +360,20 @@ class B1GHandler {
     }
   };
 
-  private login = async (): Promise<void> => {
+  public login = async (username?: string, password?: string): Promise<boolean> => {
     try {
-      const url = 'https://www.bigtenplus.com/api/v3/cleeng/login';
+      const url = ['https://', 'www.bigtenplus.com', '/api/v3/cleeng/login'].join('');
       const headers = {
         'User-Agent': b1gUserAgent,
         accept: 'application/json',
         'content-type': 'application/json',
       };
 
+      const {meta} = await db.providers.findOne<IProvider<any, IB1GMeta>>({name: 'b1g'});
+
       const params = {
-        email: process.env.B1GPLUS_USER,
-        password: process.env.B1GPLUS_PASS,
+        email: username || meta.username,
+        password: password || meta.password,
       };
 
       const {data} = await axios.post(url, params, {
@@ -335,19 +383,31 @@ class B1GHandler {
       this.access_token = data.token;
       this.expires_at = moment().add(399, 'days').valueOf();
 
-      this.save();
+      await this.save();
+
+      return true;
     } catch (e) {
       console.error(e);
       console.log('Could not login to B1G+');
+
+      return false;
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'b1g_tokens.json'), this, {spaces: 2});
+  private save = async (): Promise<void> => {
+    await db.providers.update({name: 'b1g'}, {$set: {tokens: this}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'b1g_tokens.json'))) {
+  private load = async (): Promise<void> => {
+    const {tokens} = await db.providers.findOne<IProvider<TB1GTokens>>({name: 'b1g'});
+    const {access_token, expires_at} = tokens;
+
+    this.access_token = access_token;
+    this.expires_at = expires_at;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(b1gConfigPath)) {
       const {access_token, expires_at} = fsExtra.readJSONSync(path.join(configPath, 'b1g_tokens.json'));
 
       this.access_token = access_token;
@@ -355,5 +415,7 @@ class B1GHandler {
     }
   };
 }
+
+export type TB1GTokens = ClassTypeWithoutMethods<B1GHandler>;
 
 export const b1gHandler = new B1GHandler();

@@ -44,12 +44,13 @@ export const cleanEntries = async (): Promise<void> => {
 
 export const removeChannelStatus = (channelId: string | number): void => {
   try {
-    if (appStatus.channels[channelId].heartbeatTimer) {
+    if (appStatus.channels?.[channelId]?.heartbeatTimer) {
       clearTimeout(appStatus.channels[channelId].heartbeatTimer);
     }
 
     delete appStatus.channels[channelId];
   } catch (e) {
+    console.error(e);
     console.log(`Failed to delete info for channel #${channelId}`);
   }
 };
