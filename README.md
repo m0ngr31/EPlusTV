@@ -53,7 +53,7 @@ Available to login with TV Provider
 
 ##### Linear Channels
 
-Will create a dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
 
 | Network Name | Description |
 |---|---|
@@ -137,7 +137,7 @@ Available to login with NESN+ or TV Provider
 
 ##### Linear Channels
 
-Will create a dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
 
 | Network Name | Description |
 |---|---|
