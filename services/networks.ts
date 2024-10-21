@@ -80,8 +80,3 @@ export const useMountainWest = process.env.MTNWEST?.toLowerCase() === 'true' ? t
 
 export const requiresEspnProvider =
   useEspn1 || useEspn2 || useEspn3 || useEspnU || useSec || useSecPlus || useAccN || useAccNx || useEspnews;
-
-export const usesMultiple =
-  ((useFoxSports || useMLBtv || useParamount.plus || useB1GPlus || useFloSports || useMsgPlus || useNfl.plus) &&
-    (requiresEspnProvider || useEspnPlus)) ||
-  (requiresEspnProvider && useEspnPlus);

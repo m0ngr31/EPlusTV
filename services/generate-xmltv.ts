@@ -3,13 +3,18 @@ import xml from 'xml';
 import moment from 'moment';
 
 import {db} from './database';
-import {usesMultiple} from './networks';
 import {calculateChannelFromName, CHANNELS, LINEAR_START_CHANNEL, NUM_OF_CHANNELS, START_CHANNEL} from './channels';
 import {IEntry} from './shared-interfaces';
 
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
 
-const formatEntryName = (entry: IEntry) => {
+const usesMultiple = async (): Promise<boolean> => {
+  const enabledProviders = await db.providers.count({enabled: true});
+
+  return enabledProviders > 1;
+};
+
+const formatEntryName = (entry: IEntry, usesMultiple: boolean) => {
   let entryName = entry.name;
 
   if (entry.feed) {
@@ -49,6 +54,8 @@ export const generateXml = async (linear = false): Promise<xml> => {
       },
     ],
   };
+
+  const useMultiple = await usesMultiple();
 
   if (linear) {
     for (const key in CHANNELS.MAP) {
@@ -137,7 +144,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
   for (const entry of scheduledEntries) {
     const channelNum = calculateChannelFromName(`${entry.channel}`);
 
-    const entryName = formatEntryName(entry);
+    const entryName = formatEntryName(entry, useMultiple);
 
     wrap.tv.push({
       programme: [
