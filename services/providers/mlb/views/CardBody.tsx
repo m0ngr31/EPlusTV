@@ -2,7 +2,6 @@ import {FC} from 'hono/jsx';
 
 import { TMLBTokens } from '@/services/mlb-handler';
 import { IProviderChannel } from '@/services/shared-interfaces';
-import { useLinear } from '@/services/channels';
 
 interface IMLBBodyProps {
   enabled: boolean;
@@ -22,10 +21,7 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels, onl
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span
-          data-tooltip="These are only enabled with the LINEAR_CHANNELS environment variable set"
-          data-placement="right"
-        >
+        <span>
           Linear Channels
         </span>
       </summary>
@@ -46,7 +42,7 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels, onl
                   type="checkbox"
                   checked={c.enabled && !onlyFree}
                   data-enabled={c.enabled && !onlyFree ? 'true' : 'false'}
-                  disabled={!useLinear || onlyFree}
+                  disabled={onlyFree}
                   hx-put={`/providers/mlbtv/channels/toggle/${c.id}`}
                   hx-trigger="change"
                   name="channel-enabled"

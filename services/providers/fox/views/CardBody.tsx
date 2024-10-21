@@ -20,10 +20,7 @@ export const FoxBody: FC<IFoxBodyProps> = ({enabled, tokens, open, channels}) =>
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span
-          data-tooltip="These are only enabled with the LINEAR_CHANNELS environment variable set"
-          data-placement="right"
-        >
+        <span>
           Linear Channels
         </span>
       </summary>

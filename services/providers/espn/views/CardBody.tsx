@@ -2,7 +2,6 @@ import {FC} from 'hono/jsx';
 
 import { IEspnMeta, TESPNTokens } from '@/services/espn-handler';
 import { IProviderChannel } from '@/services/shared-interfaces';
-import { useLinear } from '@/services/channels';
 
 interface IESPNBodyProps {
   enabled: boolean;
@@ -22,10 +21,7 @@ export const ESPNBody: FC<IESPNBodyProps> = ({enabled, tokens, open, channels, m
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span
-          data-tooltip="These are only enabled with the LINEAR_CHANNELS environment variable set"
-          data-placement="right"
-        >
+        <span>
           Linear Channels
         </span>
       </summary>
@@ -46,7 +42,6 @@ export const ESPNBody: FC<IESPNBodyProps> = ({enabled, tokens, open, channels, m
                   type="checkbox"
                   checked={c.enabled}
                   data-enabled={c.enabled ? 'true' : 'false'}
-                  disabled={!useLinear}
                   hx-put={`/providers/espn/channels/toggle/${c.id}`}
                   hx-trigger="change"
                   name="channel-enabled"
