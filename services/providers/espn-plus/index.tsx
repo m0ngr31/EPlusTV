@@ -48,11 +48,13 @@ espnplus.put('/toggle-ppv', async c => {
   return c.html(<ESPNPlusBody enabled={enabled} tokens={tokens} />);
 });
 
-espnplus.get('/login/check', async c => {
+espnplus.get('/login/check/:code', async c => {
+  const code = c.req.param('code');
+
   const isAuthenticated = await espnHandler.authenticatePlusRegCode();
 
   if (!isAuthenticated) {
-    return c.html(<Login />);
+    return c.html(<Login code={code} />);
   }
 
   const {tokens} = await db.providers.update<IProvider<TESPNPlusTokens>>({name: 'espnplus'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});

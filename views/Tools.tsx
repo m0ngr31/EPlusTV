@@ -7,14 +7,14 @@ export const Tools: FC = async () => {
     <section hx-swap="outerHTML" hx-target="this">
       <h3>Tools</h3>
       <div class="grid">
-        <form
-          id="rebuild-epg"
-          hx-post="/rebuild-epg"
-          hx-trigger="submit"
-          hx-on="htmx:beforeRequest: this.querySelector('button').setAttribute('aria-busy', 'true'); this.querySelector('button').setAttribute('aria-label', 'Loading…');"
-        >
+        <form id="rebuild-epg" hx-post="/rebuild-epg" hx-trigger="submit">
           <button class="outline" id="rebuild-epg-button">
             Rebuild EPG
+          </button>
+        </form>
+        <form id="reset-channels" hx-post="/reset-channels" hx-trigger="submit">
+          <button class="outline" id="reset-channels-button">
+            Reset Active Channels
           </button>
         </form>
       </div>
@@ -22,12 +22,21 @@ export const Tools: FC = async () => {
       <script
         dangerouslySetInnerHTML={{
           __html: `
-            var form = document.getElementById('rebuild-epg');
+            var rebuildEpgForm = document.getElementById('rebuild-epg');
 
-            if (form) {
-              form.addEventListener('htmx:beforeRequest', function() {
+            if (rebuildEpgForm) {
+              rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
                 this.querySelector('#rebuild-epg-button').setAttribute('aria-busy', 'true');
                 this.querySelector('#rebuild-epg-button').setAttribute('aria-label', 'Loading…');
+              });
+            }
+
+            var resetChannelsForm = document.getElementById('reset-channels');
+
+            if (resetChannelsForm) {
+              resetChannelsForm.addEventListener('htmx:beforeRequest', function() {
+                this.querySelector('#reset-channels-button').setAttribute('aria-busy', 'true');
+                this.querySelector('#reset-channels-button').setAttribute('aria-label', 'Loading…');
               });
             }
           `,

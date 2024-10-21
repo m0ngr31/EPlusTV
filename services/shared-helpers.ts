@@ -43,6 +43,7 @@ export const cleanEntries = async (): Promise<void> => {
 };
 
 export const removeAllEntries = async (): Promise<void> => {
+  await db.schedule.remove({}, {multi: true});
   await db.entries.remove({}, {multi: true});
 };
 
@@ -57,4 +58,12 @@ export const removeChannelStatus = (channelId: string | number): void => {
     console.error(e);
     console.log(`Failed to delete info for channel #${channelId}`);
   }
+};
+
+export const clearChannels = (): void => {
+  Object.keys(appStatus.channels).forEach(key => {
+    removeChannelStatus(key);
+  });
+
+  appStatus.channels = {};
 };

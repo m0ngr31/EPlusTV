@@ -21,7 +21,7 @@ import {msgHandler} from './services/msg-handler';
 import {mwHandler} from './services/mw-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
-import {cleanEntries, removeAllEntries, removeChannelStatus} from './services/shared-helpers';
+import {cleanEntries, clearChannels, removeAllEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
 import {useLinear} from './services/channels';
@@ -135,6 +135,14 @@ app.post('/rebuild-epg', async c => {
 
   return c.html(<Tools />, 200, {
     'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully rebuilt EPG"}}`,
+  });
+});
+
+app.post('/reset-channels', async c => {
+  clearChannels();
+
+  return c.html(<Tools />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully cleared channels"}}`,
   });
 });
 
