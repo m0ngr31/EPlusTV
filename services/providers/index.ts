@@ -9,6 +9,8 @@ import {fox} from './fox';
 import {nesn} from './nesn';
 import {b1g} from './b1g';
 import {nfl} from './nfl';
+import {espn} from './espn';
+import {espnplus} from './espn-plus';
 
 export const providers = new Hono().basePath('/providers');
 
@@ -21,3 +23,5 @@ providers.route('/', fox);
 providers.route('/', nesn);
 providers.route('/', b1g);
 providers.route('/', nfl);
+providers.route('/', espn);
+providers.route('/', espnplus);

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import {useAccN, useEspn1, useEspn2, useEspnews, useEspnU, useMsgPlus, useSec} from './networks';
+import {useMsgPlus} from './networks';
 import {db} from './database';
 import {IProvider} from './shared-interfaces';
 
@@ -54,7 +54,8 @@ export const CHANNELS = {
   get MAP() {
     return {
       0: {
-        canUse: useEspn1,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espn1'),
         id: 'espn1',
         logo: 'https://tmsimg.fancybits.co/assets/s32645_h3_aa.png?w=360&h=270',
         name: 'ESPN',
@@ -62,7 +63,8 @@ export const CHANNELS = {
         tvgName: 'ESPNHD',
       },
       1: {
-        canUse: useEspn2,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espn2'),
         id: 'espn2',
         logo: 'https://tmsimg.fancybits.co/assets/s45507_ll_h15_aa.png?w=360&h=270',
         name: 'ESPN2',
@@ -70,7 +72,8 @@ export const CHANNELS = {
         tvgName: 'ESPN2HD',
       },
       2: {
-        canUse: useEspnU,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espnu'),
         id: 'espnu',
         logo: 'https://tmsimg.fancybits.co/assets/s60696_ll_h15_aa.png?w=360&h=270',
         name: 'ESPNU',
@@ -78,7 +81,8 @@ export const CHANNELS = {
         tvgName: 'ESPNUHD',
       },
       3: {
-        canUse: useSec,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'sec'),
         id: 'sec',
         logo: 'https://tmsimg.fancybits.co/assets/s89714_ll_h15_aa.png?w=360&h=270',
         name: 'SEC Network',
@@ -86,7 +90,8 @@ export const CHANNELS = {
         tvgName: 'SECH',
       },
       4: {
-        canUse: useAccN,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'acc'),
         id: 'acc',
         logo: 'https://tmsimg.fancybits.co/assets/s111871_ll_h15_ac.png?w=360&h=270',
         name: 'ACC Network',
@@ -94,7 +99,8 @@ export const CHANNELS = {
         tvgName: 'ACC',
       },
       5: {
-        canUse: useEspnews,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espnews'),
         id: 'espnews',
         logo: 'https://tmsimg.fancybits.co/assets/s59976_ll_h15_aa.png?w=360&h=270',
         name: 'ESPNews',

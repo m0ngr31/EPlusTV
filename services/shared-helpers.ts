@@ -42,6 +42,10 @@ export const cleanEntries = async (): Promise<void> => {
   await db.entries.remove({end: {$lt: now}}, {multi: true});
 };
 
+export const removeAllEntries = async (): Promise<void> => {
+  await db.entries.remove({}, {multi: true});
+};
+
 export const removeChannelStatus = (channelId: string | number): void => {
   try {
     if (appStatus.channels?.[channelId]?.heartbeatTimer) {

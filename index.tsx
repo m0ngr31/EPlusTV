@@ -21,7 +21,7 @@ import {msgHandler} from './services/msg-handler';
 import {mwHandler} from './services/mw-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
-import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
+import {cleanEntries, removeAllEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
 import {useLinear} from './services/channels';
@@ -36,6 +36,7 @@ import { Links } from './views/Links';
 import { Style } from './views/Style';
 import { Providers } from './views/Providers';
 import { Script } from './views/Script';
+import {Tools} from './views/Tools';
 
 import {CBSSports} from './services/providers/cbs-sports/views';
 import { MntWest } from './services/providers/mw/views';
@@ -45,7 +46,9 @@ import {MlbTv} from './services/providers/mlb/views';
 import {FoxSports} from './services/providers/fox/views';
 import {Nesn} from './services/providers/nesn/views';
 import {B1G} from './services/providers/b1g/views';
-import { NFL } from './services/providers/nfl/views';
+import {NFL} from './services/providers/nfl/views';
+import {ESPN} from './services/providers/espn/views';
+import {ESPNPlus} from './services/providers/espn-plus/views';
 
 const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
   return c.text('404 not found', 404, {
@@ -104,16 +107,19 @@ app.get('/', async c => {
         <Header />
         <Main>
           <Links baseUrl={getUri(c)} />
+          <Tools />
           <Providers>
+            <ESPNPlus />
             <NFL />
-            <FoxSports />
             <MlbTv />
+            <FoxSports />
             <CBSSports />
+            <ESPN />
             <Paramount />
             <Nesn />
             <B1G />
-            <MntWest />
             <FloSports />
+            <MntWest />
           </Providers>
         </Main>
         <Style />
@@ -121,6 +127,15 @@ app.get('/', async c => {
       </Layout>
     )}`,
   );
+});
+
+app.post('/rebuild-epg', async c => {
+  await removeAllEntries();
+  await schedule();
+
+  return c.html(<Tools />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully rebuilt EPG"}}`,
+  });
 });
 
 app.get('/channels.m3u', async c => {
