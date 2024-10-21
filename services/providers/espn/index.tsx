@@ -110,7 +110,7 @@ espn.put('/features/toggle/:id', async c => {
   const featureMap = {
     accnx: 'ACC Network Extra',
     espn3: 'ESPN3',
-    sec_plus: 'SEC Plus',
+    sec_plus: 'SEC Network+',
   };
 
   await db.providers.update<IProvider>({name: 'espn'}, {$set: {meta: {

@@ -58,9 +58,7 @@ export const ESPNBody: FC<IESPNBodyProps> = ({enabled, tokens, open, channels, m
         </tbody>
       </table>
       <summary>
-        <span>
-          Non-Linear Channels
-        </span>
+        <span>Digital Networks</span>
       </summary>
       <table class="striped">
         <thead>
@@ -98,7 +96,7 @@ export const ESPNBody: FC<IESPNBodyProps> = ({enabled, tokens, open, channels, m
                 name="channel-enabled"
               />
             </td>
-            <td>SEC Plus</td>
+            <td>SEC Network+</td>
           </tr>
           <tr>
             <td>
