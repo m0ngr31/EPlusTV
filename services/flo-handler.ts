@@ -7,7 +7,7 @@ import moment from 'moment';
 import {floSportsUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useFloSports} from './networks';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 
@@ -83,6 +83,8 @@ const parseAirings = async (events: IFloEvent[]) => {
   }
 };
 
+const floSportsConfigPath = path.join(configPath, 'flo_tokens.json');
+
 class FloSportsHandler {
   public access_token?: string;
   public refresh_token?: string;
@@ -91,25 +93,50 @@ class FloSportsHandler {
   public device_id?: string;
 
   public initialize = async () => {
-    if (!useFloSports) {
+    const setup = (await db.providers.count({name: 'flosports'})) > 0 ? true : false;
+
+    if (!setup) {
+      const data: TFloSportsTokens = {};
+
+      if (useFloSports) {
+        this.loadJSON();
+
+        data.access_token = this.access_token;
+        data.expires_at = this.expires_at;
+        data.device_id = this.device_id;
+        data.refresh_token = this.refresh_token;
+        data.refresh_expires_at = this.refresh_expires_at;
+      }
+
+      await db.providers.insert<IProvider<TFloSportsTokens>>({
+        enabled: useFloSports,
+        name: 'flosports',
+        tokens: data,
+      });
+
+      if (fs.existsSync(floSportsConfigPath)) {
+        fs.rmSync(floSportsConfigPath);
+      }
+    }
+
+    if (useFloSports) {
+      console.log('Using FLOSPORTS variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
-
-    if (!this.device_id) {
-      this.device_id = getRandomUUID();
-      this.save();
-    }
-
-    if (!this.expires_at || !this.access_token) {
-      await this.startProviderAuthFlow();
-    }
+    await this.load();
   };
 
   public refreshTokens = async () => {
-    if (!useFloSports) {
+    const {enabled} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+
+    if (!enabled) {
       return;
     }
 
@@ -119,7 +146,9 @@ class FloSportsHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    if (!useFloSports) {
+    const {enabled} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+
+    if (!enabled) {
       return;
     }
 
@@ -231,14 +260,16 @@ class FloSportsHandler {
       this.expires_at = data.exp * 1000;
       this.refresh_token = data.refresh_token;
       this.refresh_expires_at = data.refresh_token_exp * 1000;
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not extend token for FloSports');
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
+  public getAuthCode = async (): Promise<string> => {
+    this.device_id = getRandomUUID();
+
     try {
       const url = ['https://', 'api.flosports.tv', '/api', '/activation-codes', '/new'].join('');
 
@@ -252,47 +283,14 @@ class FloSportsHandler {
         },
       );
 
-      const code = data.activation_code;
-
-      console.log('=== FloSports Auth ===');
-      console.log('Please open a browser window and go to: https://www.flolive.tv/activate');
-      console.log('Enter code: ', code);
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 5 minutes
-        const maxNumOfReqs = 30;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(code);
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return data.activation_code;
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process for Fox Sports!');
     }
   };
 
-  private authenticateRegCode = async (code: string): Promise<boolean> => {
+  public authenticateRegCode = async (code: string): Promise<boolean> => {
     try {
       const url = ['https://', 'api.flosports.tv', '/api', '/activation-codes/', code].join('');
 
@@ -310,7 +308,7 @@ class FloSportsHandler {
       this.expires_at = data.exp * 1000;
       this.refresh_token = data.refresh_token;
       this.refresh_expires_at = data.refresh_token_exp * 1000;
-      this.save();
+      await this.save();
 
       return true;
     } catch (e) {
@@ -318,15 +316,25 @@ class FloSportsHandler {
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'flo_tokens.json'), this, {spaces: 2});
+  private save = async () => {
+    await db.providers.update({name: 'flosports'}, {$set: {tokens: this}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'flo_tokens.json'))) {
-      const {device_id, access_token, expires_at, refresh_token, refresh_expires_at} = fsExtra.readJSONSync(
-        path.join(configPath, 'flo_tokens.json'),
-      );
+  private load = async () => {
+    const {tokens} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+    const {device_id, access_token, expires_at, refresh_token, refresh_expires_at} = tokens;
+
+    this.device_id = device_id;
+    this.access_token = access_token;
+    this.expires_at = expires_at;
+    this.refresh_token = refresh_token;
+    this.refresh_expires_at = refresh_expires_at;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(floSportsConfigPath)) {
+      const {device_id, access_token, expires_at, refresh_token, refresh_expires_at} =
+        fsExtra.readJSONSync(floSportsConfigPath);
 
       this.device_id = device_id;
       this.access_token = access_token;
@@ -336,5 +344,7 @@ class FloSportsHandler {
     }
   };
 }
+
+export type TFloSportsTokens = ClassTypeWithoutMethods<FloSportsHandler>;
 
 export const floSportsHandler = new FloSportsHandler();

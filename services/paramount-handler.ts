@@ -10,7 +10,7 @@ import {configPath} from './config';
 import {useParamount} from './networks';
 import {getRandomHex} from './shared-helpers';
 import {db} from './database';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {useLinear} from './channels';
 
 const BASE_THUMB_URL = 'https://wwwimage-us.pplusstatic.com/thumbnails/photos/w370-q80/';
@@ -126,6 +126,8 @@ interface IChannel {
   local: boolean;
 }
 
+const paramountConfigPath = path.join(configPath, 'paramount_tokens.json');
+
 const ALLOWED_LOCAL_SPORTS = ['College Basketball', 'College Football', 'NFL Football', 'Super Bowl LVIII'];
 
 const parseAirings = async (events: IParamountEvent[]) => {
@@ -188,40 +190,78 @@ class ParamountHandler {
   private dma: IDma;
 
   public initialize = async () => {
-    if (!useParamount.plus || isParamountDisabled) {
+    const setup = (await db.providers.count({name: 'paramount'})) > 0 ? true : false;
+
+    if (!setup) {
+      const data: TParamountTokens = {};
+
+      if (useParamount.plus) {
+        this.loadJSON();
+
+        data.cookies = this.cookies;
+        data.device_id = this.device_id;
+        data.expires = this.expires;
+        data.hashed_token = this.hashed_token;
+        data.profileId = this.profileId;
+      }
+
+      await db.providers.insert<IProvider<TParamountTokens>>({
+        enabled: useParamount.plus,
+        linear_channels: [
+          {
+            enabled: useParamount.cbsSportsHq,
+            id: 'cbssportshq',
+            name: 'CBS Sports HQ',
+            tmsId: '108919',
+          },
+          {
+            enabled: useParamount.golazo,
+            id: 'golazo',
+            name: 'GOLAZO Network',
+            tmsId: '133691',
+          },
+        ],
+        name: 'paramount',
+        tokens: data,
+      });
+
+      if (fs.existsSync(paramountConfigPath)) {
+        fs.rmSync(paramountConfigPath);
+      }
+    }
+
+    if (useParamount.plus) {
+      console.log('Using PARAMOUNTPLUS variable is no longer needed. Please use the UI going forward');
+    }
+    if (useParamount.golazo) {
+      console.log('Using GOLAZO variable is no longer needed. Please use the UI going forward');
+    }
+    if (useParamount.cbsSportsHq) {
+      console.log('Using CBSSPORTSHQ variable is no longer needed. Please use the UI going forward');
+    }
+
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'paramount'});
+
+    if (!enabled || isParamountDisabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
+    await this.load();
 
-    if (!this.device_id || !this.hashed_token) {
-      this.device_id = _.take(getRandomHex(), 16).join('');
-      this.hashed_token = crypto
-        .createHmac('sha1', 'eplustv')
-        .update(this.device_id)
-        .digest()
-        .toString('base64')
-        .substring(0, 16);
-
-      this.save();
-    }
-
-    if (!this.cookies || !this.expires || moment().valueOf() >= this.expires) {
-      await this.startProviderAuthFlow();
+    if (!this.appConfig) {
+      await this.getAppConfig();
     }
 
     if (!this.profileId) {
       await this.getUserProfile();
     }
-
-    if (!this.appConfig) {
-      await this.getAppConfig();
-    }
   };
 
   public refreshTokens = async () => {
-    if (!useParamount.plus || isParamountDisabled) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'paramount'});
+
+    if (!enabled || isParamountDisabled) {
       return;
     }
 
@@ -231,7 +271,9 @@ class ParamountHandler {
   };
 
   public getSchedule = async () => {
-    if (!useParamount.plus || isParamountDisabled) {
+    const {enabled} = await db.providers.findOne<IProvider>({name: 'paramount'});
+
+    if (!enabled || isParamountDisabled) {
       return;
     }
 
@@ -406,21 +448,26 @@ class ParamountHandler {
 
       const channels: IChannel[] = [];
 
-      data.carousel.forEach(c => {
+      for (const c of data.carousel) {
         if (c.local) {
           channels.push(c);
         }
 
         if (useLinear) {
-          if (useParamount.cbsSportsHq && c.channelName === 'CBS Sports HQ') {
+          const {linear_channels} = await db.providers.findOne<IProvider>({name: 'paramount'});
+
+          const useCbsSportsHq = linear_channels.find(c => c.id === 'cbssportshq');
+          const useGolazo = linear_channels.find(c => c.id === 'golazo');
+
+          if (useCbsSportsHq && c.channelName === 'CBS Sports HQ') {
             channels.push(c);
           }
 
-          if (useParamount.golazo && c.channelName === 'CBS Sports Golazo Network') {
+          if (useGolazo && c.channelName === 'CBS Sports Golazo Network') {
             channels.push(c);
           }
         }
-      });
+      }
 
       return channels;
     } catch (e) {
@@ -587,7 +634,15 @@ class ParamountHandler {
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
+  public getAuthCode = async (): Promise<[string, string]> => {
+    this.device_id = _.take(getRandomHex(), 16).join('');
+    this.hashed_token = crypto
+      .createHmac('sha1', 'eplustv')
+      .update(this.device_id)
+      .digest()
+      .toString('base64')
+      .substring(0, 16);
+
     try {
       const {data} = await instance.post(
         `/apps-api/v2.0/androidtv/ott/auth/code.json?${new URLSearchParams({
@@ -596,45 +651,14 @@ class ParamountHandler {
         }).toString()}`,
       );
 
-      console.log('=== TV Provider Auth ===');
-      console.log('Please open a browser window and go to: https://www.paramountplus.com/activate/androidtv');
-      console.log('Enter code: ', data.activationCode);
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 5 minutes
-        const maxNumOfReqs = 30;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(data.activationCode, data.deviceToken);
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return [data.activationCode, data.deviceToken];
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process for Paramount+!');
     }
   };
 
-  private authenticateRegCode = async (activationCode: string, deviceToken: string): Promise<boolean> => {
+  public authenticateRegCode = async (activationCode: string, deviceToken: string): Promise<boolean> => {
     const regUrl = [
       '/apps-api/v2.0/androidtv/ott/auth/status.json?',
       new URLSearchParams({
@@ -654,6 +678,14 @@ class ParamountHandler {
 
       this.saveCookies(headers['set-cookie']);
 
+      if (!this.appConfig) {
+        await this.getAppConfig();
+      }
+
+      if (!this.profileId) {
+        await this.getUserProfile();
+      }
+
       return true;
     } catch (e) {
       return false;
@@ -666,17 +698,23 @@ class ParamountHandler {
     this.save();
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(path.join(configPath, 'paramount_tokens.json'), _.omit(this, 'appConfig', 'ip', 'dma'), {
-      spaces: 2,
-    });
+  private save = async () => {
+    await db.providers.update({name: 'paramount'}, {$set: {tokens: _.omit(this, 'appConfig', 'ip', 'dma')}});
   };
 
-  private load = () => {
-    if (fs.existsSync(path.join(configPath, 'paramount_tokens.json'))) {
-      const {device_id, hashed_token, cookies, expires, profileId} = fsExtra.readJSONSync(
-        path.join(configPath, 'paramount_tokens.json'),
-      );
+  private load = async (): Promise<void> => {
+    const {tokens} = await db.providers.findOne<IProvider<TParamountTokens>>({name: 'paramount'});
+    const {device_id, hashed_token, cookies, expires} = tokens || {};
+
+    this.device_id = device_id;
+    this.hashed_token = hashed_token;
+    this.cookies = cookies;
+    this.expires = expires;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(paramountConfigPath)) {
+      const {device_id, hashed_token, cookies, expires, profileId} = fsExtra.readJSONSync(paramountConfigPath);
 
       this.device_id = device_id;
       this.hashed_token = hashed_token;
@@ -686,5 +724,7 @@ class ParamountHandler {
     }
   };
 }
+
+export type TParamountTokens = ClassTypeWithoutMethods<ParamountHandler>;
 
 export const paramountHandler = new ParamountHandler();

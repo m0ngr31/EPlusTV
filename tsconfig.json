@@ -1,12 +1,22 @@
 {
   "compilerOptions": {
     "target": "es6",
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     "module": "commonjs",
     "rootDir": "./",
     "outDir": "./dist",
+    "moduleResolution": "node",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "strict": false,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": [
+        "*"
+      ]
+    }
   },
   "exclude": [
     "tmp",

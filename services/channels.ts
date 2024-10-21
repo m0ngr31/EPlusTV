@@ -1,18 +1,8 @@
 import _ from 'lodash';
-import {
-  useAccN,
-  useEspn1,
-  useEspn2,
-  useEspnews,
-  useEspnU,
-  useFoxSports,
-  useMLBtv,
-  useMsgPlus,
-  useNesn,
-  useNfl,
-  useParamount,
-  useSec,
-} from './networks';
+
+import {useMsgPlus} from './networks';
+import {db} from './database';
+import {IProvider} from './shared-interfaces';
 
 let startChannel = _.toNumber(process.env.START_CHANNEL);
 if (_.isNaN(startChannel)) {
@@ -46,13 +36,26 @@ export const LINEAR_START_CHANNEL = nextStartChannel(startChannel + numOfChannel
 
 export const useLinear = process.env.LINEAR_CHANNELS?.toLowerCase() === 'true' ? true : false;
 
+export const checkChannelEnabled = async (provider: string, channelId: string): Promise<boolean> => {
+  const networkProvider = await db.providers.findOne<IProvider>({name: provider});
+
+  if (!networkProvider) {
+    throw new Error(`Could not find provider: ${provider}`);
+  }
+
+  const network = networkProvider.linear_channels.find(c => c.id === channelId);
+
+  return network.enabled;
+};
+
 /* eslint-disable sort-keys-custom-order-fix/sort-keys-custom-order-fix */
 export const CHANNELS = {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   get MAP() {
     return {
       0: {
-        canUse: useEspn1,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espn1'),
         id: 'espn1',
         logo: 'https://tmsimg.fancybits.co/assets/s32645_h3_aa.png?w=360&h=270',
         name: 'ESPN',
@@ -60,7 +63,8 @@ export const CHANNELS = {
         tvgName: 'ESPNHD',
       },
       1: {
-        canUse: useEspn2,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espn2'),
         id: 'espn2',
         logo: 'https://tmsimg.fancybits.co/assets/s45507_ll_h15_aa.png?w=360&h=270',
         name: 'ESPN2',
@@ -68,7 +72,8 @@ export const CHANNELS = {
         tvgName: 'ESPN2HD',
       },
       2: {
-        canUse: useEspnU,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espnu'),
         id: 'espnu',
         logo: 'https://tmsimg.fancybits.co/assets/s60696_ll_h15_aa.png?w=360&h=270',
         name: 'ESPNU',
@@ -76,7 +81,8 @@ export const CHANNELS = {
         tvgName: 'ESPNUHD',
       },
       3: {
-        canUse: useSec,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'sec'),
         id: 'sec',
         logo: 'https://tmsimg.fancybits.co/assets/s89714_ll_h15_aa.png?w=360&h=270',
         name: 'SEC Network',
@@ -84,7 +90,8 @@ export const CHANNELS = {
         tvgName: 'SECH',
       },
       4: {
-        canUse: useAccN,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'acc'),
         id: 'acc',
         logo: 'https://tmsimg.fancybits.co/assets/s111871_ll_h15_ac.png?w=360&h=270',
         name: 'ACC Network',
@@ -92,7 +99,8 @@ export const CHANNELS = {
         tvgName: 'ACC',
       },
       5: {
-        canUse: useEspnews,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('espn', 'espnews'),
         id: 'espnews',
         logo: 'https://tmsimg.fancybits.co/assets/s59976_ll_h15_aa.png?w=360&h=270',
         name: 'ESPNews',
@@ -100,7 +108,8 @@ export const CHANNELS = {
         tvgName: 'ESPNWHD',
       },
       10: {
-        canUse: useFoxSports,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('foxsports', 'fs1'),
         id: 'fs1',
         logo: 'https://tmsimg.fancybits.co/assets/s82547_ll_h15_aa.png?w=360&h=270',
         name: 'FS1',
@@ -108,7 +117,8 @@ export const CHANNELS = {
         tvgName: 'FS1HD',
       },
       11: {
-        canUse: useFoxSports,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('foxsports', 'fs2'),
         id: 'fs2',
         logo: 'https://tmsimg.fancybits.co/assets/s59305_ll_h15_aa.png?w=360&h=270',
         name: 'FS2',
@@ -116,7 +126,8 @@ export const CHANNELS = {
         tvgName: 'FS2HD',
       },
       12: {
-        canUse: useFoxSports,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('foxsports', 'btn'),
         id: 'btn',
         logo: 'https://tmsimg.fancybits.co/assets/s58321_ll_h15_ac.png?w=360&h=270',
         name: 'B1G Network',
@@ -124,7 +135,8 @@ export const CHANNELS = {
         tvgName: 'BIG10HD',
       },
       13: {
-        canUse: useFoxSports,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('foxsports', 'fox-soccer-plus'),
         id: 'fox-soccer-plus',
         logo: 'https://tmsimg.fancybits.co/assets/s66880_ll_h15_aa.png?w=360&h=270',
         name: 'FOX Soccer Plus',
@@ -132,7 +144,8 @@ export const CHANNELS = {
         tvgName: 'FSCPLHD',
       },
       20: {
-        canUse: useParamount.cbsSportsHq,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('paramount', 'cbssportshq'),
         id: 'cbssportshq',
         logo: 'https://tmsimg.fancybits.co/assets/s108919_ll_h15_aa.png?w=360&h=270',
         name: 'CBS Sports HQ',
@@ -140,7 +153,8 @@ export const CHANNELS = {
         tvgName: 'CBSSPHQ',
       },
       21: {
-        canUse: useParamount.golazo,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('paramount', 'golazo'),
         id: 'golazo',
         logo: 'https://tmsimg.fancybits.co/assets/s133691_ll_h15_aa.png?w=360&h=270',
         name: 'GOLAZO Network',
@@ -148,7 +162,8 @@ export const CHANNELS = {
         tvgName: 'GOLAZO',
       },
       30: {
-        canUse: useNfl.network,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nfl', 'NFLNETWORK'),
         id: 'NFLNETWORK',
         logo: 'https://tmsimg.fancybits.co/assets/s45399_ll_h15_aa.png?w=360&h=270',
         name: 'NFL Network',
@@ -156,7 +171,8 @@ export const CHANNELS = {
         tvgName: 'NFLHD',
       },
       31: {
-        canUse: useNfl.redZone,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nfl', 'NFLNRZ'),
         id: 'NFLNRZ',
         logo: 'https://tmsimg.fancybits.co/assets/s65025_ll_h9_aa.png?w=360&h=270',
         name: 'NFL RedZone',
@@ -164,7 +180,8 @@ export const CHANNELS = {
         tvgName: 'NFLNRZD',
       },
       32: {
-        canUse: useNfl.channel,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nfl', 'NFLDIGITAL1_OO_v3'),
         id: 'NFLDIGITAL1_OO_v3',
         logo: 'https://tmsimg.fancybits.co/assets/s121705_ll_h15_aa.png?w=360&h=270',
         name: 'NFL Channel',
@@ -172,7 +189,12 @@ export const CHANNELS = {
         tvgName: 'NFLDC1',
       },
       40: {
-        canUse: useMLBtv,
+        canUse: undefined,
+        checkChannelEnabled: async (): Promise<boolean> => {
+          const {linear_channels, meta} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+
+          return linear_channels[0].enabled && !meta.onlyFree;
+        },
         id: 'MLBTVBI',
         logo: 'https://tmsimg.fancybits.co/assets/s119153_ll_h15_aa.png?w=360&h=270',
         name: 'MLB Big Inning',
@@ -180,7 +202,8 @@ export const CHANNELS = {
         tvgName: 'MLBTVBI',
       },
       50: {
-        canUse: useNesn,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nesn', 'NESN'),
         id: 'NESN',
         logo: 'https://tmsimg.fancybits.co/assets/s35038_ll_h15_ac.png?w=360&h=270',
         name: 'New England Sports Network HD',
@@ -188,7 +211,8 @@ export const CHANNELS = {
         tvgName: 'NESNHD',
       },
       51: {
-        canUse: useNesn,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('nesn', 'NESN+'),
         id: 'NESN+',
         logo: 'https://tmsimg.fancybits.co/assets/s63198_ll_h15_ac.png?w=360&h=270',
         name: 'New England Sports Network Plus HD',

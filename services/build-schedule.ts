@@ -2,6 +2,10 @@ import {NUM_OF_CHANNELS, START_CHANNEL, useLinear} from './channels';
 import {db, IDocument} from './database';
 import {IChannel, IEntry} from './shared-interfaces';
 
+export const removeEntriesProvider = async (providerName: string): Promise<void> => {
+  await db.entries.remove({from: providerName}, {multi: true});
+};
+
 const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): Promise<void> => {
   let channelNum: number;
 

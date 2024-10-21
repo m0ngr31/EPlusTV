@@ -25,9 +25,9 @@ import {
   useEspnPpv,
   useEspnews,
 } from './networks';
-import {IAdobeAuth, isAdobeTokenValid, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
+import {IAdobeAuth, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {IEntry, IHeaders, IJWToken} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IJWToken, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
 
@@ -35,7 +35,6 @@ global.WebSocket = ws;
 
 const espnPlusTokens = path.join(configPath, 'espn_plus_tokens.json');
 const espnLinearTokens = path.join(configPath, 'espn_linear_tokens.json');
-const oldTokenFile = path.join(configPath, 'tokens.json');
 
 interface IAuthResources {
   [key: string]: boolean;
@@ -91,6 +90,16 @@ interface ITokens extends IToken {
   refresh_ttl: number;
   swid: string;
   id_token: string;
+}
+
+export interface IEspnPlusMeta {
+  use_ppv?: boolean;
+}
+
+export interface IEspnMeta {
+  sec_plus?: boolean;
+  accnx?: boolean;
+  espn3?: boolean;
 }
 
 const ADOBE_KEY = ['g', 'B', '8', 'H', 'Y', 'd', 'E', 'P', 'y', 'e', 'z', 'e', 'Y', 'b', 'R', '1'].join('');
@@ -152,17 +161,6 @@ const isTokenValid = (token?: string): boolean => {
   try {
     const decoded: IJWToken = jwt_decode(token);
     return new Date().valueOf() / 1000 < decoded.exp;
-  } catch (e) {
-    return false;
-  }
-};
-
-const canRefreshToken = (token?: ITokens): boolean => {
-  if (!token || !token.id_token || !token.refresh_ttl) return false;
-
-  try {
-    const decoded: IJWToken = jwt_decode(token.id_token);
-    return decoded.iat + token.refresh_ttl > new Date().valueOf() / 1000;
   } catch (e) {
     return false;
   }
@@ -259,7 +257,62 @@ const getNetworkInfo = (network?: string) => {
   return [networks, packages];
 };
 
+class WebSocketPlus {
+  public wsToken?: ITokens;
+  private wsClient?: Sockette;
+
+  public closeWebSocket = (): void => {
+    if (this.wsClient) {
+      try {
+        this.wsClient.close();
+        this.wsClient = undefined;
+      } catch (e) {}
+    }
+
+    this.wsToken = undefined;
+  };
+
+  public initializeWebSocket = (wsUrl: string, licensePlate: any): void => {
+    this.closeWebSocket();
+
+    this.wsClient = new Sockette(wsUrl, {
+      maxAttempts: 10,
+      onerror: e => {
+        console.error(e);
+        console.log('Could not start authentication for ESPN+');
+
+        this.closeWebSocket();
+      },
+      onmessage: e => {
+        const wsData = JSON.parse(e.data);
+
+        if (wsData.op) {
+          if (wsData.op === 'C') {
+            this.wsClient.json({
+              op: 'S',
+              rc: 200,
+              sid: wsData.sid,
+              tc: licensePlate.data.fastCastTopic,
+            });
+          } else if (wsData.op === 'P') {
+            this.wsToken = JSON.parse(wsData.pl);
+          }
+        }
+      },
+      onopen: () => {
+        this.wsClient.json({
+          op: 'C',
+        });
+      },
+      timeout: 5e3,
+    });
+  };
+}
+
+const wsPlus = new WebSocketPlus();
+
 const authorizedResources: IAuthResources = {};
+
 const parseCategories = event => {
   const categories = ['ESPN'];
   for (const classifier of [event.category, event.subcategory, event.sport, event.league]) {
@@ -316,6 +369,33 @@ const parseAirings = async events => {
   }
 };
 
+const isEnabled = async (which?: string): Promise<boolean> => {
+  const {enabled: espnPlusEnabled, meta: plusMeta} = await db.providers.findOne<
+    IProvider<TESPNPlusTokens, IEspnPlusMeta>
+  >({name: 'espnplus'});
+  const {
+    enabled: espnLinearEnabled,
+    linear_channels,
+    meta: linearMeta,
+  } = await db.providers.findOne<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
+
+  if (which === 'linear') {
+    return espnLinearEnabled && _.some(linear_channels, c => c.enabled);
+  } else if (which === 'plus') {
+    return espnPlusEnabled;
+  } else if (which === 'ppv') {
+    return plusMeta?.use_ppv ? true : false;
+  } else if (which === 'espn3') {
+    return linearMeta?.espn3 ? true : false;
+  } else if (which === 'sec_plus') {
+    return linearMeta?.sec_plus ? true : false;
+  } else if (which === 'accnx') {
+    return linearMeta?.accnx ? true : false;
+  }
+
+  return espnPlusEnabled || (espnLinearEnabled && _.some(linear_channels, c => c.enabled));
+};
+
 class EspnHandler {
   public tokens?: ITokens;
   public account_token?: IToken;
@@ -331,93 +411,228 @@ class EspnHandler {
   private graphQlApiKey: string;
 
   public initialize = async () => {
-    if (!requiresEspnProvider && !useEspnPlus) {
+    const setupPlus = (await db.providers.count({name: 'espnplus'})) > 0 ? true : false;
+
+    if (!setupPlus) {
+      const data: TESPNPlusTokens = {};
+
+      if (useEspnPlus) {
+        this.loadJSON();
+
+        data.tokens = this.tokens;
+        data.device_grant = this.device_grant;
+        data.device_token_exchange = this.device_token_exchange;
+        data.device_refresh_token = this.device_refresh_token;
+        data.id_token_grant = this.id_token_grant;
+        data.account_token = this.account_token;
+      }
+
+      await db.providers.insert<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+        enabled: useEspnPlus,
+        meta: {
+          use_ppv: useEspnPpv,
+        },
+        name: 'espnplus',
+        tokens: data,
+      });
+
+      if (fs.existsSync(espnPlusTokens)) {
+        fs.rmSync(espnPlusTokens);
+      }
+    }
+
+    const setupLinear = (await db.providers.count({name: 'espn'})) > 0 ? true : false;
+
+    if (!setupLinear) {
+      const data: TESPNTokens = {};
+
+      if (requiresEspnProvider) {
+        this.loadJSON();
+
+        data.adobe_device_id = this.adobe_device_id;
+        data.adobe_auth = this.adobe_auth;
+      }
+
+      await db.providers.insert<IProvider<TESPNTokens, IEspnMeta>>({
+        enabled: requiresEspnProvider,
+        linear_channels: [
+          {
+            enabled: useEspn1,
+            id: 'espn1',
+            name: 'ESPN',
+            tmsId: '32645',
+          },
+          {
+            enabled: useEspn2,
+            id: 'espn2',
+            name: 'ESPN2',
+            tmsId: '45507',
+          },
+          {
+            enabled: useEspnU,
+            id: 'espnu',
+            name: 'ESPNU',
+            tmsId: '60696',
+          },
+          {
+            enabled: useSec,
+            id: 'sec',
+            name: 'SEC Network',
+            tmsId: '89714',
+          },
+          {
+            enabled: useAccN,
+            id: 'acc',
+            name: 'ACC Network',
+            tmsId: '111871',
+          },
+          {
+            enabled: useEspnews,
+            id: 'espnews',
+            name: 'ESPNews',
+            tmsId: '59976',
+          },
+        ],
+        meta: {
+          accnx: useAccNx,
+          espn3: useEspn3,
+          sec_plus: useSecPlus,
+        },
+        name: 'espn',
+        tokens: data,
+      });
+
+      if (fs.existsSync(espnLinearTokens)) {
+        fs.rmSync(espnLinearTokens);
+      }
+    }
+
+    if (useEspnPlus) {
+      console.log('Using ESPNPLUS variable is no longer needed. Please use the UI going forward');
+    }
+    if (useEspnPpv) {
+      console.log('Using ESPN_PPV variable is no longer needed. Please use the UI going forward');
+    }
+    if (useEspn1) {
+      console.log('Using ESPN variable is no longer needed. Please use the UI going forward');
+    }
+    if (useEspn2) {
+      console.log('Using ESPN2 variable is no longer needed. Please use the UI going forward');
+    }
+    if (useEspn3) {
+      console.log('Using ESPN3 variable is no longer needed. Please use the UI going forward');
+    }
+    if (useEspnU) {
+      console.log('Using ESPNU variable is no longer needed. Please use the UI going forward');
+    }
+    if (useSec) {
+      console.log('Using SEC variable is no longer needed. Please use the UI going forward');
+    }
+    if (useSecPlus) {
+      console.log('Using SECPLUS variable is no longer needed. Please use the UI going forward');
+    }
+    if (useAccN) {
+      console.log('Using ACCN variable is no longer needed. Please use the UI going forward');
+    }
+    if (useAccNx) {
+      console.log('Using ACCNX variable is no longer needed. Please use the UI going forward');
+    }
+    if (useEspnews) {
+      console.log('Using ESPNEWS variable is no longer needed. Please use the UI going forward');
+    }
+
+    const enabled = await isEnabled();
+
+    if (!enabled) {
       return;
     }
 
     // Load tokens from local file and make sure they are valid
-    this.load();
+    await this.load();
 
     if (!this.appConfig) {
       await this.getAppConfig();
     }
-
-    if (requiresEspnProvider && !isAdobeTokenValid(this.adobe_auth)) {
-      await this.startProviderAuthFlow();
-    }
-
-    if (useEspnPlus && (!this.tokens || !isTokenValid(this.tokens?.id_token))) {
-      if (canRefreshToken(this.tokens)) {
-        await this.refreshTokens();
-      } else {
-        await this.startAuthFlow();
-      }
-    }
   };
 
   public refreshTokens = async () => {
-    if (useEspnPlus) {
+    const espnPlusEnabled = await isEnabled('plus');
+
+    if (espnPlusEnabled) {
       await this.updatePlusTokens();
     }
 
-    if (requiresEspnProvider && willAdobeTokenExpire(this.adobe_auth)) {
+    const espnLinearEnabled = await isEnabled('linear');
+
+    if (espnLinearEnabled && willAdobeTokenExpire(this.adobe_auth)) {
       console.log('Refreshing TV Provider token (ESPN)');
       await this.refreshProviderToken();
     }
   };
 
   public getSchedule = async (): Promise<void> => {
+    const espnPlusEnabled = await isEnabled('plus');
+    const espnPpvEnabled = await isEnabled('ppv');
+    const espnLinearEnabled = await isEnabled('linear');
+    const secPlusEnabled = await isEnabled('sec_plus');
+    const espn3Enabled = await isEnabled('espn3');
+    const accnxEnabled = await isEnabled('accnx');
+
+    const {linear_channels} = await db.providers.findOne<IProvider>({name: 'espn'});
+
+    const isChannelEnabled = (channelId: string): boolean => linear_channels.some(c => c.id === channelId && c.enabled);
+
     let entries = [];
 
     try {
-      if (useEspnPlus) {
+      if (espnPlusEnabled) {
         console.log('Looking for ESPN+ events...');
 
         const liveEntries = await this.getLiveEvents();
         entries = [...entries, ...liveEntries];
       }
 
-      if (requiresEspnProvider) {
+      if (espnLinearEnabled) {
         console.log('Looking for ESPN events');
       }
 
-      if (useEspn1) {
+      if (isChannelEnabled('espn1')) {
         const liveEntries = await this.getLiveEvents('espn1');
         entries = [...entries, ...liveEntries];
       }
-      if (useEspn2) {
+      if (isChannelEnabled('espn2')) {
         const liveEntries = await this.getLiveEvents('espn2');
         entries = [...entries, ...liveEntries];
       }
-      if (useEspn3) {
+      if (espn3Enabled) {
         const liveEntries = await this.getLiveEvents('espn3');
         entries = [...entries, ...liveEntries];
       }
-      if (useEspnU) {
+      if (isChannelEnabled('espnu')) {
         const liveEntries = await this.getLiveEvents('espnU');
         entries = [...entries, ...liveEntries];
       }
-      if (useSec) {
+      if (isChannelEnabled('sec')) {
         const liveEntries = await this.getLiveEvents('secn');
         entries = [...entries, ...liveEntries];
       }
-      if (useSecPlus) {
+      if (secPlusEnabled) {
         const liveEntries = await this.getLiveEvents('secnPlus');
         entries = [...entries, ...liveEntries];
       }
-      if (useAccN) {
+      if (isChannelEnabled('acc')) {
         const liveEntries = await this.getLiveEvents('accn');
         entries = [...entries, ...liveEntries];
       }
-      if (useAccNx) {
+      if (accnxEnabled) {
         const liveEntries = await this.getLiveEvents('accnx');
         entries = [...entries, ...liveEntries];
       }
-      if (useEspnews) {
+      if (isChannelEnabled('espnews')) {
         const liveEntries = await this.getLiveEvents('espnews');
         entries = [...entries, ...liveEntries];
       }
-      if (useEspnPpv) {
+      if (espnPpvEnabled) {
         const liveEntries = await this.getLiveEvents('espn_ppv');
         entries = [...entries, ...liveEntries];
       }
@@ -431,47 +646,47 @@ class EspnHandler {
       const date = moment(today).add(i, 'days');
 
       try {
-        if (useEspnPlus) {
+        if (espnPlusEnabled) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'));
           entries = [...entries, ...upcomingEntries];
         }
-        if (useEspn1) {
+        if (isChannelEnabled('espn1')) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn1');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useEspn2) {
+        if (isChannelEnabled('espn2')) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn2');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useEspn3) {
+        if (espn3Enabled) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn3');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useEspnU) {
+        if (isChannelEnabled('espnu')) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espnU');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useSec) {
+        if (isChannelEnabled('sec')) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secn');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useSecPlus) {
+        if (secPlusEnabled) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'secnPlus');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useAccN) {
+        if (isChannelEnabled('acc')) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accn');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useAccNx) {
+        if (accnxEnabled) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'accnx');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useEspnews) {
+        if (isChannelEnabled('espnews')) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espnews');
           entries = [...entries, ...upcomingEntries];
         }
-        if (useEspnPpv) {
+        if (espnPpvEnabled) {
           const upcomingEntries = await this.getUpcomingEvents(date.format('YYYY-MM-DD'), 'espn_ppv');
           entries = [...entries, ...upcomingEntries];
         }
@@ -488,8 +703,9 @@ class EspnHandler {
   };
 
   public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
-    useEspnPlus && (await this.getBamAccessToken());
-    useEspnPlus && (await this.getGraphQlApiKey());
+    const espnPlusEnabled = await isEnabled('plus');
+    espnPlusEnabled && (await this.getBamAccessToken());
+    espnPlusEnabled && (await this.getGraphQlApiKey());
 
     try {
       const {data: scenarios} = await axios.get('https://watch.graph.api.espn.com/api', {
@@ -557,7 +773,10 @@ class EspnHandler {
 
             tokenType = 'ADOBEPASS';
             token = data.serializedToken;
-          } catch (e) {}
+          } catch (e) {
+            console.error(e);
+            console.log('could not get mediatoken');
+          }
         }
 
         // Get stream data
@@ -588,7 +807,7 @@ class EspnHandler {
 
       return [uri, headers];
     } catch (e) {
-      console.error(e);
+      // console.error(e);
       console.log('Could not get stream data. Event might be upcoming, ended, or in blackout...');
     }
   };
@@ -600,7 +819,7 @@ class EspnHandler {
       });
 
       this.tokens = refreshTokenData.data.token;
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not get auth refresh token');
@@ -709,13 +928,14 @@ class EspnHandler {
     }
   };
 
-  private startProviderAuthFlow = async (): Promise<void> => {
-    const regUrl = ['https://', 'api.auth.adobe.com', '/reggie/', 'v1/', 'ESPN', '/regcode'].join('');
-
-    if (!this.adobe_device_id) {
-      this.adobe_device_id = getRandomHex();
-      this.save();
+  public getLinearAuthCode = async (): Promise<string> => {
+    if (!this.appConfig) {
+      await this.getAppConfig();
     }
+
+    this.adobe_device_id = getRandomHex();
+
+    const regUrl = ['https://', 'api.auth.adobe.com', '/reggie/', 'v1/', 'ESPN', '/regcode'].join('');
 
     try {
       const {data} = await axios.post(
@@ -733,45 +953,14 @@ class EspnHandler {
         },
       );
 
-      console.log('=== TV Provider Auth ===');
-      console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
-      console.log('Enter code: ', data.code);
-      console.log('App will continue when login has completed...');
-
-      return new Promise(async (resolve, reject) => {
-        // Reg code expires in 30 minutes
-        const maxNumOfReqs = 180;
-
-        let numOfReqs = 0;
-
-        const authenticate = async () => {
-          if (numOfReqs < maxNumOfReqs) {
-            const res = await this.authenticateRegCode(data.code);
-            numOfReqs += 1;
-
-            if (res) {
-              clearInterval(regInterval);
-              resolve();
-            }
-          } else {
-            clearInterval(regInterval);
-            reject();
-          }
-        };
-
-        const regInterval = setInterval(() => {
-          authenticate();
-        }, 10 * 1000);
-
-        await authenticate();
-      });
+      return data.code;
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process!');
     }
   };
 
-  private authenticateRegCode = async (regcode: string): Promise<boolean> => {
+  public authenticateLinearRegCode = async (regcode: string): Promise<boolean> => {
     const regUrl = ['https://', 'api.auth.adobe.com', '/api/v1/', 'authenticate/', regcode, '?requestor=ESPN'].join('');
 
     try {
@@ -783,7 +972,7 @@ class EspnHandler {
       });
 
       this.adobe_auth = data;
-      this.save();
+      await this.save();
 
       return true;
     } catch (e) {
@@ -797,11 +986,6 @@ class EspnHandler {
   };
 
   private refreshProviderToken = async (): Promise<void> => {
-    if (!this.adobe_device_id) {
-      await this.startProviderAuthFlow();
-      return;
-    }
-
     const renewUrl = [
       'https://',
       'api.auth.adobe.com',
@@ -820,14 +1004,18 @@ class EspnHandler {
       });
 
       this.adobe_auth = data;
-      this.save();
+      await this.save();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh provider token data!');
     }
   };
 
-  private startAuthFlow = async (): Promise<void> => {
+  public getPlusAuthCode = async (): Promise<string> => {
+    if (!this.appConfig) {
+      await this.getAppConfig();
+    }
+
     const apiKey = await getApiKey(ANDROID_ID);
 
     try {
@@ -851,55 +1039,31 @@ class EspnHandler {
 
       const {data: wsInfo} = await axios.get(`${licensePlate.data.fastCastHost}/public/websockethost`);
 
-      return new Promise((resolve, reject) => {
-        const client = new Sockette(
-          `wss://${wsInfo.ip}:${wsInfo.securePort}/FastcastService/pubsub/profiles/${licensePlate.data.fastCastProfileId}?TrafficManager-Token=${wsInfo.token}`,
-          {
-            maxAttempts: 10,
-            onerror: e => {
-              console.error(e);
-              console.log('Could not start the authentication process!');
+      wsPlus.initializeWebSocket(
+        `wss://${wsInfo.ip}:${wsInfo.securePort}/FastcastService/pubsub/profiles/${licensePlate.data.fastCastProfileId}?TrafficManager-Token=${wsInfo.token}`,
+        licensePlate,
+      );
 
-              client.close();
-              reject();
-            },
-            onmessage: e => {
-              const wsData = JSON.parse(e.data);
+      setTimeout(() => wsPlus.closeWebSocket(), 5 * 60 * 1000);
 
-              if (wsData.op) {
-                if (wsData.op === 'C') {
-                  client.json({
-                    op: 'S',
-                    rc: 200,
-                    sid: wsData.sid,
-                    tc: licensePlate.data.fastCastTopic,
-                  });
-                } else if (wsData.op === 'P') {
-                  this.tokens = JSON.parse(wsData.pl);
-
-                  this.save();
-                  client.close();
-                  resolve();
-                }
-              }
-            },
-            onopen: () => {
-              console.log('=== ESPN+ Auth ===');
-              console.log('Please open a browser window and go to: https://www.espn.com/watch/activate');
-              console.log('Enter code: ', licensePlate.data.pairingCode);
-
-              client.json({
-                op: 'C',
-              });
-            },
-            timeout: 5e3,
-          },
-        );
-      });
+      return licensePlate.data.pairingCode;
     } catch (e) {
       console.error(e);
       console.log('Could not start the authentication process!');
     }
+  };
+
+  public authenticatePlusRegCode = async (): Promise<boolean> => {
+    if (wsPlus.wsToken) {
+      this.tokens = wsPlus.wsToken;
+
+      await this.save();
+
+      wsPlus.closeWebSocket();
+      return true;
+    }
+
+    return false;
   };
 
   private getAppConfig = async () => {
@@ -936,7 +1100,7 @@ class EspnHandler {
           deviceProfile: 'linux',
         });
 
-        this.save();
+        await this.save();
       } catch (e) {
         console.error(e);
         console.log('Could not get device grant');
@@ -957,7 +1121,7 @@ class EspnHandler {
           this.device_refresh_token.access_token,
         );
 
-        this.save();
+        await this.save();
       } catch (e) {
         console.error(e);
         console.log('Could not get account grant');
@@ -980,7 +1144,7 @@ class EspnHandler {
           subject_token_type: 'urn:bamtech:params:oauth:token-type:device',
         });
 
-        this.save();
+        await this.save();
       } catch (e) {
         console.error(e);
         console.log('Could not get device token exchange');
@@ -1002,7 +1166,7 @@ class EspnHandler {
           setCookie: false,
         });
 
-        this.save();
+        await this.save();
       } catch (e) {
         console.error(e);
         console.log('Could not get device token exchange');
@@ -1025,7 +1189,7 @@ class EspnHandler {
           subject_token_type: 'urn:bamtech:params:oauth:token-type:account',
         });
 
-        this.save();
+        await this.save();
       } catch (e) {
         console.error(e);
         console.log('Could not get BAM access token');
@@ -1033,26 +1197,38 @@ class EspnHandler {
     }
   };
 
-  private save = () => {
-    fsExtra.writeJSONSync(espnPlusTokens, _.omit(this, 'appConfig', 'graphQlApiKey', 'adobe_auth', 'adobe_device_id'), {
-      spaces: 2,
-    });
+  private save = async (): Promise<void> => {
+    await db.providers.update(
+      {name: 'espnplus'},
+      {$set: {tokens: _.omit(this, 'appConfig', 'graphQlApiKey', 'adobe_auth', 'adobe_device_id')}},
+    );
 
-    fsExtra.writeJSONSync(espnLinearTokens, _.pick(this, 'adobe_auth', 'adobe_device_id'), {spaces: 2});
+    await db.providers.update({name: 'espn'}, {$set: {tokens: _.pick(this, 'adobe_auth', 'adobe_device_id')}});
   };
 
-  private load = () => {
-    if (fs.existsSync(oldTokenFile)) {
-      const {
-        tokens,
-        device_grant,
-        device_token_exchange,
-        device_refresh_token,
-        id_token_grant,
-        account_token,
-        adobe_device_id,
-        adobe_auth,
-      } = fsExtra.readJSONSync(oldTokenFile);
+  private load = async (): Promise<void> => {
+    const {tokens: plusTokens} = await db.providers.findOne<IProvider<TESPNPlusTokens>>({name: 'espnplus'});
+    const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
+      plusTokens;
+
+    this.tokens = tokens;
+    this.device_grant = device_grant;
+    this.device_token_exchange = device_token_exchange;
+    this.device_refresh_token = device_refresh_token;
+    this.id_token_grant = id_token_grant;
+    this.account_token = account_token;
+
+    const {tokens: linearTokens} = await db.providers.findOne<IProvider<TESPNTokens>>({name: 'espn'});
+    const {adobe_device_id, adobe_auth} = linearTokens;
+
+    this.adobe_device_id = adobe_device_id;
+    this.adobe_auth = adobe_auth;
+  };
+
+  private loadJSON = () => {
+    if (fs.existsSync(espnPlusTokens)) {
+      const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
+        fsExtra.readJSONSync(espnPlusTokens);
 
       this.tokens = tokens;
       this.device_grant = device_grant;
@@ -1060,33 +1236,18 @@ class EspnHandler {
       this.device_refresh_token = device_refresh_token;
       this.id_token_grant = id_token_grant;
       this.account_token = account_token;
+    }
+
+    if (fs.existsSync(espnLinearTokens)) {
+      const {adobe_device_id, adobe_auth} = fsExtra.readJSONSync(espnLinearTokens);
+
       this.adobe_device_id = adobe_device_id;
       this.adobe_auth = adobe_auth;
-
-      fs.rmSync(oldTokenFile);
-
-      this.save();
-    } else {
-      if (fs.existsSync(espnPlusTokens)) {
-        const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
-          fsExtra.readJSONSync(espnPlusTokens);
-
-        this.tokens = tokens;
-        this.device_grant = device_grant;
-        this.device_token_exchange = device_token_exchange;
-        this.device_refresh_token = device_refresh_token;
-        this.id_token_grant = id_token_grant;
-        this.account_token = account_token;
-      }
-
-      if (fs.existsSync(espnLinearTokens)) {
-        const {adobe_device_id, adobe_auth} = fsExtra.readJSONSync(espnLinearTokens);
-
-        this.adobe_device_id = adobe_device_id;
-        this.adobe_auth = adobe_auth;
-      }
     }
   };
 }
+
+export type TESPNPlusTokens = Omit<ClassTypeWithoutMethods<EspnHandler>, 'adobe_device_id' | 'adobe_auth'>;
+export type TESPNTokens = Pick<ClassTypeWithoutMethods<EspnHandler>, 'adobe_device_id' | 'adobe_auth'>;
 
 export const espnHandler = new EspnHandler();

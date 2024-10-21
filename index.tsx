@@ -1,4 +1,8 @@
-import express from 'express';
+import {Context, Hono} from 'hono';
+import {serve} from '@hono/node-server';
+import {serveStatic} from '@hono/node-server/serve-static';
+import {BlankEnv, BlankInput} from 'hono/types';
+import {html} from 'hono/html';
 import moment from 'moment';
 
 import {generateM3u} from './services/generate-m3u';
@@ -17,25 +21,57 @@ import {msgHandler} from './services/msg-handler';
 import {mwHandler} from './services/mw-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
-import {cleanEntries, removeChannelStatus} from './services/shared-helpers';
+import {cleanEntries, clearChannels, removeAllEntries, removeChannelStatus} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
 import {useLinear} from './services/channels';
+import { providers } from './services/providers';
 
 import {version} from './package.json';
 
-const notFound = (_req, res) => {
-  res.writeHead(404, {
+import { Layout } from './views/Layout';
+import { Header } from './views/Header';
+import { Main } from './views/Main';
+import { Links } from './views/Links';
+import { Style } from './views/Style';
+import { Providers } from './views/Providers';
+import { Script } from './views/Script';
+import {Tools} from './views/Tools';
+
+import {CBSSports} from './services/providers/cbs-sports/views';
+import { MntWest } from './services/providers/mw/views';
+import {Paramount} from './services/providers/paramount/views';
+import {FloSports} from './services/providers/flosports/views';
+import {MlbTv} from './services/providers/mlb/views';
+import {FoxSports} from './services/providers/fox/views';
+import {Nesn} from './services/providers/nesn/views';
+import {B1G} from './services/providers/b1g/views';
+import {NFL} from './services/providers/nfl/views';
+import {ESPN} from './services/providers/espn/views';
+import {ESPNPlus} from './services/providers/espn-plus/views';
+
+const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
+  return c.text('404 not found', 404, {
     'X-Tuner-Error': 'EPlusTV: Error getting content',
   });
-  res.write('404 not found');
-  res.end();
 };
 
 const shutDown = () => process.exit(0);
 
+const getUri = (c: Context<BlankEnv, '', BlankInput>): string => {
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+
+  const protocol = c.req.header('x-forwarded-proto') || 'http';
+  const host = c.req.header('host') || '';
+
+  return `${protocol}://${host}`;
+};
+
 const schedule = async () => {
   console.log('=== Getting events ===');
+
   await espnHandler.getSchedule();
   await foxHandler.getSchedule();
   await mlbHandler.getSchedule();
@@ -49,84 +85,125 @@ const schedule = async () => {
   await cbsHandler.getSchedule();
 
   console.log('=== Done getting events ===');
-  await cleanEntries();
   console.log('=== Building the schedule ===');
+
+  await cleanEntries();
   await scheduleEntries();
+
   console.log('=== Done building the schedule ===');
 };
 
-const app = express();
+const app = new Hono();
 
-app.get('/channels.m3u', (req, res) => {
-  const uri = process.env.BASE_URL || `${req.protocol}://${req.headers.host}`;
-  const m3uFile = generateM3u(uri);
+app.use('/node_modules/*', serveStatic({root: './'}));
+app.use('/favicon.ico', serveStatic({root: './'}));
 
-  if (!m3uFile) {
-    notFound(req, res);
-    return;
-  }
+app.route('/', providers);
 
-  res.writeHead(200, {
-    'Content-Type': 'application/x-mpegurl',
-  });
-  res.end(m3uFile, 'utf-8');
+app.get('/', async c => {
+  return c.html(
+    html`<!DOCTYPE html>${(
+      <Layout>
+        <Header />
+        <Main>
+          <Links baseUrl={getUri(c)} />
+          <Tools />
+          <Providers>
+            <ESPNPlus />
+            <NFL />
+            <MlbTv />
+            <FoxSports />
+            <CBSSports />
+            <ESPN />
+            <Paramount />
+            <Nesn />
+            <B1G />
+            <FloSports />
+            <MntWest />
+          </Providers>
+        </Main>
+        <Style />
+        <Script />
+      </Layout>
+    )}`,
+  );
 });
 
-app.get('/linear-channels.m3u', (req, res) => {
+app.post('/rebuild-epg', async c => {
+  await removeAllEntries();
+  await schedule();
+
+  return c.html(<Tools />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully rebuilt EPG"}}`,
+  });
+});
+
+app.post('/reset-channels', async c => {
+  clearChannels();
+
+  return c.html(<Tools />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully cleared channels"}}`,
+  });
+});
+
+app.get('/channels.m3u', async c => {
+  const m3uFile = await generateM3u(getUri(c));
+
+  if (!m3uFile) {
+    return notFound(c);
+  }
+
+  return c.body(m3uFile, 200, {
+    'Content-Type': 'application/x-mpegurl',
+  });
+});
+
+app.get('/linear-channels.m3u', async c => {
   if (!useLinear) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
-  const uri = process.env.BASE_URL || `${req.protocol}://${req.headers.host}`;
-  const m3uFile = generateM3u(uri, true);
+  const m3uFile = await generateM3u(getUri(c), true);
 
   if (!m3uFile) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
-  res.writeHead(200, {
+  return c.body(m3uFile, 200, {
     'Content-Type': 'application/x-mpegurl',
   });
-  res.end(m3uFile, 'utf-8');
 });
 
-app.get('/xmltv.xml', async (req, res) => {
+app.get('/xmltv.xml', async c => {
   const xmlFile = await generateXml();
 
   if (!xmlFile) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
-  res.writeHead(200, {
+  return c.body(xmlFile, 200, {
     'Content-Type': 'application/xml',
   });
-  res.end(xmlFile, 'utf-8');
 });
 
-app.get('/linear-xmltv.xml', async (req, res) => {
+app.get('/linear-xmltv.xml', async c => {
   if (!useLinear) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
   const xmlFile = await generateXml(true);
 
   if (!xmlFile) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
-  res.writeHead(200, {
+  return c.body(xmlFile, 200, {
     'Content-Type': 'application/xml',
   });
-  res.end(xmlFile, 'utf-8');
 });
 
-app.get('/channels/:id.m3u8', async (req, res) => {
-  const {id} = req.params;
+app.get('/channels/:id{.+\\.m3u8$}', async c => {
+  const id = c.req.param('id').split('.m3u8')[0];
 
   let contents: string | undefined;
 
@@ -135,7 +212,7 @@ app.get('/channels/:id.m3u8', async (req, res) => {
     appStatus.channels[id] = {};
   }
 
-  const uri = process.env.BASE_URL || `${req.protocol}://${req.headers.host}`;
+  const uri = getUri(c);
 
   if (!appStatus.channels[id].player?.playlist) {
     try {
@@ -154,27 +231,25 @@ app.get('/channels/:id.m3u8', async (req, res) => {
 
     removeChannelStatus(id);
 
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
   appStatus.channels[id].heartbeat = new Date();
 
-  res.writeHead(200, {
+  return c.body(contents, 200, {
     'Cache-Control': 'no-cache',
     'Content-Type': 'application/vnd.apple.mpegurl',
   });
-  res.end(contents, 'utf-8');
 });
 
-app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
-  const {id, chunklistid} = req.params;
+app.get('/chunklist/:id/:chunklistid{.+\\.m3u8$}', async c => {
+  const id = c.req.param('id');
+  const chunklistid = c.req.param('chunklistid').split('.m3u8')[0];
 
-  let contents: string | null;
+  let contents: string | undefined;
 
   if (!appStatus.channels[id]?.player?.playlist) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
   try {
@@ -183,71 +258,66 @@ app.get('/chunklist/:id/:chunklistid.m3u8', async (req, res) => {
 
   if (!contents) {
     console.log(`Could not get chunklist for channel #${id}.`);
-    notFound(req, res);
-    return;
+    removeChannelStatus(id);
+    return notFound(c);
   }
 
   appStatus.channels[id].heartbeat = new Date();
 
-  res.writeHead(200, {
+  return c.body(contents, 200, {
     'Cache-Control': 'no-cache',
     'Content-Type': 'application/vnd.apple.mpegurl',
   });
-  res.end(contents, 'utf-8');
 });
 
-app.get('/channels/:id/:part.key', async (req, res) => {
-  const {id, part} = req.params;
+app.get('/channels/:id/:part{.+\\.key$}', async c => {
+  const id = c.req.param('id');
+  const part = c.req.param('part').split('.key')[0];
 
   let contents: ArrayBuffer | undefined;
 
   try {
     contents = await appStatus.channels[id].player?.getSegmentOrKey(part);
   } catch (e) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
   if (!contents) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
   appStatus.channels[id].heartbeat = new Date();
 
-  res.writeHead(200, {
+  return c.body(contents, 200, {
     'Cache-Control': 'no-cache',
     'Content-Type': 'application/octet-stream',
   });
-  res.end(contents, 'utf-8');
 });
 
-app.get('/channels/:id/:part.ts', async (req, res) => {
-  const {id, part} = req.params;
+app.get('/channels/:id/:part{.+\\.ts$}', async c => {
+  const id = c.req.param('id');
+  const part = c.req.param('part').split('.ts')[0];
 
   let contents: ArrayBuffer | undefined;
 
   try {
     contents = await appStatus.channels[id].player?.getSegmentOrKey(part);
   } catch (e) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
   if (!contents) {
-    notFound(req, res);
-    return;
+    return notFound(c);
   }
 
-  res.writeHead(200, {
+  return c.body(contents, 200, {
     'Cache-Control': 'no-cache',
     'Content-Type': 'video/MP2T',
   });
-  res.end(contents, 'utf-8');
 });
 
 // 404 Handler
-app.use(notFound);
+app.notFound(notFound);
 
 process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
@@ -286,10 +356,18 @@ process.on('SIGINT', shutDown);
   await cbsHandler.initialize();
   await cbsHandler.refreshTokens();
 
-  await schedule();
+  await mwHandler.initialize();
 
-  console.log('=== Starting Server ===');
-  app.listen(SERVER_PORT, () => console.log(`Server started on port ${SERVER_PORT}`));
+  serve(
+    {
+      fetch: app.fetch,
+      port: SERVER_PORT,
+    },
+    () => {
+      console.log(`Server started on port ${SERVER_PORT}`);
+      schedule();
+    },
+  );
 })();
 
 // Check for events every 4 hours and set the schedule

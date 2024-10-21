@@ -55,3 +55,25 @@ export interface IChannel {
   channel: string | number;
   endsAt: number;
 }
+
+export interface IProviderChannel {
+  enabled: boolean;
+  name: string;
+  tmsId?: string;
+  id: string;
+}
+
+export interface IProvider<T = any, M = any> {
+  enabled: boolean;
+  tokens?: T;
+  linear_channels?: IProviderChannel[];
+  name: string;
+  meta?: M;
+}
+
+export type ClassTypeWithoutMethods<T> = Omit<
+  T,
+  {
+    [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
+  }[keyof T]
+>;

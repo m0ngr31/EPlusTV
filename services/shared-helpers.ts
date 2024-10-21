@@ -42,14 +42,28 @@ export const cleanEntries = async (): Promise<void> => {
   await db.entries.remove({end: {$lt: now}}, {multi: true});
 };
 
+export const removeAllEntries = async (): Promise<void> => {
+  await db.schedule.remove({}, {multi: true});
+  await db.entries.remove({}, {multi: true});
+};
+
 export const removeChannelStatus = (channelId: string | number): void => {
   try {
-    if (appStatus.channels[channelId].heartbeatTimer) {
+    if (appStatus.channels?.[channelId]?.heartbeatTimer) {
       clearTimeout(appStatus.channels[channelId].heartbeatTimer);
     }
 
     delete appStatus.channels[channelId];
   } catch (e) {
+    console.error(e);
     console.log(`Failed to delete info for channel #${channelId}`);
   }
+};
+
+export const clearChannels = (): void => {
+  Object.keys(appStatus.channels).forEach(key => {
+    removeChannelStatus(key);
+  });
+
+  appStatus.channels = {};
 };

@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **3.3.4**
+Current version: **4.0.0**
 
 # About
 This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, CBS Sports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -12,7 +12,7 @@ This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain 
 * The Mouse might not like it and it could be taken down at any minute. Enjoy it while it lasts. ¯\\_(ツ)_/¯
 
 # Using
-The server exposes 2 main endpoints:
+The server exposes 4 main endpoints:
 
 | Endpoint | Description |
 |---|---|
@@ -36,116 +36,142 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No | - |
 | PORT | Port the API will be served on. You can set this if it conflicts with another service in your environment. | No | 8000 |
 
-### Available channel options
+### Available Providers
+
+#### ESPN+
+
+Available to login with ESPN+ credentials
+
+##### Extras
+| Name | Description |
+|---|---|
+| ESPN+ PPV | Schedule ESPN+ PPV events |
 
 #### ESPN
-Use if you would like to login with a TV provider or ESPN+ and access various ESPN events
-| Environment Variable | Description | Default |
-|---|---|---|
-| ESPNPLUS | Set to false if you don't want to use ESPN+ | True |
-| ESPN*** | ESPN: Set if your TV provider supports it | False |
-| ESPN2*** | ESPN2: Set if your TV provider supports it | False |
-| ESPN3 | ESPN2: Set if your TV provider supports it | False |
-| ESPNU*** | ESPNU: Set if your TV provider supports it | False |
-| SEC*** | SEC Network: Set if your TV provider supports it | False |
-| SECPLUS | SEC Network+: Set if your TV provider supports it | False |
-| ACCN*** | ACCN: Set if your TV provider supports it | False |
-| ACCNX | ACCNX: Set if your TV provider supports it | False |
-| ESPNEWS*** | ESPNews: Set if your TV provider supports it | False |
-| ESPN_PPV | PPV: Set if you have purchased PPV events | False |
+
+Available to login with TV Provider
+
+##### Linear Channels
+
+Will create a dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+
+| Network Name | Description |
+|---|---|
+| ESPN | Set if your TV provider supports it |
+| ESPN2 | Set if your TV provider supports it |
+| ESPNU | Set if your TV provider supports it |
+| SEC Network | Set if your TV provider supports it |
+| ACC Network | Set if your TV provider supports it |
+| ESPNews | Set if your TV provider supports it |
+
+##### Digital Networks
+
+| Network Name | Description |
+|---|---|
+| ESPN3 | Set if your TV provider supports it |
+| SEC Network+ | Set if your TV provider supports it |
+| ACC Network Extra | Set if your TV provider supports it |
 
 #### FOX Sports
-Use if you would like to login with a TV provider and access various FOX Sports events
-| Environment Variable | Description | Required? | Default |
-|---|---|---|---|
-| FOXSPORTS** | Set if your TV provider supports it | No | False |
-| MAX_RESOLUTION | Max resolution to use. Valid options are `UHD/HDR` and `720p` (Some events don't offer 4K and will attempt to play the highest framerate available for selected resolution). | No | 720p |
-| FOX_ONLY_4K | Only grab 4K events | No | False |
+
+Available to login with TV Provider
+
+##### Linear Channels
+
+Some events are on linear channels and some aren't. If you use `LINEAR_CHANNELS`, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
+
+| Network Name |
+|---|
+| FS1 |
+| FS2 |
+| B1G Network |
+| FOX Soccer Plus |
 
 #### Paramount+
-Use if you would like to login with Paramount+
-| Environment Variable | Description | Required? | Default |
-|---|---|---|---|
-| PARAMOUNTPLUS | Set if you would like CBS Sports events | False | False |
-| CBSSPORTSHQ* | Set if you would like the CBS Sports HQ channel (only available with `LINEAR_CHANNELS`) | False | False |
-| GOLAZO* | Set if you would like the Golazo Network channel (only available with `LINEAR_CHANNELS`) | False | False |
+
+Available to login with Paramount+ credentials
+
+##### Linear Channels
+
+Dedicated linear channels - Will only schedule when `LINEAR_CHANNELS` is set
+
+| Network Name | Description |
+|---|---|
+| CBS Sports HQ | Set if your TV provider supports it |
+| Golazo Network | Set if your TV provider supports it |
 
 #### CBS Sports
-Use if you would like to login with a TV provider and access various CBS Sports events
-| Environment Variable | Description | Required? | Default |
-|---|---|---|---|
-| CBSSPORTS | Set if you would like CBS Sports events | False | False |
 
-#### NFL+
-Use if you would like to login with NFL+.
+Available to login with TV Provider
 
-Please note that if you only have an NFL account, you can still get events from Amazon Prime, Peacock, or your TV Provider.
+#### NFL
 
-*** If you have access to NFL RedZone (NFL+ Premium), it will be scheduled. If `LINEAR_CHANNELS` is set, it will be on its own channel
+Available to login with NFL.com credentials
 
-| Environment Variable | Description | Required? | Default |
-|---|---|---|---|
-| NFLPLUS | Set if you would like NFL+ events | False | False |
-| NFL_TVE | Set if you would like NFL games from your TV Provider (not needed with NFL+) | False | False |
-| NFL_PRIME | Set if you would like NFL games from Amazon Prime (not needed with NFL+) | False | False |
-| NFL_PEACOCK | Set if you would like NFL games from Peacock (not needed with NFL+) | False | False |
-| NFL_SUNDAY_TICKET | Set if you would like NFL games from Sunday Ticket | False | False |
-| NFLNETWORK* | Set if you would like the NFL Network channel (only available with `LINEAR_CHANNELS`). Must have NFL+ or TV Provider. | False | False |
-| NFLCHANNEL* | Set if you would like the NFL Channel (only available with `LINEAR_CHANNELS`) | False | False |
+This integration works with NFL+ or using other providers (TVE, Amazon Prime, Peacock, Sunday Ticket) to access games.
+
+##### Extra Providers
+
+If you don't have an NFL+ subscription, you can use these providers to access games.
+
+| Provider Name | Description |
+|---|---|
+| Amazon Prime | Get TNF games from Amazon Prime |
+| Peacock | Get SNF games from Peacock |
+| TV Provider | Get in-market games from your TV Provider |
+| Sunday Ticket | Get out-of-market games from Youtube |
+
+##### Linear Channels
+
+If you have access to NFL RedZone, it will be scheduled. If `LINEAR_CHANNELS` is set, it will be on its own channel
+
+| Network Name | Description |
+|---|---|
+| NFL NETWORK | NFL+ or TV Provider access |
+| NFL RedZone | NFL+ Premium or TV Provider access |
+| NFL CHANNEL | Free channel for all accounts |
 
 #### NESN
-Use if you would like to login with NESN. Will get NESN and NESN+ programming
 
-4K events (home Red Sox and Bruins games will be scheduled normally)
-| Environment Variable | Description | Default |
-|---|---|---|
-| NESN*** | Set if you would like to use NESN | False |
+Available to login with NESN+ or TV Provider
+
+##### Linear Channels
+
+Will create a dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+
+| Network Name | Description |
+|---|---|
+| NESN | New England Sports Network HD |
+| NESN+ | New England Sports Network Plus HD |
 
 #### B1G+
-Use if you would like to login with your B1G+ account
-| Environment Variable | Description | Default |
-|---|---|---|
-| B1GPLUS | Set if you would like to use B1G+ | False |
-| B1GPLUS_USER | B1G+ Username | False |
-| B1GPLUS_PASS | B1G+ Password | False |
 
-#### MSG+
-Use if you would like to login with your MSG+ account
-| Environment Variable | Description | Default |
-|---|---|---|
-| MSGPLUS*** | Set if you would like to use MSG+ | False |
-| MSGPLUS_USER | MSG+ Username | False |
-| MSGPLUS_PASS | MSG+ Password | False |
+Available to login with B1G+ credentials
 
 #### FloSports
-Use if you would like to login with FloSports
-| Environment Variable | Description | Required? | Default |
-|---|---|---|---|
-| FLOSPORTS | Set if you would like FloSports events | False | False |
+
+Available to login with FloSports credentials
 
 #### Mountain West
-Use if you would like to use Mountain West
-| Environment Variable | Description | Required? | Default |
-|---|---|---|---|
-| MTNWEST | Set if you would like Mountain West events | False | False |
+
+Available for free
 
 #### MLB.tv
-Use if you would like to login with your MLB.tv account
 
-*** If `LINEAR_CHANNELS` is set, Big Inning will be on its own channel
+Available to login with MLB.tv credentials
 
-| Environment Variable | Description | Default |
-|---|---|---|
-| MLBTV | Set if you would like to use MLB.tv | False |
-| MLBTV_ONLY_FREE | Only schedule free games | False |
+##### Extras
+| Name | Description |
+|---|---|
+| Only free games | If you have a free account, only 1 free game per day will be scheduled |
 
+##### Linear Channels
 
-### Notes
-`*`: Dedicated linear channel - Will only schedule when `LINEAR_CHANNELS` is set
+Will create a dedicated linear channel if using `LINEAR_CHANNELS`, otherwise will schedule Big Inning normally
 
-`**`: Some events are on linear channels and some aren't. If you use `LINEAR_CHANNELS`, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
-
-`***`: Will create a dedicated linear channel(s) if requested, if not, will schedule events normally
+| Network Name |
+|---|
+| Big Inning |
 
 ## Volumes
 | Volume Name | Description | Required? |
@@ -166,4 +192,4 @@ If you run into permissions issues:
 docker run -p 8000:8000 -v config_dir:/app/config -e PUID=$(id -u $USER) -e PGID=$(id -g $USER) m0ngr31/eplustv
 ```
 
-Once it runs for the first time, check the Docker logs to see what the next steps for authentication are.
+Open the service in your web browser at `http://<ip>:8000`
