@@ -127,9 +127,9 @@ If you have access to NFL RedZone, it will be scheduled. If `LINEAR_CHANNELS` is
 
 | Network Name | Description |
 |---|---|
-| NFL NETWORK | NFL+ or TV Provider access |
+| NFL Network | NFL+ or TV Provider access |
 | NFL RedZone | NFL+ Premium or TV Provider access |
-| NFL CHANNEL | Free channel for all accounts |
+| NFL Channel | Free channel for all accounts |
 
 #### NESN
 
