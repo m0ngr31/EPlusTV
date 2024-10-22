@@ -30,7 +30,7 @@ export const Links: FC<ILinksProps> = async ({baseUrl}) => {
         <tbody>
           <tr>
             <td>Normal</td>
-            <td>Insert into Source section</td>
+            <td>Insert into XMLTV Guide Data section</td>
             <td>
               <a href={xmltvUrl} class="secondary" target="_blank">
                 {xmltvUrl}
@@ -39,7 +39,7 @@ export const Links: FC<ILinksProps> = async ({baseUrl}) => {
           </tr>
           <tr>
             <td>Normal</td>
-            <td>Insert into XMLTV Guide Data section</td>
+            <td>Insert into Source section</td>
             <td>
               <a href={channelsUrl} class="secondary" target="_blank">
                 {channelsUrl}
@@ -50,7 +50,7 @@ export const Links: FC<ILinksProps> = async ({baseUrl}) => {
             <>
               <tr>
                 <td>Linear</td>
-                <td>Insert into Source section</td>
+                <td>Insert into XMLTV Guide Data section</td>
                 <td>
                   <a href={linearXmltvUrl} class="secondary" target="_blank">
                     {linearXmltvUrl}
@@ -59,7 +59,7 @@ export const Links: FC<ILinksProps> = async ({baseUrl}) => {
               </tr>
               <tr>
                 <td>Linear</td>
-                <td>Insert into XMLTV Guide Data section</td>
+                <td>Insert into Source section</td>
                 <td>
                   <a href={linearChannelsUrl} class="secondary" target="_blank">
                     {linearChannelsUrl}

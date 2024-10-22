@@ -507,9 +507,6 @@ class EspnHandler {
       }
     }
 
-    if (useEspnPlus) {
-      console.log('Using ESPNPLUS variable is no longer needed. Please use the UI going forward');
-    }
     if (useEspnPpv) {
       console.log('Using ESPN_PPV variable is no longer needed. Please use the UI going forward');
     }
