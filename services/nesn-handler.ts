@@ -632,8 +632,8 @@ class NesnHandler {
 
       return data;
     } catch (e) {
-      console.error(e);
-      console.log('Could not authorize Adobe device');
+      // console.error(e);
+      console.log('Could not authorize Adobe device for NESN');
     }
   };
 

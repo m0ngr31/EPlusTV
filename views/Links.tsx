@@ -50,7 +50,14 @@ export const Links: FC<ILinksProps> = async ({baseUrl}) => {
             <>
               <tr>
                 <td>Linear</td>
-                <td>Insert into XMLTV Guide Data section</td>
+                <td>
+                  Insert into XMLTV Guide Data section
+                  <p class="help-text">
+                    <small data-tooltip="Gracenote data is automatically added to M3U so Channels is able to map EPG data automatically." data-placement="bottom">
+                      Not needed for Channels DVR
+                    </small>
+                  </p>
+                </td>
                 <td>
                   <a href={linearXmltvUrl} class="secondary" target="_blank">
                     {linearXmltvUrl}

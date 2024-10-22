@@ -37,15 +37,15 @@ export const LINEAR_START_CHANNEL = nextStartChannel(startChannel + numOfChannel
 export const useLinear = process.env.LINEAR_CHANNELS?.toLowerCase() === 'true' ? true : false;
 
 export const checkChannelEnabled = async (provider: string, channelId: string): Promise<boolean> => {
-  const networkProvider = await db.providers.findOne<IProvider>({name: provider});
+  const {enabled, linear_channels} = await db.providers.findOne<IProvider>({name: provider});
 
-  if (!networkProvider) {
-    throw new Error(`Could not find provider: ${provider}`);
+  if (!enabled || !linear_channels || !linear_channels.length) {
+    return false;
   }
 
-  const network = networkProvider.linear_channels.find(c => c.id === channelId);
+  const network = linear_channels.find(c => c.id === channelId);
 
-  return network.enabled;
+  return network?.enabled;
 };
 
 /* eslint-disable sort-keys-custom-order-fix/sort-keys-custom-order-fix */

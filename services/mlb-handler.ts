@@ -486,7 +486,7 @@ class MLBHandler {
 
       return bigInnings;
     } catch (e) {
-      console.error(e);
+      // console.error(e);
       console.log('Could not get Big Inning data');
     }
   };

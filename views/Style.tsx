@@ -13,6 +13,10 @@ export const Style: FC = () => (
       font-weight: 900;
       color: red;
     }
+    .help-text {
+      margin-bottom: 0px;
+      color: red;
+    }
     .provider-section {
       // max-height: 30rem;
     }

@@ -2,10 +2,10 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.0.3**
+Current version: **4.0.4**
 
 # About
-This takes ESPN/ESPN+, FOX Sports, Paramount+, MSG+, NFL+, B1G+, NESN, Mountain West, FloSports, CBS Sports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, MSG+, NFL, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
@@ -19,7 +19,7 @@ The server exposes 4 main endpoints:
 | /channels.m3u | The channel list you'll import into your client |
 | /xmltv.xml | The schedule that you'll import into your client |
 | /linear-channels.m3u | The linear channel list you'll import into your client (only used when using `LINEAR_CHANNELS` variable) |
-| /linear-xmltv.xml | The linear schedule that you'll import into your client (only used when using `LINEAR_CHANNELS` variable) |
+| /linear-xmltv.xml | The linear schedule that you'll import into your client (only used when using `LINEAR_CHANNELS` variable) - Not needed for Channels DVR |
 
 # Running
 The recommended way of running is to pull the image from [Docker Hub](https://hub.docker.com/r/m0ngr31/eplustv).
