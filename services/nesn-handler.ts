@@ -13,6 +13,7 @@ import {ClassTypeWithoutMethods, IEntry, IHeaders, IJWToken, IProvider} from './
 import {db} from './database';
 import {getRandomHex, getRandomUUID} from './shared-helpers';
 import {useLinear} from './channels';
+import {debug} from './debug';
 
 const ADOBE_CLIENT_ID = [
   '6',
@@ -378,6 +379,8 @@ class NesnHandler {
             authorization: `Basic ${BASIC_AUTH_TOKEN}`,
           },
         });
+
+        debug.saveRequestData(data, 'nesn', 'epg');
 
         for (const event of data) {
           const eventStart = moment.utc(

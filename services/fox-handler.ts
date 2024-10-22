@@ -13,6 +13,7 @@ import {getRandomHex} from './shared-helpers';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
+import {debug} from './debug';
 
 interface IAppConfig {
   api: {
@@ -429,6 +430,8 @@ class FoxHandler {
           },
         },
       );
+
+      debug.saveRequestData(data, 'foxsports', 'epg');
 
       _.forEach(data.panels.member, member => {
         _.forEach(member.items.member, m => {

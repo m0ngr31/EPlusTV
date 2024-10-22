@@ -30,6 +30,7 @@ import {getRandomHex} from './shared-helpers';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IJWToken, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
+import {debug} from './debug';
 
 global.WebSocket = ws;
 
@@ -875,6 +876,9 @@ class EspnHandler {
         `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
       ),
     );
+
+    debug.saveRequestData(entryData, network || 'espn+', 'live-epg');
+
     return entryData.data.airings;
   };
 
@@ -892,6 +896,9 @@ class EspnHandler {
         `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
       ),
     );
+
+    debug.saveRequestData(entryData, network || 'espn+', 'upcoming-epg');
+
     return entryData.data.airings;
   };
 

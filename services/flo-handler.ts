@@ -10,6 +10,7 @@ import {useFloSports} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
+import {debug} from './debug';
 
 interface IFloEventsRes {
   sections: {
@@ -174,6 +175,8 @@ class FloSportsHandler {
             Authorization: `Bearer ${this.access_token}`,
           },
         });
+
+        debug.saveRequestData(data, 'flosports', 'epg');
 
         data?.sections.forEach(e => {
           if (e.id === 'live-and-upcoming' || e.title === 'Live & Upcoming') {

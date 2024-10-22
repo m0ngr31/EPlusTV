@@ -10,6 +10,7 @@ import {configPath} from './config';
 import {useB1GPlus} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
+import {debug} from './debug';
 
 interface IEventCategory {
   name: string;
@@ -250,6 +251,8 @@ class B1GHandler {
         events = events.concat(data.data);
         page += 1;
       }
+
+      debug.saveRequestData(events, 'b1g+', 'epg');
 
       await parseAirings(events);
     } catch (e) {

@@ -11,6 +11,7 @@ import {useMLBtv, useMLBtvOnlyFree} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
 import {useLinear} from './channels';
+import {debug} from './debug';
 
 interface IGameContent {
   media: {
@@ -316,6 +317,9 @@ class MLBHandler {
     try {
       const entries = await this.getEvents();
       const feeds = await this.getFeeds();
+
+      debug.saveRequestData(entries, 'mlb', 'entries');
+      debug.saveRequestData(feeds, 'mlb', 'feeds');
 
       const combinedEntries: ICombinedGame = {};
 

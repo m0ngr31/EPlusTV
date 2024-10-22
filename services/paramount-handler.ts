@@ -12,6 +12,7 @@ import {getRandomHex} from './shared-helpers';
 import {db} from './database';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {useLinear} from './channels';
+import {debug} from './debug';
 
 const BASE_THUMB_URL = 'https://wwwimage-us.pplusstatic.com/thumbnails/photos/w370-q80/';
 const BASE_URL = 'https://www.paramountplus.com';
@@ -301,6 +302,8 @@ class ParamountHandler {
 
       const channels = await this.getLiveChannels();
 
+      debug.saveRequestData(data, 'paramount+local', 'epg');
+
       for (const c of channels) {
         try {
           const {data} = await instance.get(
@@ -445,6 +448,8 @@ class ParamountHandler {
           start: '0',
         })}`,
       );
+
+      debug.saveRequestData(data, 'paramount+channels', 'epg');
 
       const channels: IChannel[] = [];
 

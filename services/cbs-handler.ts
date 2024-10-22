@@ -13,6 +13,7 @@ import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-int
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 import {createAdobeAuthHeader} from './adobe-helpers';
+import {debug} from './debug';
 
 interface ICBSEvent {
   id: number;
@@ -379,6 +380,8 @@ class CBSHandler {
           'x-api-key': API_KEY,
         },
       });
+
+      debug.saveRequestData(data, 'cbssports', 'epg');
 
       data.forEach(e => {
         if (

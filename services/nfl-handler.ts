@@ -12,6 +12,7 @@ import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-int
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 import {useLinear} from './channels';
+import {debug} from './debug';
 
 interface INFLRes {
   data: {
@@ -380,6 +381,8 @@ class NflHandler {
           Authorization: `Bearer ${this.access_token}`,
         },
       });
+
+      debug.saveRequestData(data, 'nfl', 'epg');
 
       data.data.items.forEach(i => {
         if (moment(i.startTime).isBefore(endSchedule)) {

@@ -5,6 +5,7 @@ import {userAgent} from './user-agent';
 import {useMountainWest} from './networks';
 import {IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
+import {debug} from './debug';
 
 interface IMWEvent {
   image: string;
@@ -97,6 +98,8 @@ class MountainWestHandler {
           'user-agent': userAgent,
         },
       });
+
+      debug.saveRequestData(data, 'mtnwest', 'epg');
 
       await parseAirings(data.data);
     } catch (e) {
