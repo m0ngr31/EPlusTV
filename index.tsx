@@ -17,7 +17,7 @@ import {b1gHandler} from './services/b1g-handler';
 import {floSportsHandler} from './services/flo-handler';
 import {paramountHandler} from './services/paramount-handler';
 import {nflHandler} from './services/nfl-handler';
-import {msgHandler} from './services/msg-handler';
+import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
@@ -49,6 +49,7 @@ import {B1G} from './services/providers/b1g/views';
 import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
+import {Gotham} from './services/providers/gotham/views';
 
 const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
   return c.text('404 not found', 404, {
@@ -80,7 +81,7 @@ const schedule = async () => {
   await mwHandler.getSchedule();
   await nflHandler.getSchedule();
   await paramountHandler.getSchedule();
-  await msgHandler.getSchedule();
+  await gothamHandler.getSchedule();
   await nesnHandler.getSchedule();
   await cbsHandler.getSchedule();
 
@@ -117,6 +118,7 @@ app.get('/', async c => {
             <ESPN />
             <Paramount />
             <Nesn />
+            <Gotham />
             <B1G />
             <FloSports />
             <MntWest />
@@ -316,6 +318,28 @@ app.get('/channels/:id/:part{.+\\.ts$}', async c => {
   });
 });
 
+app.get('/channels/:id/:part{.+\\.m4i$}', async c => {
+  const id = c.req.param('id');
+  const part = c.req.param('part').split('.m4i')[0];
+
+  let contents: ArrayBuffer | undefined;
+
+  try {
+    contents = await appStatus.channels[id].player?.getSegmentOrKey(part);
+  } catch (e) {
+    return notFound(c);
+  }
+
+  if (!contents) {
+    return notFound(c);
+  }
+
+  return c.body(contents, 200, {
+    'Cache-Control': 'no-cache',
+    'Content-Type': 'video/MP2T',
+  });
+});
+
 // 404 Handler
 app.notFound(notFound);
 
@@ -347,8 +371,8 @@ process.on('SIGINT', shutDown);
   await paramountHandler.initialize();
   await paramountHandler.refreshTokens();
 
-  await msgHandler.initialize();
-  await msgHandler.refreshTokens();
+  await gothamHandler.initialize();
+  await gothamHandler.refreshTokens();
 
   await nesnHandler.initialize();
   await nesnHandler.refreshTokens();
@@ -384,7 +408,7 @@ setInterval(async () => {
   await floSportsHandler.refreshTokens();
   await nflHandler.refreshTokens();
   await paramountHandler.refreshTokens();
-  await msgHandler.refreshTokens();
+  await gothamHandler.refreshTokens();
   await nesnHandler.refreshTokens();
   await cbsHandler.refreshTokens();
 }, 1000 * 60 * 30);

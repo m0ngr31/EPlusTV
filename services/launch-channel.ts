@@ -4,7 +4,6 @@ import {foxHandler} from './fox-handler';
 import {mlbHandler} from './mlb-handler';
 import {paramountHandler} from './paramount-handler';
 import {b1gHandler} from './b1g-handler';
-import {msgHandler} from './msg-handler';
 import {floSportsHandler} from './flo-handler';
 import {nflHandler} from './nfl-handler';
 import {mwHandler} from './mw-handler';
@@ -15,6 +14,7 @@ import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
 import {removeChannelStatus} from './shared-helpers';
 import {calculateChannelNumber} from './channels';
+import {gothamHandler} from './gotham-handler';
 
 const checkingStream = {};
 
@@ -44,8 +44,8 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
         case 'paramount+':
           [url, headers] = await paramountHandler.getEventData(appStatus.channels[channelId].current);
           break;
-        case 'msg+':
-          [url, headers] = await msgHandler.getEventData(appStatus.channels[channelId].current);
+        case 'gotham':
+          [url, headers] = await gothamHandler.getEventData(appStatus.channels[channelId].current);
           break;
         case 'b1g+':
           [url, headers] = await b1gHandler.getEventData(appStatus.channels[channelId].current);

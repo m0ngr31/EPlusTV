@@ -210,6 +210,9 @@ export class PlaylistHandler {
 
       const chunks = HLS.parse(clonedChunklist);
 
+      const shouldProxy =
+        PROXY_SEGMENTS || baseManifestUrl.includes('akamai') || this.network === 'mlbtv' || this.network === 'gotham';
+
       chunks.segments.forEach(segment => {
         const segmentUrl = segment.uri;
         const segmentKey = segment.key?.uri;
@@ -219,8 +222,6 @@ export class PlaylistHandler {
             ? convertHostUrl(segmentUrl, baseManifestUrl)
             : cleanUrl(`${baseManifestUrl}${segmentUrl}`)
           : segmentUrl;
-
-        const shouldProxy = PROXY_SEGMENTS || baseManifestUrl.includes('akamai') || this.network === 'mlbtv';
 
         if (
           shouldProxy &&
@@ -270,7 +271,12 @@ export class PlaylistHandler {
               : cleanUrl(`${baseManifestUrl}${xmap[1]}`)
             : xmap[1];
 
-          updatedChunkList = updatedChunkList.replace(xmap[1], fullMapUrl);
+          if (shouldProxy) {
+            const m4iName = cacheLayer.getSegmentFromUrl(fullMapUrl, `${this.channel}-m4i`);
+            updatedChunkList = updatedChunkList.replace(xmap[1], `${this.baseUrl}${m4iName}.m4i`);
+          } else {
+            updatedChunkList = updatedChunkList.replace(xmap[1], fullMapUrl);
+          }
         }
       });
 

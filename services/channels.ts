@@ -1,6 +1,5 @@
 import _ from 'lodash';
 
-import {useMsgPlus} from './networks';
 import {db} from './database';
 import {IProvider} from './shared-interfaces';
 
@@ -220,7 +219,8 @@ export const CHANNELS = {
         tvgName: 'NESNPLD',
       },
       60: {
-        canUse: useMsgPlus,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSG'),
         id: 'MSG',
         logo: 'https://tmsimg.fancybits.co/assets/s10979_ll_h15_ab.png?w=360&h=270',
         name: 'MSG',
@@ -228,7 +228,8 @@ export const CHANNELS = {
         tvgName: 'MSG',
       },
       61: {
-        canUse: useMsgPlus,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSGSN'),
         id: 'MSGSN',
         logo: 'https://tmsimg.fancybits.co/assets/s11105_ll_h15_ac.png?w=360&h=270',
         name: 'MSG Sportsnet HD',
@@ -236,7 +237,8 @@ export const CHANNELS = {
         tvgName: 'MSGSNNP',
       },
       62: {
-        canUse: useMsgPlus,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSG2'),
         id: 'MSG2',
         logo: 'https://tmsimg.fancybits.co/assets/s70283_ll_h15_aa.png?w=360&h=270',
         name: 'MSG2 HD',
@@ -244,12 +246,22 @@ export const CHANNELS = {
         tvgName: 'MSG2HD',
       },
       63: {
-        canUse: useMsgPlus,
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSGSN2'),
         id: 'MSGSN2',
         logo: 'https://tmsimg.fancybits.co/assets/s70285_ll_h15_ab.png?w=360&h=270',
         name: 'MSG Sportsnet 2 HD',
         stationId: '70285',
         tvgName: 'MSG2SNH',
+      },
+      64: {
+        canUse: undefined,
+        checkChannelEnabled: () => checkChannelEnabled('gotham', 'YES'),
+        id: 'YES',
+        logo: 'https://tmsimg.fancybits.co/assets/s30017_ll_h15_aa.png?w=360&h=270',
+        name: 'Yes Network',
+        stationId: '30017',
+        tvgName: 'YES',
       },
     };
   },

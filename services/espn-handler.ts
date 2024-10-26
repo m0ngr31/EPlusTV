@@ -385,13 +385,13 @@ const isEnabled = async (which?: string): Promise<boolean> => {
   } else if (which === 'plus') {
     return espnPlusEnabled;
   } else if (which === 'ppv') {
-    return plusMeta?.use_ppv ? true : false;
+    return (plusMeta?.use_ppv ? true : false) && espnPlusEnabled;
   } else if (which === 'espn3') {
-    return linearMeta?.espn3 ? true : false;
+    return (linearMeta?.espn3 ? true : false) && espnLinearEnabled;
   } else if (which === 'sec_plus') {
-    return linearMeta?.sec_plus ? true : false;
+    return (linearMeta?.sec_plus ? true : false) && espnLinearEnabled;
   } else if (which === 'accnx') {
-    return linearMeta?.accnx ? true : false;
+    return (linearMeta?.accnx ? true : false) && espnLinearEnabled;
   }
 
   return espnPlusEnabled || (espnLinearEnabled && _.some(linear_channels, c => c.enabled));
@@ -578,7 +578,8 @@ class EspnHandler {
 
     const {linear_channels} = await db.providers.findOne<IProvider>({name: 'espn'});
 
-    const isChannelEnabled = (channelId: string): boolean => linear_channels.some(c => c.id === channelId && c.enabled);
+    const isChannelEnabled = (channelId: string): boolean =>
+      espnLinearEnabled && linear_channels.some(c => c.id === channelId && c.enabled);
 
     let entries = [];
 

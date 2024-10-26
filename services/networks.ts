@@ -36,8 +36,6 @@ export const useParamount = {
   plus: process.env.PARAMOUNTPLUS?.toLowerCase() === 'true' ? true : false,
 };
 
-export const useMsgPlus = process.env.MSGPLUS?.toLowerCase() === 'true' ? true : false;
-
 export const useNfl = {
   _channel: process.env.NFLCHANNEL?.toLowerCase() === 'true' ? true : false,
   _network: process.env.NFLNETWORK?.toLowerCase() === 'true' ? true : false,
