@@ -156,6 +156,10 @@ const parseAirings = async (events: any[]) => {
       const start = moment(event.start);
       const end = moment(event.end);
 
+      if (!useLinear) {
+        start.subtract(30, 'minutes'); // For Pre-game
+      }
+
       if (end.isBefore(now) || start.isAfter(inTwoDays)) {
         continue;
       }
@@ -270,7 +274,6 @@ class GothamHandler {
       return;
     }
 
-    await this.getNewTokens();
     await this.authenticateRegCode();
 
     if (moment().add(20, 'hours').isAfter(this.expiresIn)) {
@@ -391,7 +394,7 @@ class GothamHandler {
             categories: ['Gotham', 'HD', 'Sports', airing.net || 'MSG', airing.aw_tm, airing.hm_tm, airing.spt_lg],
             contentId: `${airing.id}----${airing.cid}`,
             end: airing.ev_ed_dt,
-            network: airing.net,
+            network: `${airing.pn}`.toUpperCase(),
             sport: airing.spt_lg,
             start: airing.ev_st_dt,
             title: eventName,
@@ -408,7 +411,7 @@ class GothamHandler {
 
   public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
     try {
-      const [contentId, channelId] = eventId.split('----');
+      const [, channelId] = eventId.split('----');
 
       const event = await db.entries.findOne<IEntry>({id: eventId});
 
@@ -425,8 +428,8 @@ class GothamHandler {
       const {data} = await axios.post(
         `${authUrl}`,
         {
-          catalogType: useLinear ? 'channel' : 'liveevent',
-          contentId: useLinear ? channelId : contentId,
+          catalogType: 'channel',
+          contentId: channelId,
           contentTypeId: 'live',
           delivery: 'streaming',
           deviceId: this.device_id,
@@ -859,8 +862,6 @@ class GothamHandler {
 
       this.save();
 
-      // await this.refreshProviderToken();
-
       const adobeId = await this.getAdobeId();
       const adobeUserMeta = await this.getUserMetadata();
 
@@ -969,23 +970,6 @@ class GothamHandler {
       console.error(e);
       console.log('Could not add TVE subscription for Gotham!');
     }
-  };
-
-  private refreshProviderToken = async (): Promise<void> => {
-    if (!this.adobe_token) {
-      return;
-    }
-
-    // const renewUrl = [`${BASE_ADOBE_URL}/tokens/authn`, `?deviceId=${this.device_id}`, '&requestor=Gotham'].join('');
-
-    // try {
-    //   await axios.get(renewUrl, {
-    //     headers: {
-    //       Authorization: `Bearer ${this.adobe_token}`,
-    //       'User-Agent': okHttpUserAgent,
-    //     },
-    //   });
-    // } catch (e) {}
   };
 
   private save = async () => {

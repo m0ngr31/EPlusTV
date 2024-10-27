@@ -8,7 +8,7 @@ export const useAccN = process.env.ACCN?.toLowerCase() === 'true' ? true : false
 export const useAccNx = process.env.ACCNX?.toLowerCase() === 'true' ? true : false;
 export const useEspnews = process.env.ESPNEWS?.toLowerCase() === 'true' ? true : false;
 export const useEspnPpv = process.env.ESPN_PPV?.toLowerCase() === 'true' ? true : false;
-export const useEspnPlus = process.env.ESPNPLUS?.toLowerCase() === 'false' ? false : true;
+export const useEspnPlus = process.env.ESPNPLUS?.toLowerCase() === 'true' ? true : false;
 
 export const useFoxSports = process.env.FOXSPORTS?.toLowerCase() === 'true' ? true : false;
 export const useFoxOnly4k = process.env.FOX_ONLY_4K?.toLowerCase() === 'true' ? true : false;

@@ -5,6 +5,9 @@ export const Style: FC = () => (
     pre {
       padding: 5px;
     }
+    .align-center {
+      align-content: center;
+    }
     .title {
       font-family: 'sans-serif';
       font-weight: normal;
