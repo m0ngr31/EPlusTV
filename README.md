@@ -117,6 +117,7 @@ If you don't have an NFL+ subscription, you can use these providers to access ga
 | Provider Name | Description |
 |---|---|
 | Amazon Prime | Get TNF games from Amazon Prime |
+| Twitch | Get TNF games from Twitch.tv (no auth required) |
 | Peacock | Get SNF games from Peacock |
 | TV Provider | Get in-market games from your TV Provider |
 | Sunday Ticket | Get out-of-market games from Youtube |
@@ -143,6 +144,22 @@ Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will
 |---|---|
 | NESN | New England Sports Network HD |
 | NESN+ | New England Sports Network Plus HD |
+
+#### Gotham Sports
+
+Available to login with Gotham Sports or TV Provider
+
+##### Linear Channels
+
+Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+
+| Network Name | Description |
+|---|---|
+| MSG | MSG |
+| MSGSN | MSG Sportsnet HD |
+| MSG2 | MSG2 HD |
+| MSGSN2 | MSG Sportsnet 2 HD |
+| YES | Yes Network |
 
 #### B1G+
 
