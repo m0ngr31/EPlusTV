@@ -111,6 +111,24 @@ export const NFLBody: FC<INFLBodyProps> = ({enabled, tokens, open, channels}) =>
         </fieldset>
       </div>
       <div class="grid-container">
+        <h6>Twitch:</h6>
+        <fieldset>
+          <label>
+            Enabled&nbsp;&nbsp;
+            <input
+              hx-put="/providers/nfl/auth/twitch"
+              hx-trigger="change"
+              hx-target="#nfl-body"
+              name="nfl-twitch-enabled"
+              type="checkbox"
+              role="switch"
+              checked={tokens.twitchDeviceId ? true : false}
+              data-enabled={tokens.twitchDeviceId ? 'true' : 'false'}
+            />
+          </label>
+        </fieldset>
+      </div>
+      <div class="grid-container">
         <h6>Sunday Ticket:</h6>
         <fieldset>
           <label>

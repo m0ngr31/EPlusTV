@@ -5,7 +5,7 @@ import axios from 'axios';
 import moment from 'moment';
 import jwt_decode from 'jwt-decode';
 
-import {okHttpUserAgent} from './user-agent';
+import {okHttpUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useNfl} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
@@ -42,6 +42,7 @@ interface INFLEvent {
   linear: boolean;
   networks: string[];
   broadcastAiringType?: string;
+  hostNetwork?: string;
 }
 
 const CLIENT_KEY = [
@@ -118,6 +119,39 @@ const CLIENT_SECRET = ['q', 'G', 'h', 'E', 'v', '1', 'R', 't', 'I', '2', 'S', 'f
 
 const TV_CLIENT_SECRET = ['u', 'o', 'C', 'y', 'y', 'k', 'y', 'U', 'w', 'D', 'b', 'f', 'Q', 'Z', 'r', '2'].join('');
 
+const TWITCH_CLIENT_ID = [
+  'k',
+  'i',
+  'm',
+  'n',
+  'e',
+  '7',
+  '8',
+  'k',
+  'x',
+  '3',
+  'n',
+  'c',
+  'x',
+  '6',
+  'b',
+  'r',
+  'g',
+  'o',
+  '4',
+  'm',
+  'v',
+  '6',
+  'w',
+  'k',
+  'i',
+  '5',
+  'h',
+  '1',
+  'k',
+  'o',
+].join('');
+
 const DEVICE_INFO = {
   capabilities: {},
   ctvDevice: 'AndroidTV',
@@ -160,12 +194,25 @@ const DEFAULT_CATEGORIES = ['NFL', 'NFL+', 'Football'];
 
 const nflConfigPath = path.join(configPath, 'nfl_tokens.json');
 
-export type TOtherAuth = 'prime' | 'tve' | 'peacock' | 'sunday_ticket';
+export type TOtherAuth = 'prime' | 'tve' | 'peacock' | 'sunday_ticket' | 'twitch';
 
 interface INFLJwt {
   dmaCode: string;
   plans: {plan: string; status: string}[];
   networks?: {[key: string]: string};
+}
+
+interface ITwitchAccessTokenRes {
+  data: ITwitchAccessToken;
+}
+
+interface ITwitchAccessToken {
+  streamPlaybackAccessToken: ITwitchStreamToken;
+}
+
+interface ITwitchStreamToken {
+  value: string;
+  signature: string;
 }
 
 const parseAirings = async (events: INFLEvent[]) => {
@@ -244,6 +291,7 @@ class NflHandler {
   public peacockUUID?: string;
   public youTubeUserId?: string;
   public youTubeUUID?: string;
+  public twitchDeviceId?: string;
 
   public initialize = async () => {
     const setup = (await db.providers.count({name: 'nfl'})) > 0 ? true : false;
@@ -343,9 +391,7 @@ class NflHandler {
       return;
     }
 
-    if (!this.expires_at || moment(this.expires_at * 1000).isBefore(moment())) {
-      await this.extendTokens();
-    }
+    await this.extendTokens();
   };
 
   public getSchedule = async (): Promise<void> => {
@@ -398,10 +444,24 @@ class NflHandler {
               this.checkTVEEventAccess(i) ||
               // Peacock
               (i.authorizations.peacock && this.checkPeacockAccess()) ||
-              // Prime
-              (i.authorizations.amazon_prime && this.checkPrimeAccess())
+              // Prime || Twitch.tv
+              (i.authorizations.amazon_prime && (this.checkPrimeAccess() || this.checkTwitchAccess()))
             ) {
-              events.push(i);
+              if (i.authorizations.amazon_prime) {
+                if (this.checkTwitchAccess()) {
+                  events.push({
+                    ...i,
+                    externalId: `${i.externalId}-twitch`,
+                    networks: ['Twitch'],
+                  });
+                }
+
+                if (this.checkPrimeAccess()) {
+                  events.push(i);
+                }
+              } else {
+                events.push(i);
+              }
             }
           } else if (
             i.callSign === 'NFLNRZ' &&
@@ -417,7 +477,7 @@ class NflHandler {
             i.contentType === 'GAME' &&
             i.language.find(l => l === 'en') &&
             i.authorizations.sunday_ticket &&
-            this.checkSundayTicket()
+            this.checkSundayTicketAccess()
           ) {
             events.push(i);
           }
@@ -460,31 +520,97 @@ class NflHandler {
       const isGame =
         event.channel !== 'NFLNETWORK' && event.channel !== 'NFLDIGITAL1_OO_v3' && event.channel !== 'NFLNRZ';
 
-      const url = ['https://', 'api.nfl.com/', 'play/v1/asset/', id].join('');
+      const isTwitch = event.feed === 'Twitch';
 
-      const {data} = await axios.post(
-        url,
+      if (!isTwitch) {
+        const url = ['https://', 'api.nfl.com/', 'play/v1/asset/', id].join('');
+
+        const {data} = await axios.post(
+          url,
+          {
+            ...(this.checkTVEAccess() && {
+              idp: this.mvpdIdp,
+              mvpdUUID: this.mvpdUUID,
+              mvpdUserId: this.mvpdUserId,
+              networks: event.feed || 'NFLN',
+            }),
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': okHttpUserAgent,
+              authorization: `Bearer ${isGame ? this.access_token : this.tv_access_token}`,
+            },
+          },
+        );
+
+        return [data.accessUrl, {}];
+      } else {
+        try {
+          const channel = event.name.indexOf('Vision') > -1 ? 'primevision' : 'primevideo';
+
+          const accessToken = await this.getTwitchAccessToken(channel);
+
+          const url = [
+            'https://usher.ttvnw.net',
+            '/api/channel/hls/',
+            `${channel}.m3u8`,
+            '?client_id=',
+            TWITCH_CLIENT_ID,
+            '&token=',
+            accessToken.value,
+            '&sig=',
+            accessToken.signature,
+            '&allow_source=true',
+            '&allow_audio_only=false',
+          ].join('');
+
+          return [url, {}];
+        } catch (e) {
+          console.error(e);
+          console.log('Could not start playback from Twitch');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      console.log('Could not start playback');
+    }
+  };
+
+  private getTwitchAccessToken = async (channel: string): Promise<ITwitchStreamToken> => {
+    try {
+      const {data} = await axios.post<ITwitchAccessTokenRes>(
+        'https://gql.twitch.tv/gql',
         {
-          ...(this.checkTVEAccess() && {
-            idp: this.mvpdIdp,
-            mvpdUUID: this.mvpdUUID,
-            mvpdUserId: this.mvpdUserId,
-            networks: event.feed || 'NFLN',
-          }),
+          extensions: {
+            persistedQuery: {
+              sha256Hash: 'ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9',
+              version: 1,
+            },
+          },
+          operationName: 'PlaybackAccessToken',
+          variables: {
+            isLive: true,
+            isVod: false,
+            login: channel,
+            platform: 'web',
+            playerType: 'site',
+            vodID: '',
+          },
         },
         {
           headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': okHttpUserAgent,
-            authorization: `Bearer ${isGame ? this.access_token : this.tv_access_token}`,
+            'Client-id': TWITCH_CLIENT_ID,
+            'User-Agent': userAgent,
+            'X-Device-Id': this.twitchDeviceId,
           },
         },
       );
 
-      return [data.accessUrl, {}];
+      return data.data.streamPlaybackAccessToken;
     } catch (e) {
       console.error(e);
-      console.log('Could not start playback');
+      console.log('Could not get Twitch access token');
     }
   };
 
@@ -571,7 +697,8 @@ class NflHandler {
   private checkTVEAccess = (): boolean => (this.mvpdIdp ? true : false);
   private checkPeacockAccess = (): boolean => (this.peacockUserId ? true : false);
   private checkPrimeAccess = (): boolean => (this.amazonPrimeUserId ? true : false);
-  private checkSundayTicket = (): boolean => (this.youTubeUserId ? true : false);
+  private checkSundayTicketAccess = (): boolean => (this.youTubeUserId ? true : false);
+  private checkTwitchAccess = (): boolean => (this.twitchDeviceId ? true : false);
 
   private checkTVEEventAccess = (event: INFLEvent): boolean => {
     let hasChannel = false;
@@ -684,14 +811,6 @@ class NflHandler {
             mvpdUUID: this.mvpdUUID,
             mvpdUserId: this.mvpdUserId,
           }),
-          ...(this.amazonPrimeUserId && {
-            amazonPrimeUUID: this.amazonPrimeUUID,
-            amazonPrimeUserId: this.amazonPrimeUserId,
-          }),
-          ...(this.peacockUserId && {
-            peacockUUID: this.peacockUUID,
-            peacockUserId: this.peacockUserId,
-          }),
           ...(this.youTubeUserId && {
             youTubeUUID: this.youTubeUUID,
             youTubeUserId: this.youTubeUserId,
@@ -708,20 +827,7 @@ class NflHandler {
       this.tv_refresh_token = data.refreshToken;
       this.tv_expires_at = data.expiresIn;
 
-      if (data.additionalInfo) {
-        data.additionalInfo.forEach(ai => {
-          if (ai.data) {
-            if (ai.data.idp === 'amazon') {
-              this.amazonPrimeUUID = ai.data.newUUID;
-            }
-          }
-        });
-      }
-
       await this.save();
-
-      await this.checkRedZoneAccess();
-      await this.checkNetworkAccess();
     } catch (e) {
       console.error(e);
       console.log('Could not refresh token for NFL');
@@ -962,6 +1068,7 @@ class NflHandler {
       peacockUUID,
       youTubeUserId,
       youTubeUUID,
+      twitchDeviceId,
     } = tokens;
 
     this.device_id = device_id;
@@ -983,6 +1090,7 @@ class NflHandler {
     this.peacockUUID = peacockUUID;
     this.youTubeUUID = youTubeUUID;
     this.youTubeUserId = youTubeUserId;
+    this.twitchDeviceId = twitchDeviceId;
   };
 
   private loadJSON = () => {

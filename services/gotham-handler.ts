@@ -276,8 +276,9 @@ class GothamHandler {
 
     await this.authenticateRegCode();
 
-    // Refresh access token
+    // Refresh access token and entitlements
     await this.getAccessToken();
+    await this.getEntitlements();
 
     if (moment().add(20, 'hours').isAfter(this.expiresIn)) {
       console.log('Refreshing Gotham auth token');
