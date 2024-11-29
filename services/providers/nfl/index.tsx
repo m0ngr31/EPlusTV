@@ -75,6 +75,11 @@ nfl.put('/auth/:provider', async c => {
   if (!enabled || provider === 'twitch') {
     const {linear_channels, tokens} = await db.providers.update<IProvider<TNFLTokens>>({name: 'nfl'}, {$set: {tokens: updatedTokens}}, {returnUpdatedDocs: true});
 
+    if (provider === 'twitch' && enabled) {
+      // Kickoff event scheduler
+      await scheduleEvents();
+    }
+
     return c.html(<NFLBody channels={linear_channels} enabled={true} open={false} tokens={tokens} />);
   }
 

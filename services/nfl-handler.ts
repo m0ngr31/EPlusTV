@@ -10,7 +10,7 @@ import {configPath} from './config';
 import {useNfl} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
 import {db} from './database';
-import {getRandomUUID} from './shared-helpers';
+import {getRandomHex, getRandomUUID} from './shared-helpers';
 import {useLinear} from './channels';
 import {debug} from './debug';
 
@@ -602,7 +602,7 @@ class NflHandler {
           headers: {
             'Client-id': TWITCH_CLIENT_ID,
             'User-Agent': userAgent,
-            'X-Device-Id': this.twitchDeviceId,
+            'X-Device-Id': this.twitchDeviceId || getRandomHex(),
           },
         },
       );
