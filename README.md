@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.1.3**
+Current version: **4.1.4**
 
 # About
 This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -117,7 +117,6 @@ If you don't have an NFL+ subscription, you can use these providers to access ga
 | Provider Name | Description |
 |---|---|
 | Amazon Prime | Get TNF games from Amazon Prime |
-| Twitch | Get TNF games from Twitch.tv (no auth required) |
 | Peacock | Get SNF games from Peacock |
 | TV Provider | Get in-market games from your TV Provider |
 | Sunday Ticket | Get out-of-market games from Youtube |

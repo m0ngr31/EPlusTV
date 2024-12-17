@@ -4,7 +4,6 @@ import { db } from '@/services/database';
 import { IProvider } from '@/services/shared-interfaces';
 import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
 import { nflHandler, TNFLTokens, TOtherAuth } from '@/services/nfl-handler';
-import { getRandomHex } from '@/services/shared-helpers';
 
 import { Login } from './views/Login';
 import { NFLBody } from './views/CardBody';
@@ -62,23 +61,11 @@ nfl.put('/auth/:provider', async c => {
         delete updatedTokens.youTubeUUID;
         delete updatedTokens.youTubeUserId;
         break;
-      case 'twitch':
-        delete updatedTokens.twitchDeviceId;
-        break;
-    }
-  } else {
-    if (provider === 'twitch') {
-      updatedTokens.twitchDeviceId = getRandomHex();
     }
   }
 
-  if (!enabled || provider === 'twitch') {
+  if (!enabled) {
     const {linear_channels, tokens} = await db.providers.update<IProvider<TNFLTokens>>({name: 'nfl'}, {$set: {tokens: updatedTokens}}, {returnUpdatedDocs: true});
-
-    if (provider === 'twitch' && enabled) {
-      // Kickoff event scheduler
-      await scheduleEvents();
-    }
 
     return c.html(<NFLBody channels={linear_channels} enabled={true} open={false} tokens={tokens} />);
   }
@@ -116,7 +103,7 @@ nfl.get('/login/:code/:other', async c => {
       ? ' (Peacock)'
       : otherAuth === 'sunday_ticket'
       ? ' (Youtube)'
-      : otherAuth === 'twitch' ? ' (Twitch)' : '';
+      : '';
 
   const message = `NFL${otherAuthName}`;
 
