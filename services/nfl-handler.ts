@@ -165,7 +165,7 @@ export type TOtherAuth = 'prime' | 'tve' | 'peacock' | 'sunday_ticket';
 
 interface INFLJwt {
   dmaCode: string;
-  plans: {plan: string; status: string}[];
+  plans: {plan: string; status: string; expirationDate: string}[];
   networks?: {[key: string]: string};
 }
 
