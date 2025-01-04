@@ -165,7 +165,7 @@ export type TOtherAuth = 'prime' | 'tve' | 'peacock' | 'sunday_ticket';
 
 interface INFLJwt {
   dmaCode: string;
-  plans: {plan: string; status: string}[];
+  plans: {plan: string; status: string; expirationDate: string}[];
   networks?: {[key: string]: string};
 }
 
@@ -508,7 +508,7 @@ class NflHandler {
 
       if (plans) {
         const redZoneAccess =
-          plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && p.status === 'ACTIVE') > -1 || networks?.NFLRZ
+          plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && (p.status === 'ACTIVE' || (p.status === 'CANCELLED' && p.expirationDate >= (new Date()).toISOString().split('T')[0]))) > -1 || networks?.NFLRZ
             ? true
             : false;
 
@@ -558,7 +558,7 @@ class NflHandler {
 
       if (plans) {
         hasPlus =
-          plans.findIndex(p => (p.plan === 'NFL_PLUS' || p.plan === 'NFL_PLUS_PREMIUM') && p.status === 'ACTIVE') > -1
+          plans.findIndex(p => (p.plan === 'NFL_PLUS' || p.plan === 'NFL_PLUS_PREMIUM') && (p.status === 'ACTIVE' || (p.status === 'CANCELLED' && p.expirationDate >= (new Date()).toISOString().split('T')[0]))) > -1
             ? true
             : false;
       }
