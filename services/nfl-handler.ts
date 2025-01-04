@@ -508,7 +508,11 @@ class NflHandler {
 
       if (plans) {
         const redZoneAccess =
-          plans.findIndex(p => p.plan === 'NFL_PLUS_PREMIUM' && (p.status === 'ACTIVE' || (p.status === 'CANCELLED' && p.expirationDate >= (new Date()).toISOString().split('T')[0]))) > -1 || networks?.NFLRZ
+          plans.findIndex(
+            p =>
+              p.plan === 'NFL_PLUS_PREMIUM' &&
+              (p.status === 'ACTIVE' || (p.status === 'CANCELLED' && moment(p.expirationDate).isAfter(moment()))),
+          ) > -1 || networks?.NFLRZ
             ? true
             : false;
 
@@ -558,7 +562,11 @@ class NflHandler {
 
       if (plans) {
         hasPlus =
-          plans.findIndex(p => (p.plan === 'NFL_PLUS' || p.plan === 'NFL_PLUS_PREMIUM') && (p.status === 'ACTIVE' || (p.status === 'CANCELLED' && p.expirationDate >= (new Date()).toISOString().split('T')[0]))) > -1
+          plans.findIndex(
+            p =>
+              (p.plan === 'NFL_PLUS' || p.plan === 'NFL_PLUS_PREMIUM') &&
+              (p.status === 'ACTIVE' || (p.status === 'CANCELLED' && moment(p.expirationDate).isAfter(moment()))),
+          ) > -1
             ? true
             : false;
       }
