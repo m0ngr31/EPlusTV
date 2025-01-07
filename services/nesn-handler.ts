@@ -432,10 +432,10 @@ class NesnHandler {
 
   public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
     try {
-      const baseUrl = ['https://', 'dtc-stream-source-backup-prod.s3.us-east-2.amazonaws.com'];
-      const nesnUrl = [...baseUrl, '/nesn_stream_android_tv'].join('');
-      const nesnPlusUrl = [...baseUrl, '/plus_stream_default'].join('');
-      const nesn4k = [...baseUrl, '/4k_stream_default'].join('');
+      const baseUrl = ['https://t2qkxvxfw6.execute-api.us-east-2.amazonaws.com/v3/stream?stream_type='];
+      const nesnUrl = [...baseUrl, 'nesn_stream'].join('');
+      const nesnPlusUrl = [...baseUrl, 'plus_stream'].join('');
+      const nesn4k = [...baseUrl, '4k_stream'].join('');
 
       await this.refreshTokens();
 
@@ -668,7 +668,7 @@ class NesnHandler {
         },
       });
 
-      return data.playbackToken;
+      return data?.subscription?.playbackToken;
     } catch (e) {
       console.error(e);
       console.log('Could not get playback token');

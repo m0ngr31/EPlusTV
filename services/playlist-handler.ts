@@ -36,6 +36,7 @@ const PROXY_SEGMENTS =
 
 const reTarget = /#EXT-X-TARGETDURATION:([0-9]+)/;
 const reAudioTrack = /#EXT-X-MEDIA:TYPE=AUDIO.*URI="([^"]+)"/gm;
+const reAudioTrackNesn = /#EXT-X-MEDIA.*TYPE=AUDIO.*URI="([^"]+)"/gm;
 const reMap = /#EXT-X-MAP:URI="([^"]+)"/gm;
 const reSubMap = /#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="([^"]+)"/gm;
 const reVersion = /#EXT-X-VERSION:(\d+)/;
@@ -108,6 +109,7 @@ export class PlaylistHandler {
         headers: resHeaders,
       } = await axios.get<string>(manifestUrl, {
         headers: {
+          'Accept-Encodixng': 'identity',
           'User-Agent': userAgent,
           ...headers,
         },
@@ -146,7 +148,17 @@ export class PlaylistHandler {
       const clonedManifest = updateVersion(HLS.stringify(playlist));
       let updatedManifest = clonedManifest;
 
-      if (this.network !== 'foxsports') {
+      if (this.network === 'nesn') {
+        const audioTracks = [...manifest.matchAll(reAudioTrackNesn)];
+        audioTracks.forEach(track => {
+          if (track && track[1]) {
+            const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
+
+            const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
+            updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+          }
+        });
+      } else if (this.network !== 'foxsports') {
         const audioTracks = [...manifest.matchAll(reAudioTrack)];
         audioTracks.forEach(track => {
           if (track && track[1]) {
@@ -196,6 +208,7 @@ export class PlaylistHandler {
 
       const {data: chunkList, request} = await axios.get<string>(url, {
         headers: {
+          'Accept-Encoding': 'identity',
           'User-Agent': userAgent,
           ...this.headers,
         },
