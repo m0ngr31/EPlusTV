@@ -301,3 +301,5 @@ export const calculateChannelFromName = (channelName: string): number => {
 
   return channelNum;
 };
+
+export const XMLTV_PADDING = process.env.XMLTV_PADDING?.toLowerCase() === 'false' ? false : true;

@@ -121,6 +121,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
       if (!entryExists) {
         const start = moment(event.startTime);
         const end = moment(event.startTime).add(4, 'hours');
+        const xmltvEnd = moment(event.startTime).add(3, 'hours');
 
         if (end.isBefore(now) || start.isAfter(endDate) || content.enableDrmProtection) {
           continue;
@@ -139,6 +140,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
           network: 'B1G+',
           sport: gameData.sport,
           start: start.valueOf(),
+          xmltvEnd: xmltvEnd.valueOf(),
         });
       }
     }

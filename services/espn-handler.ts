@@ -347,6 +347,7 @@ const parseAirings = async events => {
 
       const start = moment(event.startDateTime);
       const end = moment(event.startDateTime).add(event.duration, 'seconds').add(1, 'hour');
+      const xmltvEnd = moment(event.startDateTime).add(event.duration, 'seconds');
 
       if (!isLinear) {
         end.add(1, 'hour');
@@ -375,6 +376,7 @@ const parseAirings = async events => {
           channel: event.network?.id,
           linear: true,
         }),
+        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

@@ -58,6 +58,7 @@ const parseAirings = async (events: IFloEvent[]) => {
       if (!entryExists) {
         const start = moment(event.label_1_parts.start_date_time);
         const end = moment(event.label_1_parts.start_date_time).add(4, 'hours');
+        const xmltvEnd = moment(event.label_1_parts.start_date_time).add(3, 'hours');
 
         if (end.isBefore(now) || start.isAfter(endSchedule)) {
           continue;
@@ -78,6 +79,7 @@ const parseAirings = async (events: IFloEvent[]) => {
           network: event.action.analytics.site_name,
           sport: event.footer_1,
           start: start.valueOf(),
+          xmltvEnd: xmltvEnd.valueOf(),
         });
       }
     }
