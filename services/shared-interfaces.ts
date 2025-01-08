@@ -49,6 +49,7 @@ export interface IEntry {
   sport?: string;
   linear?: boolean;
   replay?: boolean;
+  xmltvEnd?: number;
 }
 
 export interface IChannel {

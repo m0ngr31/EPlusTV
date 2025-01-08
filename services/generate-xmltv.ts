@@ -3,7 +3,7 @@ import xml from 'xml';
 import moment from 'moment';
 
 import {db} from './database';
-import {calculateChannelFromName, CHANNELS, LINEAR_START_CHANNEL, NUM_OF_CHANNELS, START_CHANNEL} from './channels';
+import {calculateChannelFromName, CHANNELS, LINEAR_START_CHANNEL, NUM_OF_CHANNELS, START_CHANNEL, XMLTV_PADDING} from './channels';
 import {IEntry} from './shared-interfaces';
 
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
@@ -146,13 +146,15 @@ export const generateXml = async (linear = false): Promise<xml> => {
 
     const entryName = formatEntryName(entry, useMultiple);
 
+    const end = (XMLTV_PADDING || !entry.xmltvEnd) ? entry.end : entry.xmltvEnd;
+
     wrap.tv.push({
       programme: [
         {
           _attr: {
             channel: `${channelNum}.eplustv`,
             start: moment(entry.start).format('YYYYMMDDHHmmss ZZ'),
-            stop: moment(entry.end).format('YYYYMMDDHHmmss ZZ'),
+            stop: moment(end).format('YYYYMMDDHHmmss ZZ'),
           },
         },
         {
