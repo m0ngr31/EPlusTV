@@ -174,6 +174,8 @@ class FloSportsHandler {
           headers: {
             Authorization: `Bearer ${this.access_token}`,
           },
+          // This request can take a long time so increasing the timeout
+          timeout: 1000 * 60 * 5,
         });
 
         debug.saveRequestData(data, 'flosports', 'epg');

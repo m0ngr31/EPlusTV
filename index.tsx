@@ -4,6 +4,7 @@ import {serveStatic} from '@hono/node-server/serve-static';
 import {BlankEnv, BlankInput} from 'hono/types';
 import {html} from 'hono/html';
 import moment from 'moment';
+import axios from 'axios';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
@@ -50,6 +51,9 @@ import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
 import {Gotham} from './services/providers/gotham/views';
+
+// Set timeout of requests to 1 minute
+axios.defaults.timeout = 1000 * 60;
 
 const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
   return c.text('404 not found', 404, {
