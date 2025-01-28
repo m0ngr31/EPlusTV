@@ -11,9 +11,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN \
-  cd /app && \
-  npm ci
+RUN npm ci
 
 RUN chmod +x entrypoint.sh
 

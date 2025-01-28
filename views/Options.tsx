@@ -18,7 +18,7 @@ export const Options: FC = async () => {
               Starting Channel #{' '}
               <span
                 class="warning-red"
-                data-tooltip="Will break scheduled recording in your DVR software!"
+                data-tooltip="Making changes will break/invalidate existing scheduled recordings"
                 data-placement="right"
               >
                 **
@@ -47,7 +47,7 @@ export const Options: FC = async () => {
               # of Channels{' '}
               <span
                 class="warning-red"
-                data-tooltip="Will break scheduled recording in your DVR software!"
+                data-tooltip="Making changes will break/invalidate existing scheduled recordings"
                 data-placement="right"
               >
                 **
@@ -90,7 +90,7 @@ export const Options: FC = async () => {
               Dedicated Linear Channels?{' '}
               <span
                 class="warning-red"
-                data-tooltip="Will break scheduled recording in your DVR software!"
+                data-tooltip="Making changes will break/invalidate existing scheduled recordings"
                 data-placement="right"
               >
                 **

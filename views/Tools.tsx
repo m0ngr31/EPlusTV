@@ -1,7 +1,7 @@
 import type {FC} from 'hono/jsx';
 
 
-export const Tools: FC = async () =>  (
+export const Tools: FC = () =>  (
   <section hx-swap="outerHTML" hx-target="this">
     <h3>Tools</h3>
     <div class="grid">
