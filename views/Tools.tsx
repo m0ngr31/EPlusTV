@@ -1,25 +1,25 @@
 import type {FC} from 'hono/jsx';
 
-
-export const Tools: FC = () =>  (
-  <section hx-swap="outerHTML" hx-target="this">
-    <h3>Tools</h3>
-    <div class="grid">
-      <form id="rebuild-epg" hx-post="/rebuild-epg" hx-trigger="submit">
-        <button class="outline" id="rebuild-epg-button">
-          Rebuild EPG
-        </button>
-      </form>
-      <form id="reset-channels" hx-post="/reset-channels" hx-trigger="submit">
-        <button class="outline" id="reset-channels-button">
-          Reset Active Playing Channels
-        </button>
-      </form>
-    </div>
-    <hr />
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
+export const Tools: FC = () => {
+  return (
+    <section hx-swap="outerHTML" hx-target="this">
+      <h3>Tools</h3>
+      <div class="grid">
+        <form id="rebuild-epg" hx-post="/rebuild-epg" hx-trigger="submit">
+          <button class="outline" id="rebuild-epg-button">
+            Rebuild EPG
+          </button>
+        </form>
+        <form id="reset-channels" hx-post="/reset-channels" hx-trigger="submit">
+          <button class="outline" id="reset-channels-button">
+            Reset Active Playing Channels
+          </button>
+        </form>
+      </div>
+      <hr />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
           var rebuildEpgForm = document.getElementById('rebuild-epg');
 
           if (rebuildEpgForm) {
@@ -38,7 +38,8 @@ export const Tools: FC = () =>  (
             });
           }
         `,
-      }}
-    />
-  </section>
-);
+        }}
+      />
+    </section>
+  );
+};
