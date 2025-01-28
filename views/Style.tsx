@@ -38,5 +38,8 @@ export const Style: FC = () => (
       align-items: stretch;
       padding-right: 1rem;
     }
+    .warning-red {
+      color: red;
+    }
   `}</style>
 );

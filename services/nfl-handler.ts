@@ -8,11 +8,11 @@ import jwt_decode from 'jwt-decode';
 import {okHttpUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useNfl} from './networks';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
-import {useLinear} from './channels';
 import {debug} from './debug';
+import {usesLinear} from './misc-db-service';
 
 interface INFLRes {
   data: {
@@ -170,6 +170,8 @@ interface INFLJwt {
 }
 
 const parseAirings = async (events: INFLEvent[]) => {
+  const useLinear = await usesLinear();
+
   const now = moment();
   const endDate = moment().add(2, 'days').endOf('day');
 
@@ -354,6 +356,8 @@ class NflHandler {
       return;
     }
 
+    const useLinear = await usesLinear();
+
     const {dmaCode}: INFLJwt = jwt_decode(this.access_token);
 
     const redZoneAccess = await this.checkRedZoneAccess();
@@ -450,7 +454,7 @@ class NflHandler {
     }
   };
 
-  public getEventData = async (id: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (id: string): Promise<TChannelPlaybackInfo> => {
     try {
       await this.refreshTokens();
 
@@ -528,6 +532,8 @@ class NflHandler {
   };
 
   private checkNetworkAccess = async (): Promise<boolean> => {
+    const useLinear = await usesLinear();
+
     try {
       const {plans, networks}: INFLJwt = jwt_decode(this.tv_access_token);
 

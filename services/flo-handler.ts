@@ -7,7 +7,7 @@ import moment from 'moment';
 import {floSportsUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useFloSports} from './networks';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 import {debug} from './debug';
@@ -204,7 +204,7 @@ class FloSportsHandler {
     }
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     const id = eventId.replace('flo-', '');
 
     try {

@@ -3,7 +3,7 @@ import moment from 'moment';
 
 import {userAgent} from './user-agent';
 import {useMountainWest} from './networks';
-import {IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
 
@@ -108,7 +108,7 @@ class MountainWestHandler {
     }
   };
 
-  public getEventData = async (id: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (id: string): Promise<TChannelPlaybackInfo> => {
     try {
       const event = await db.entries.findOne<IEntry>({id});
 

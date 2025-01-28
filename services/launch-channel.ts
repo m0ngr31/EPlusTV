@@ -9,7 +9,7 @@ import {nflHandler} from './nfl-handler';
 import {mwHandler} from './mw-handler';
 import {nesnHandler} from './nesn-handler';
 import {cbsHandler} from './cbs-handler';
-import {IEntry, IHeaders} from './shared-interfaces';
+import {IEntry, THeaderInfo} from './shared-interfaces';
 import {PlaylistHandler} from './playlist-handler';
 import {appStatus} from './app-status';
 import {removeChannelStatus} from './shared-helpers';
@@ -26,7 +26,7 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
   checkingStream[channelId] = true;
 
   let url: string;
-  let headers: IHeaders;
+  let headers: THeaderInfo;
 
   const playingNow = await db.entries.findOne<IEntry>({
     id: appStatus.channels[channelId].current,
@@ -76,7 +76,13 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
       // Reset channel state
       removeChannelStatus(channelId);
     } else {
-      appStatus.channels[channelId].player = new PlaylistHandler(headers, appUrl, channelId, playingNow.from);
+      appStatus.channels[channelId].player = new PlaylistHandler(
+        headers,
+        appUrl,
+        channelId,
+        playingNow.from,
+        appStatus.channels[channelId].current,
+      );
 
       try {
         await appStatus.channels[channelId].player.initialize(url);
@@ -92,7 +98,7 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
 };
 
 export const launchChannel = async (channelId: string, appUrl: string): Promise<void> => {
-  const channelNum = calculateChannelNumber(channelId);
+  const channelNum = await calculateChannelNumber(channelId);
   const isNumber = Number.isFinite(parseInt(`${channelNum}`, 10));
 
   if (appStatus.channels[channelId].player || checkingStream[channelId]) {

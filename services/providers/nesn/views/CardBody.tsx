@@ -21,7 +21,7 @@ export const NesnBody: FC<INesnBodyProps> = ({enabled, tokens, open, channels}) 
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
         <span
-          data-tooltip="These are only enabled with the LINEAR_CHANNELS environment variable set"
+          data-tooltip="These are only enabled with Dedicated Linear Channels enabled"
           data-placement="right"
         >
           Linear Channels

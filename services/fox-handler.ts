@@ -10,10 +10,10 @@ import {configPath} from './config';
 import {useFoxOnly4k, useFoxSports} from './networks';
 import {IAdobeAuthFox} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {useLinear} from './channels';
 import {debug} from './debug';
+import {usesLinear} from './misc-db-service';
 
 interface IAppConfig {
   api: {
@@ -122,6 +122,8 @@ const parseCategories = (event: IFoxEvent) => {
 };
 
 const parseAirings = async (events: IFoxEvent[]) => {
+  const useLinear = await usesLinear();
+
   const now = moment();
   const inTwoDays = moment().add(2, 'days').endOf('day');
 
@@ -311,7 +313,7 @@ class FoxHandler {
     }
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     try {
       if (!this.appConfig) {
         await this.getAppConfig();
@@ -412,6 +414,8 @@ class FoxHandler {
     if (!this.appConfig) {
       await this.getAppConfig();
     }
+
+    const useLinear = await usesLinear();
 
     const events: IFoxEvent[] = [];
 

@@ -2,7 +2,7 @@ import {FC} from 'hono/jsx';
 
 import { TNFLTokens } from '@/services/nfl-handler';
 import { IProviderChannel } from '@/services/shared-interfaces';
-import { useLinear } from '@/services/channels';
+import { usesLinear } from '@/services/misc-db-service';
 
 interface INFLBodyProps {
   enabled: boolean;
@@ -11,7 +11,9 @@ interface INFLBodyProps {
   channels: IProviderChannel[];
 }
 
-export const NFLBody: FC<INFLBodyProps> = ({enabled, tokens, open, channels}) => {
+export const NFLBody: FC<INFLBodyProps> = async ({enabled, tokens, open, channels}) => {
+  const useLinear = await usesLinear();
+
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
@@ -22,7 +24,7 @@ export const NFLBody: FC<INFLBodyProps> = ({enabled, tokens, open, channels}) =>
     <div hx-swap="innerHTML" hx-target="this">
       <summary>
         <span
-          data-tooltip="These are only enabled with the LINEAR_CHANNELS environment variable set"
+          data-tooltip="These are only enabled with Dedicated Linear Channels enabled"
           data-placement="right"
         >
           Linear Channels

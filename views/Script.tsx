@@ -12,8 +12,21 @@ export const Script: FC = () => {
             });
           }
 
+          function updateTextInputs() {
+            document.querySelectorAll('input[type="text"], input[type="number"]').forEach(checkbox => {
+              checkbox.value = checkbox.getAttribute('data-value');
+            });
+          }
+
+          function refreshPage() {
+            setTimeout(function() {
+              location.reload();
+            }, 5000);
+          }
+
           document.addEventListener('DOMContentLoaded', updateCheckboxes);
-          // document.addEventListener('htmx:afterSwap', updateCheckboxes);
+          document.addEventListener('DOMContentLoaded', updateTextInputs);
+          document.body.addEventListener("HXRefresh", refreshPage);
         `,
       }}
     />

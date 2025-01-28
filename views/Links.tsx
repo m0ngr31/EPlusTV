@@ -1,12 +1,14 @@
 import type {FC} from 'hono/jsx';
 
-import { useLinear } from '../services/channels';
+import { usesLinear } from '@/services/misc-db-service';
 
 export interface ILinksProps {
   baseUrl: string;
 }
 
 export const Links: FC<ILinksProps> = async ({baseUrl}) => {
+  const useLinear = await usesLinear();
+
   const xmltvUrl = `${baseUrl}/xmltv.xml`;
   const linearXmltvUrl = `${baseUrl}/linear-xmltv.xml`;
   const channelsUrl = `${baseUrl}/channels.m3u`;

@@ -71,6 +71,16 @@ export interface IProvider<T = any, M = any> {
   meta?: M;
 }
 
+export interface IMiscDbEntry<T = string | number | boolean, M = any> {
+  name: string;
+  value: T;
+  meta?: M;
+}
+
+export type THeaderInfo = IHeaders | ((eventId: string | number, currentHeaders?: IHeaders) => Promise<IHeaders>);
+
+export type TChannelPlaybackInfo = [string, THeaderInfo];
+
 export type ClassTypeWithoutMethods<T> = Omit<
   T,
   {
