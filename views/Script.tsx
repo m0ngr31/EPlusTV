@@ -1,10 +1,9 @@
 import type {FC} from 'hono/jsx';
 
-export const Script: FC = () => {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
+export const Script: FC = () => (
+  <script
+    dangerouslySetInnerHTML={{
+      __html: `
           function updateCheckboxes() {
             document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
               const isEnabled = checkbox.getAttribute('data-enabled') === 'true';
@@ -28,7 +27,6 @@ export const Script: FC = () => {
           document.addEventListener('DOMContentLoaded', updateTextInputs);
           document.body.addEventListener("HXRefresh", refreshPage);
         `,
-      }}
-    />
-  );
-};
+    }}
+  />
+);

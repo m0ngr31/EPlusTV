@@ -12,7 +12,7 @@ export const ESPNPlusBody: FC<IESPNPlusBodyProps> = ({enabled, tokens, open}) =>
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (

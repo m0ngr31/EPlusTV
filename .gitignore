@@ -142,5 +142,5 @@ dist
 tmp/
 run*.sh
 .DS_Store
-config/
+config*/
 playroom/

@@ -17,7 +17,7 @@ export const ParamountBody: FC<IParamountBodyProps> = async ({enabled, tokens, o
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (

@@ -14,7 +14,7 @@ export const FoxBody: FC<IFoxBodyProps> = ({enabled, tokens, open, channels}) =>
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (

@@ -15,7 +15,7 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels, onl
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (

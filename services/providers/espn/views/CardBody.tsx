@@ -15,7 +15,7 @@ export const ESPNBody: FC<IESPNBodyProps> = ({enabled, tokens, open, channels, m
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (
