@@ -114,7 +114,6 @@ app.get('/', async c => {
         <Header />
         <Main>
           <Links baseUrl={getUri(c)} />
-          <Tools />
           <Options />
           <Providers>
             <ESPNPlus />
