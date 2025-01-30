@@ -6,9 +6,9 @@ import CryptoJS from 'crypto-js';
 
 import {getRandomUUID} from './shared-helpers';
 import {db} from './database';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {okHttpUserAgent} from './user-agent';
-import {useLinear} from './channels';
+import {usesLinear} from './misc-db-service';
 
 const API_KEY = [
   'G',
@@ -146,6 +146,8 @@ const CHANNEL_MAP = {
 } as const;
 
 const parseAirings = async (events: any[]) => {
+  const useLinear = await usesLinear();
+
   const now = moment();
   const inTwoDays = moment().add(2, 'days').endOf('day');
 
@@ -308,6 +310,8 @@ class GothamHandler {
 
     console.log('Looking for Gotham events...');
 
+    const useLinear = await usesLinear();
+
     const now = moment();
     const end = moment(now).add(2, 'days').endOf('day');
 
@@ -413,7 +417,7 @@ class GothamHandler {
     await parseAirings(entries);
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     try {
       const [, channelId] = eventId.split('----');
 

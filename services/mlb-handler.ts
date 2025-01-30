@@ -8,10 +8,10 @@ import moment, {Moment} from 'moment-timezone';
 import {okHttpUserAgent, userAgent, androidMlbUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useMLBtv, useMLBtvOnlyFree} from './networks';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {useLinear} from './channels';
 import {debug} from './debug';
+import {usesLinear} from './misc-db-service';
 
 interface IGameContent {
   media: {
@@ -182,6 +182,8 @@ const parseAirings = async (events: ICombinedGame) => {
 };
 
 const parseBigInnings = async (dates: Moment[][]) => {
+  const useLinear = await usesLinear();
+
   const now = moment();
   const endDate = moment().add(2, 'days').endOf('day');
 
@@ -359,7 +361,7 @@ class MLBHandler {
     }
   };
 
-  public getEventData = async (mediaId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (mediaId: string): Promise<TChannelPlaybackInfo> => {
     try {
       await this.getSession();
 

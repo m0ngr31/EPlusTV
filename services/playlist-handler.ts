@@ -3,8 +3,9 @@ import axios from 'axios';
 import _ from 'lodash';
 
 import {userAgent} from './user-agent';
-import {IHeaders} from './shared-interfaces';
+import {IHeaders, THeaderInfo} from './shared-interfaces';
 import {cacheLayer, promiseCache} from './caching';
+import {proxySegments} from './misc-db-service';
 
 const isRelativeUrl = (url?: string): boolean => (url?.startsWith('http') ? false : true);
 const cleanUrl = (url: string): string => url.replace(/(\[.*\])/gm, '').replace(/(?<!:)\/\//gm, '/');
@@ -30,9 +31,6 @@ const convertHostUrl = (url: string, fullUrl: string): string => {
   return `${uri.origin}${url}`;
 };
 const isBase64Uri = (url: string) => url.indexOf('base64') > -1 || url.startsWith('data');
-
-const PROXY_SEGMENTS =
-  process.env.PROXY_SEGMENTS && process.env.PROXY_SEGMENTS.toLowerCase() !== 'false' ? true : false;
 
 const reTarget = /#EXT-X-TARGETDURATION:([0-9]+)/;
 const reAudioTrack = /#EXT-X-MEDIA:TYPE=AUDIO.*URI="([^"]+)"/gm;
@@ -76,26 +74,32 @@ export class PlaylistHandler {
 
   private baseUrl: string;
   private baseProxyUrl: string;
-  private headers: IHeaders;
+  private headers: THeaderInfo;
+  private overlayCookies?: string[];
+  private currentHeaders?: IHeaders;
   private channel: string;
   private segmentDuration: number;
   private network: string;
+  private eventId: string | number;
 
-  constructor(headers: IHeaders, appUrl: string, channel: string, network: string) {
+  constructor(headers: THeaderInfo, appUrl: string, channel: string, network: string, eventId: string | number) {
     this.headers = headers;
     this.channel = channel;
     this.baseUrl = `${appUrl}/channels/${channel}/`;
     this.baseProxyUrl = `${appUrl}/chunklist/${channel}/`;
     this.network = network;
+    this.eventId = eventId;
   }
 
   public async initialize(manifestUrl: string): Promise<void> {
-    await this.parseManifest(manifestUrl, this.headers);
+    const headers = await this.getHeaders();
+    await this.parseManifest(manifestUrl, headers);
   }
 
   public async getSegmentOrKey(segmentId: string): Promise<ArrayBuffer> {
     try {
-      return cacheLayer.getDataFromSegment(segmentId, this.headers);
+      const headers = await this.getHeaders();
+      return cacheLayer.getDataFromSegment(segmentId, headers);
     } catch (e) {
       console.error(e);
     }
@@ -116,15 +120,7 @@ export class PlaylistHandler {
       });
 
       if (resHeaders['set-cookie']) {
-        if (this.headers.Cookie) {
-          if (_.isArray(this.headers.Cookie)) {
-            this.headers.Cookie = [...this.headers.Cookie, ...resHeaders['set-cookie']];
-          } else {
-            this.headers.Cookie = [`${this.headers.Cookie}`, ...resHeaders['set-cookie']];
-          }
-        } else {
-          this.headers.Cookie = resHeaders['set-cookie'];
-        }
+        this.overlayCookies = resHeaders['set-cookie'];
       }
 
       const realManifestUrl = request.res.responseUrl;
@@ -203,14 +199,17 @@ export class PlaylistHandler {
   }
 
   private async proxyChunklist(chunkListId: string): Promise<string> {
+    const proxyAllSegments = await proxySegments();
+
     try {
       const url = cacheLayer.getChunklistFromId(chunkListId);
+      const headers = await this.getHeaders();
 
       const {data: chunkList, request} = await axios.get<string>(url, {
         headers: {
           'Accept-Encoding': 'identity',
           'User-Agent': userAgent,
-          ...this.headers,
+          ...headers,
         },
       });
 
@@ -224,7 +223,7 @@ export class PlaylistHandler {
       const chunks = HLS.parse(clonedChunklist);
 
       const shouldProxy =
-        PROXY_SEGMENTS || baseManifestUrl.includes('akamai') || this.network === 'mlbtv' || this.network === 'gotham';
+        proxyAllSegments || baseManifestUrl.includes('akamai') || this.network === 'mlbtv' || this.network === 'gotham';
 
       chunks.segments.forEach(segment => {
         const segmentUrl = segment.uri;
@@ -298,5 +297,29 @@ export class PlaylistHandler {
       console.error(e);
       console.log('Could not parse chunklist properly!');
     }
+  }
+
+  private async getHeaders(): Promise<IHeaders> {
+    let headers: IHeaders = {};
+
+    if (_.isFunction(this.headers)) {
+      headers = await this.headers(this.eventId, this.currentHeaders);
+    } else {
+      headers = _.cloneDeep(this.headers);
+    }
+
+    this.currentHeaders = _.cloneDeep(headers);
+
+    if (this.overlayCookies) {
+      if (headers.Cookie) {
+        headers.Cookie = [
+          ...new Set([...(_.isArray(headers.Cookie) ? headers.Cookie : [`${headers.Cookie}`]), ...this.overlayCookies]),
+        ];
+      } else {
+        headers.Cookie = this.overlayCookies;
+      }
+    }
+
+    return headers;
   }
 }

@@ -4,6 +4,8 @@ import {serveStatic} from '@hono/node-server/serve-static';
 import {BlankEnv, BlankInput} from 'hono/types';
 import {html} from 'hono/html';
 import moment from 'moment';
+import _ from 'lodash';
+import axios from 'axios';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
@@ -21,10 +23,9 @@ import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
-import {cleanEntries, clearChannels, removeAllEntries, removeChannelStatus} from './services/shared-helpers';
+import {cleanEntries, clearChannels, removeAllEntries, removeChannelStatus, resetSchedule} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
-import {useLinear} from './services/channels';
 import { providers } from './services/providers';
 
 import {version} from './package.json';
@@ -37,6 +38,7 @@ import { Style } from './views/Style';
 import { Providers } from './views/Providers';
 import { Script } from './views/Script';
 import {Tools} from './views/Tools';
+import {Options} from './views/Options';
 
 import {CBSSports} from './services/providers/cbs-sports/views';
 import { MntWest } from './services/providers/mw/views';
@@ -50,6 +52,10 @@ import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
 import {Gotham} from './services/providers/gotham/views';
+import { initMiscDb, resetLinearStartChannel, setLinear, setNumberofChannels, setProxySegments, setStartChannel, usesLinear } from './services/misc-db-service';
+
+// Set timeout of requests to 1 minute
+axios.defaults.timeout = 1000 * 60;
 
 const notFound = (c: Context<BlankEnv, '', BlankInput>) => {
   return c.text('404 not found', 404, {
@@ -109,6 +115,7 @@ app.get('/', async c => {
         <Main>
           <Links baseUrl={getUri(c)} />
           <Tools />
+          <Options />
           <Providers>
             <ESPNPlus />
             <NFL />
@@ -148,6 +155,107 @@ app.post('/reset-channels', async c => {
   });
 });
 
+app.post('/start-channel', async c => {
+  const body = await c.req.parseBody();
+  const startChannel = _.toNumber(body['start-channel']);
+
+  if (_.isNaN(startChannel) || startChannel < 1 || startChannel > 10000) {
+    return c.html(<Options />, 200, {
+      'HX-Trigger': `{"HXToast":{"type":"error","body":"Starting channel must be a valid number"}}`,
+    });
+  }
+
+  await setStartChannel(startChannel);
+  await resetLinearStartChannel();
+  await resetSchedule();
+  await scheduleEntries();
+
+  return c.html(<Options />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved starting channel number"}}`,
+  });
+});
+
+app.post('/num-of-channels', async c => {
+  const body = await c.req.parseBody();
+  const numChannels = _.toNumber(body['num-of-channels']);
+
+  if (_.isNaN(numChannels) || numChannels < 0 || numChannels > 5000) {
+    return c.html(<Options />, 200, {
+      'HX-Trigger': `{"HXToast":{"type":"error","body":"Number of channels must be a valid number"}}`,
+    });
+  }
+
+  await setNumberofChannels(numChannels);
+  await resetLinearStartChannel();
+  await resetSchedule();
+  await scheduleEntries();
+
+  return c.html(<Options />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved number of channels"}}`,
+  });
+});
+
+app.post('/linear-channels', async c => {
+  const body = await c.req.parseBody();
+  const enabled = body['linear-channels'] === 'on';
+
+  await setLinear(enabled);
+
+  if (enabled) {
+    await removeAllEntries();
+    await schedule();
+  } else {
+    await scheduleEntries();
+  }
+
+  return c.html(
+    <input
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger="change"
+      hx-post="/linear-channels"
+      name="linear-channels"
+      type="checkbox"
+      role="switch"
+      checked={enabled}
+      data-enabled={enabled ? 'true' : 'false'}
+    />,
+    200,
+    {
+      'HX-Trigger': `{"HXRefresh": true, "HXToast":{"type":"success","body":"Successfully ${
+        enabled ? 'enabled' : 'disabled'
+      } dedicated linear channels. Page will refresh momentarily"}}`,
+    },
+  );
+});
+
+app.post('/proxy-segments', async c => {
+  const body = await c.req.parseBody();
+  const enabled = body['proxy-segments'] === 'on';
+
+  await setProxySegments(enabled);
+
+  return c.html(
+    <input
+      hx-post="/proxy-segments"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger="change"
+      name="proxy-segments"
+      type="checkbox"
+      role="switch"
+      checked={enabled}
+      data-enabled={enabled ? 'true' : 'false'}
+    />,
+    200,
+    {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully ${
+        enabled ? 'enabled' : 'disabled'
+      } proxying of segment files"}}`,
+    },
+  );
+});
+
 app.get('/channels.m3u', async c => {
   const m3uFile = await generateM3u(getUri(c));
 
@@ -161,6 +269,8 @@ app.get('/channels.m3u', async c => {
 });
 
 app.get('/linear-channels.m3u', async c => {
+  const useLinear = await usesLinear();
+
   if (!useLinear) {
     return notFound(c);
   }
@@ -189,6 +299,8 @@ app.get('/xmltv.xml', async c => {
 });
 
 app.get('/linear-xmltv.xml', async c => {
+  const useLinear = await usesLinear();
+
   if (!useLinear) {
     return notFound(c);
   }
@@ -349,6 +461,8 @@ process.on('SIGINT', shutDown);
 (async () => {
   console.log(`=== E+TV v${version} starting ===`);
   initDirectories();
+
+  await initMiscDb();
 
   await espnHandler.initialize();
   await espnHandler.refreshTokens();

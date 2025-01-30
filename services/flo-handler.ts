@@ -7,7 +7,7 @@ import moment from 'moment';
 import {floSportsUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useFloSports} from './networks';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 import {debug} from './debug';
@@ -176,6 +176,8 @@ class FloSportsHandler {
           headers: {
             Authorization: `Bearer ${this.access_token}`,
           },
+          // This request can take a long time so increasing the timeout
+          timeout: 1000 * 60 * 5,
         });
 
         debug.saveRequestData(data, 'flosports', 'epg');
@@ -204,7 +206,7 @@ class FloSportsHandler {
     }
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     const id = eventId.replace('flo-', '');
 
     try {

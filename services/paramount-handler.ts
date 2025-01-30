@@ -5,14 +5,15 @@ import axios from 'axios';
 import _ from 'lodash';
 import moment from 'moment';
 import crypto from 'crypto';
+import jwt_decode from 'jwt-decode';
 
 import {configPath} from './config';
 import {useParamount} from './networks';
 import {getRandomHex} from './shared-helpers';
 import {db} from './database';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
-import {useLinear} from './channels';
+import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {debug} from './debug';
+import {usesLinear} from './misc-db-service';
 
 const BASE_THUMB_URL = 'https://wwwimage-us.pplusstatic.com/thumbnails/photos/w370-q80/';
 const BASE_URL = 'https://www.paramountplus.com';
@@ -370,7 +371,7 @@ class ParamountHandler {
     await parseAirings(events);
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     try {
       const data = await this.getSteamData(eventId);
 
@@ -378,18 +379,45 @@ class ParamountHandler {
         throw new Error('Could not get stream data. Event might be upcoming, ended, or in blackout...');
       }
 
-      return [
-        data.streamingUrl,
-        {
-          ...(data.ls_session && {
-            Authorization: `Bearer ${data.ls_session}`,
-          }),
-        },
-      ];
+      return [data.streamingUrl, this.getPlaybackAuthToken];
     } catch (e) {
       console.error(e);
       console.log('Could not get stream information!');
     }
+  };
+
+  private getPlaybackAuthToken = async (eventId: string, headers?: IHeaders): Promise<IHeaders> => {
+    let newHeaders: IHeaders = {};
+
+    const updateLsSession = async (): Promise<void> => {
+      try {
+        const data = await this.getSteamData(eventId);
+
+        newHeaders = {
+          ...(data.ls_session && {
+            Authorization: `Bearer ${data.ls_session}`,
+          }),
+        };
+      } catch (e) {}
+    };
+
+    if (!headers) {
+      await updateLsSession();
+    } else {
+      newHeaders = _.cloneDeep(headers);
+
+      const lsSession = (headers['Authorization'] as string)?.split(' ')[1];
+
+      if (lsSession) {
+        const {exp}: {exp: number} = jwt_decode(lsSession);
+
+        if (moment(exp * 1000).isBefore(moment().add(30, 'minutes'))) {
+          await updateLsSession();
+        }
+      }
+    }
+
+    return newHeaders;
   };
 
   private getSteamData = async (id: string): Promise<{streamingUrl: string; ls_session?: string}> => {
@@ -437,6 +465,8 @@ class ParamountHandler {
     if (!this.dma) {
       await this.getDma();
     }
+
+    const useLinear = await usesLinear();
 
     try {
       const {data} = await instance.get<{carousel: IChannel[]}>(

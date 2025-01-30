@@ -2,7 +2,7 @@ import {FC} from 'hono/jsx';
 
 import { TParamountTokens } from '@/services/paramount-handler';
 import { IProviderChannel } from '@/services/shared-interfaces';
-import { useLinear } from '@/services/channels';
+import { usesLinear } from '@/services/misc-db-service';
 
 interface IParamountBodyProps {
   enabled: boolean;
@@ -11,18 +11,20 @@ interface IParamountBodyProps {
   channels: IProviderChannel[];
 }
 
-export const ParamountBody: FC<IParamountBodyProps> = ({enabled, tokens, open, channels}) => {
+export const ParamountBody: FC<IParamountBodyProps> = async ({enabled, tokens, open, channels}) => {
+  const useLinear = await usesLinear();
+
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
         <span
-          data-tooltip="These are only enabled with the LINEAR_CHANNELS environment variable set"
+          data-tooltip="These are only enabled with Dedicated Linear Channels enabled"
           data-placement="right"
         >
           Linear Channels
@@ -60,10 +62,7 @@ export const ParamountBody: FC<IParamountBodyProps> = ({enabled, tokens, open, c
         <summary>Tokens</summary>
         <div>
           <pre>{parsedTokens}</pre>
-          <form
-            hx-put="/providers/paramount/reauth"
-            hx-trigger="submit"
-          >
+          <form hx-put="/providers/paramount/reauth" hx-trigger="submit">
             <button id="paramount-reauth">Re-Authenticate</button>
           </form>
         </div>

@@ -4,10 +4,12 @@ import {configPath} from './config';
 import {
   entriesDb,
   initializeEntries,
-  initializeSchedule,
   scheduleDb,
-  initializeProviders,
+  initializeSchedule,
   providersDb,
+  initializeProviders,
+  miscDb,
+  initializeMisc,
 } from './database';
 import {debug, debugPath} from './debug';
 
@@ -30,5 +32,9 @@ export const initDirectories = (): void => {
 
   if (!fs.existsSync(providersDb)) {
     initializeProviders();
+  }
+
+  if (!fs.existsSync(miscDb)) {
+    initializeMisc();
   }
 };

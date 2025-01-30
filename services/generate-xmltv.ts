@@ -3,8 +3,9 @@ import xml from 'xml';
 import moment from 'moment';
 
 import {db} from './database';
-import {calculateChannelFromName, CHANNELS, LINEAR_START_CHANNEL, NUM_OF_CHANNELS, START_CHANNEL, XMLTV_PADDING} from './channels';
+import {calculateChannelFromName, CHANNELS} from './channels';
 import {IEntry} from './shared-interfaces';
+import {getLinearStartChannel, getNumberOfChannels, getStartChannel} from './misc-db-service';
 
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
 
@@ -45,6 +46,10 @@ const formatCategories = (categories: string[] = []) =>
   }));
 
 export const generateXml = async (linear = false): Promise<xml> => {
+  const startChannel = await getStartChannel();
+  const numOfChannels = await getNumberOfChannels();
+  const linearStartChannel = await getLinearStartChannel();
+
   const wrap: any = {
     tv: [
       {
@@ -67,11 +72,9 @@ export const generateXml = async (linear = false): Promise<xml> => {
         if (!enabled) {
           continue;
         }
-      } else if (!val.canUse) {
-        continue;
       }
 
-      const channelNum = parseInt(key, 10) + LINEAR_START_CHANNEL;
+      const channelNum = parseInt(key, 10) + linearStartChannel;
 
       wrap.tv.push({
         channel: [
@@ -103,8 +106,8 @@ export const generateXml = async (linear = false): Promise<xml> => {
       });
     }
   } else {
-    _.times(NUM_OF_CHANNELS, i => {
-      const channelNum = START_CHANNEL + i;
+    _.times(numOfChannels, i => {
+      const channelNum = startChannel + i;
 
       wrap.tv.push({
         channel: [
@@ -142,7 +145,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
     .sort({start: 1});
 
   for (const entry of scheduledEntries) {
-    const channelNum = calculateChannelFromName(`${entry.channel}`);
+    const channelNum = await calculateChannelFromName(`${entry.channel}`);
 
     const entryName = formatEntryName(entry, useMultiple);
 

@@ -8,7 +8,7 @@ import jwt_decode from 'jwt-decode';
 import {b1gUserAgent, okHttpUserAgent} from './user-agent';
 import {configPath} from './config';
 import {useB1GPlus} from './networks';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
 
@@ -263,7 +263,7 @@ class B1GHandler {
     }
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     const id = eventId.replace('b1g-', '');
 
     try {

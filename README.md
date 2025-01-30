@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.1.6**
+Current version: **4.1.10**
 
 # About
 This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -18,8 +18,8 @@ The server exposes 4 main endpoints:
 |---|---|
 | /channels.m3u | The channel list you'll import into your client |
 | /xmltv.xml | The schedule that you'll import into your client |
-| /linear-channels.m3u | The linear channel list you'll import into your client (only used when using `LINEAR_CHANNELS` variable) |
-| /linear-xmltv.xml | The linear schedule that you'll import into your client (only used when using `LINEAR_CHANNELS` variable) - Not needed for Channels DVR |
+| /linear-channels.m3u | The linear channel list you'll import into your client (only used when using the dedicated linear channels option) |
+| /linear-xmltv.xml | The linear schedule that you'll import into your client (only used when using the dedicated linear channels option) - Not needed for Channels DVR |
 
 # Running
 The recommended way of running is to pull the image from [Docker Hub](https://hub.docker.com/r/m0ngr31/eplustv).
@@ -27,11 +27,7 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 ## Environment Variables
 | Environment Variable | Description | Required? | Default |
 |---|---|---|---|
-| START_CHANNEL | What the first channel number should be. | No | 1 |
-| NUM_OF_CHANNELS | How many channels to create? This is dependent on the networks you are using. A good number to start with is >= 200 if you are using ESPN+. | No | 200 |
-| LINEAR_CHANNELS | Break out dedicated linear channels (see Endpoints above to use) | No | False |
-| BASE_URL | If using a reverse proxy, m3u will be generated with this uri base. | No | - |
-| PROXY_SEGMENTS | Proxy keyed `*.ts` files. | No | False |
+| BASE_URL | If using a reverse proxy, m3u will be generated with this as the base. | No | - |
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No | - |
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No | - |
 | PORT | Port the API will be served on. You can set this if it conflicts with another service in your environment. | No | 8000 |
@@ -54,7 +50,7 @@ Available to login with TV Provider
 
 ##### Linear Channels
 
-Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+Will create dedicated linear channels if using dedicated linear channels, otherwise will schedule events normally
 
 | Network Name | Description |
 |---|---|
@@ -79,7 +75,7 @@ Available to login with TV Provider
 
 ##### Linear Channels
 
-Some events are on linear channels and some aren't. If you use `LINEAR_CHANNELS`, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
+Some events are on linear channels and some aren't. If you use dedicated linear channels, only events that are on FOX will be scheduled normally. All other events will be scheduled to linear channels
 
 | Network Name |
 |---|
@@ -94,7 +90,7 @@ Available to login with Paramount+ credentials
 
 ##### Linear Channels
 
-Dedicated linear channels - Will only schedule when `LINEAR_CHANNELS` is set
+Dedicated linear channels - Will only schedule when dedicated linear channels is set
 
 | Network Name | Description |
 |---|---|
@@ -124,7 +120,7 @@ If you don't have an NFL+ subscription, you can use these providers to access ga
 
 ##### Linear Channels
 
-If you have access to NFL RedZone, it will be scheduled. If `LINEAR_CHANNELS` is set, it will be on its own channel
+If you have access to NFL RedZone, it will be scheduled. If dedicated linear channels is set, it will be on its own channel
 
 | Network Name | Description |
 |---|---|
@@ -138,7 +134,7 @@ Available to login with NESN+ or TV Provider
 
 ##### Linear Channels
 
-Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+Will create dedicated linear channels if using dedicated linear channels, otherwise will schedule events normally
 
 | Network Name | Description |
 |---|---|
@@ -151,7 +147,7 @@ Available to login with Gotham Sports or TV Provider
 
 ##### Linear Channels
 
-Will create dedicated linear channels if using `LINEAR_CHANNELS`, otherwise will schedule events normally
+Will create dedicated linear channels if using dedicated linear channels, otherwise will schedule events normally
 
 | Network Name | Description |
 |---|---|
@@ -184,7 +180,7 @@ Available to login with MLB.tv credentials
 
 ##### Linear Channels
 
-Will create a dedicated linear channel if using `LINEAR_CHANNELS`, otherwise will schedule Big Inning normally
+Will create a dedicated linear channel if using dedicated linear channels, otherwise will schedule Big Inning normally
 
 | Network Name |
 |---|

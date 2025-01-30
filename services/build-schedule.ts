@@ -1,12 +1,12 @@
-import {NUM_OF_CHANNELS, START_CHANNEL, useLinear} from './channels';
 import {db, IDocument} from './database';
+import {getNumberOfChannels, getStartChannel, usesLinear} from './misc-db-service';
 import {IChannel, IEntry} from './shared-interfaces';
 
 export const removeEntriesProvider = async (providerName: string): Promise<void> => {
   await db.entries.remove({from: providerName}, {multi: true});
 };
 
-const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): Promise<void> => {
+const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number, numOfChannels: number): Promise<void> => {
   let channelNum: number;
 
   const availableChannels = await db.schedule
@@ -16,7 +16,7 @@ const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): P
   if (!availableChannels || !availableChannels.length) {
     const channelNums = await db.schedule.count({});
 
-    if (channelNums > NUM_OF_CHANNELS - 1) {
+    if (channelNums > numOfChannels - 1) {
       return;
     }
 
@@ -38,6 +38,10 @@ const scheduleEntry = async (entry: IEntry & IDocument, startChannel: number): P
 export const scheduleEntries = async (): Promise<void> => {
   let needReschedule = false;
 
+  const useLinear = await usesLinear();
+  const startChannel = await getStartChannel();
+  const numOfChannels = await getNumberOfChannels();
+
   if (!useLinear) {
     const linearEntries = await db.entries.count({linear: {$exists: true}});
 
@@ -50,7 +54,7 @@ export const scheduleEntries = async (): Promise<void> => {
     console.log('');
     console.log('====================================================================');
     console.log('===                                                              ===');
-    console.log('===   Need to rebuild the schedule because the LINEAR_CHANNELS   ===');
+    console.log('===   Need to rebuild the schedule because the linear channels   ===');
     console.log('===            variable is no longer being used.                 ===');
     console.log('===                                                              ===');
     console.log('====================================================================');
@@ -63,7 +67,7 @@ export const scheduleEntries = async (): Promise<void> => {
 
     // Remove all dedicated linear channel entries
     await db.entries.remove(
-      {$or: [{channel: 'cbssportshq'}, {channel: 'golazo'}, {channel: 'NFLNETWORK'}]},
+      {$or: [{channel: 'cbssportshq'}, {channel: 'golazo'}, {channel: 'NFLNETWORK'}, {channel: 'NFLDIGITAL1_OO_v3'}]},
       {multi: true},
     );
 
@@ -78,6 +82,6 @@ export const scheduleEntries = async (): Promise<void> => {
   unscheduledEntries.length > 0 && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
 
   for (const entry of unscheduledEntries) {
-    await scheduleEntry(entry, START_CHANNEL);
+    await scheduleEntry(entry, startChannel, numOfChannels);
   }
 };

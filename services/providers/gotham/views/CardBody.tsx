@@ -14,7 +14,7 @@ export const GothamBody: FC<IGothamBodyProps> = ({enabled, tokens, open, channel
   const parsedTokens = JSON.stringify(tokens, undefined, 2);
 
   if (!enabled) {
-    return null;
+    return <></>;
   }
 
   return (

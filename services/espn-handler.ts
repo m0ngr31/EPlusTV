@@ -28,10 +28,17 @@ import {
 } from './networks';
 import {IAdobeAuth, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
 import {getRandomHex} from './shared-helpers';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IJWToken, IProvider} from './shared-interfaces';
+import {
+  ClassTypeWithoutMethods,
+  IEntry,
+  IHeaders,
+  IJWToken,
+  IProvider,
+  TChannelPlaybackInfo,
+} from './shared-interfaces';
 import {db} from './database';
-import {useLinear} from './channels';
 import {debug} from './debug';
+import {usesLinear} from './misc-db-service';
 
 global.WebSocket = ws;
 
@@ -336,6 +343,8 @@ const parseCategories = event => {
 };
 
 const parseAirings = async events => {
+  const useLinear = await usesLinear();
+
   const now = moment();
   const endSchedule = moment().add(2, 'days').endOf('day');
 
@@ -713,7 +722,7 @@ class EspnHandler {
     }
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     const espnPlusEnabled = await isEnabled('plus');
     espnPlusEnabled && (await this.getBamAccessToken());
     espnPlusEnabled && (await this.getGraphQlApiKey());

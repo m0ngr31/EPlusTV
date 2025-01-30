@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import {cbsSportsUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useCBSSports} from './networks';
-import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider} from './shared-interfaces';
+import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {getRandomUUID} from './shared-helpers';
 import {createAdobeAuthHeader} from './adobe-helpers';
@@ -402,7 +402,7 @@ class CBSHandler {
     await parseAirings(entries);
   };
 
-  public getEventData = async (eventId: string): Promise<[string, IHeaders]> => {
+  public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
     const event = await db.entries.findOne<IEntry>({id: eventId});
 
     try {
