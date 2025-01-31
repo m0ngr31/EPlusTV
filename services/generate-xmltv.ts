@@ -5,7 +5,7 @@ import moment from 'moment';
 import {db} from './database';
 import {calculateChannelFromName, CHANNELS} from './channels';
 import {IEntry} from './shared-interfaces';
-import {getLinearStartChannel, getNumberOfChannels, getStartChannel} from './misc-db-service';
+import {getLinearStartChannel, getNumberOfChannels, getStartChannel, xmltvPadding} from './misc-db-service';
 
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
 
@@ -49,6 +49,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
   const startChannel = await getStartChannel();
   const numOfChannels = await getNumberOfChannels();
   const linearStartChannel = await getLinearStartChannel();
+  const xmltvPadded = await xmltvPadding();
 
   const wrap: any = {
     tv: [
@@ -149,7 +150,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
 
     const entryName = formatEntryName(entry, useMultiple);
 
-    const end = (XMLTV_PADDING || !entry.xmltvEnd) ? entry.end : entry.xmltvEnd;
+    const end = (xmltvPadded || !entry.xmltvEnd) ? entry.end : entry.xmltvEnd;
 
     wrap.tv.push({
       programme: [

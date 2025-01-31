@@ -52,7 +52,7 @@ import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
 import {Gotham} from './services/providers/gotham/views';
-import { initMiscDb, resetLinearStartChannel, setLinear, setNumberofChannels, setProxySegments, setStartChannel, usesLinear } from './services/misc-db-service';
+import { initMiscDb, resetLinearStartChannel, setLinear, setNumberofChannels, setProxySegments, setStartChannel, usesLinear, setXmltvPadding } from './services/misc-db-service';
 
 // Set timeout of requests to 1 minute
 axios.defaults.timeout = 1000 * 60;
@@ -252,6 +252,33 @@ app.post('/proxy-segments', async c => {
       'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully ${
         enabled ? 'enabled' : 'disabled'
       } proxying of segment files"}}`,
+    },
+  );
+});
+
+app.post('/xmltv-padding', async c => {
+  const body = await c.req.parseBody();
+  const enabled = body['xmltv-padding'] === 'on';
+
+  await setXmltvPadding(enabled);
+
+  return c.html(
+    <input
+      hx-post="/xmltv-padding"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger="change"
+      name="xmltv-padding"
+      type="checkbox"
+      role="switch"
+      checked={enabled}
+      data-enabled={enabled ? 'true' : 'false'}
+    />,
+    200,
+    {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully ${
+        enabled ? 'enabled' : 'disabled'
+      } XMLTV padding"}}`,
     },
   );
 });

@@ -31,7 +31,6 @@ The recommended way of running is to pull the image from [Docker Hub](https://hu
 | PUID | Current user ID. Use if you have permission issues. Needs to be combined with PGID. | No | - |
 | PGID | Current group ID. Use if you have permission issues. Needs to be combined with PUID. | No | - |
 | PORT | Port the API will be served on. You can set this if it conflicts with another service in your environment. | No | 8000 |
-| XMLTV_PADDING | Show extra event padding in generated XMLTV schedule | No | True |
 
 ### Available Providers
 

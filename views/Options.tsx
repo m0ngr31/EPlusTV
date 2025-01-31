@@ -1,12 +1,13 @@
 import type {FC} from 'hono/jsx';
 
-import { getNumberOfChannels, getStartChannel, proxySegments, usesLinear } from '@/services/misc-db-service';
+import { getNumberOfChannels, getStartChannel, proxySegments, usesLinear, xmltvPadding } from '@/services/misc-db-service';
 
 export const Options: FC = async () => {
   const startChannel = await getStartChannel();
   const numOfChannels = await getNumberOfChannels();
   const linearChannels = await usesLinear();
   const proxiedSegments = await proxySegments();
+  const xmltvPadded = await xmltvPadding();
 
   return (
     <section hx-swap="outerHTML" hx-target="this">
@@ -112,6 +113,22 @@ export const Options: FC = async () => {
               data-enabled={proxiedSegments ? 'true' : 'false'}
             />
             Proxy segment files?
+          </label>
+        </fieldset>
+        <fieldset>
+          <label>
+            <input
+              hx-post="/xmltv-padding"
+              hx-target="this"
+              hx-swap="outerHTML"
+              hx-trigger="change"
+              name="xmltv-padding"
+              type="checkbox"
+              role="switch"
+              checked={xmltvPadded}
+              data-enabled={xmltvPadded ? 'true' : 'false'}
+            />
+            Pad XMLTV event end times?
           </label>
         </fieldset>
       </div>
