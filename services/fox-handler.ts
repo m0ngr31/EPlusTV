@@ -135,6 +135,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
     if (!entryExists) {
       const start = moment(event.startDate);
       const end = moment(event.endDate);
+      const xmltvEnd = moment(event.endDate);
       const isLinear = event.network !== 'fox' && useLinear;
 
       if (!isLinear) {
@@ -170,6 +171,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
           channel: event.network,
           linear: true,
         }),
+        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

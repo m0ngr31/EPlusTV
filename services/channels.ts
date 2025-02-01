@@ -252,3 +252,5 @@ export const calculateChannelFromName = async (channelName: string): Promise<num
 
   return channelNum;
 };
+
+export const XMLTV_PADDING = process.env.XMLTV_PADDING?.toLowerCase() === 'false' ? false : true;

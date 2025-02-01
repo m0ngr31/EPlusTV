@@ -142,6 +142,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
     if (!entryExists) {
       const start = moment(event.startTimestamp);
       const end = moment(event.endTimestamp);
+      const xmltvEnd = moment(event.endTimestamp);
 
       if (!event.linear) {
         end.add(1, 'hour');
@@ -173,6 +174,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
           : {
               sport: event.channelName,
             }),
+        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

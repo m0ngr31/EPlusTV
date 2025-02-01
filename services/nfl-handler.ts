@@ -181,6 +181,7 @@ const parseAirings = async (events: INFLEvent[]) => {
     if (!entryExists) {
       const start = moment(event.startTime);
       const end = moment(start).add(event.duration, 'seconds');
+      const xmltvEnd = moment(start).add(event.duration, 'seconds');
 
       const isLinear =
         useLinear &&
@@ -221,6 +222,7 @@ const parseAirings = async (events: INFLEvent[]) => {
           linear: true,
           replay: event.callSign === 'NFLDIGITAL1_OO_v3' || event.broadcastAiringType === 'REAIR',
         }),
+        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

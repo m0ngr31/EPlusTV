@@ -152,6 +152,7 @@ const parseAirings = async (events: ICombinedGame) => {
 
           const start = moment(event.gameDate);
           const end = moment(event.gameDate).add(5, 'hours');
+          const xmltvEnd = moment(event.gameDate).add(3, 'hours');
 
           if (end.isBefore(now) || start.isAfter(endDate)) {
             continue;
@@ -172,6 +173,7 @@ const parseAirings = async (events: ICombinedGame) => {
             network: epg.callLetters,
             sport: 'MLB',
             start: start.valueOf(),
+            xmltvEnd: xmltvEnd.valueOf(),
           });
         }
       }

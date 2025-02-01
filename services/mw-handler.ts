@@ -34,6 +34,7 @@ const parseAirings = async (events: IMWEvent[]) => {
     if (!entryExists) {
       const start = moment(event.start_time);
       const end = moment(event.end_time).add(1, 'hours');
+      const xmltvEnd = moment(event.end_time);
 
       if (end.isBefore(now) || event.format !== 'video' || start.isAfter(endSchedule)) {
         continue;
@@ -53,6 +54,7 @@ const parseAirings = async (events: IMWEvent[]) => {
         sport: event.sport_category_title,
         start: start.valueOf(),
         url: event.value,
+        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

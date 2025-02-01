@@ -85,6 +85,15 @@ export const initMiscDb = async (): Promise<void> => {
     });
   }
 
+  const setupXmltvPadding = (await db.misc.count({name: 'xmltv_padding'})) > 0 ? true : false;
+
+  if (!setupXmltvPadding) {
+    await db.misc.insert<IMiscDbEntry<boolean>>({
+      name: 'xmltv_padding',
+      value: true,
+    });
+  }
+
   if (linearChannelsEnv) {
     console.log('Using LINEAR_CHANNELS variable is no longer needed. Please use the UI going forward');
   }
@@ -156,3 +165,12 @@ export const proxySegments = async (): Promise<boolean> => {
 
 export const setProxySegments = async (value: boolean): Promise<number> =>
   db.misc.update({name: 'proxy_segments'}, {$set: {value}});
+
+export const xmltvPadding = async (): Promise<boolean> => {
+  const {value} = await db.misc.findOne<IMiscDbEntry<boolean>>({name: 'xmltv_padding'});
+
+  return value;
+};
+
+export const setXmltvPadding = async (value: boolean): Promise<number> =>
+  db.misc.update({name: 'xmltv_padding'}, {$set: {value}});
