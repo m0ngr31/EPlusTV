@@ -112,6 +112,7 @@ interface ITokens extends IToken {
 
 export interface IEspnPlusMeta {
   use_ppv?: boolean;
+  category_filter?: string;
 }
 
 export interface IEspnMeta {
@@ -348,6 +349,13 @@ const parseAirings = async events => {
   const now = moment();
   const endSchedule = moment().add(2, 'days').endOf('day');
 
+  const { meta: plusMeta} = await db.providers.findOne<
+    IProvider<TESPNPlusTokens, IEspnPlusMeta>
+  >({name: 'espnplus'});
+
+  const category_filter = plusMeta?.category_filter;
+  const lowercaseCategoryFilters = (category_filter.trim().length > 0) ? category_filter.split(',').map(category => category.toLowerCase().trim()) : false;
+
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
@@ -366,10 +374,16 @@ const parseAirings = async events => {
         continue;
       }
 
+      const categories = parseCategories(event);
+
+      if ( lowercaseCategoryFilters && !lowercaseCategoryFilters.some(v => categories.map(category => category.toLowerCase()).includes(v)) ) {
+        continue;
+      }
+
       console.log('Adding event: ', event.name);
 
       await db.entries.insert<IEntry>({
-        categories: parseCategories(event),
+        categories: categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         feed: event.feedName,
@@ -453,6 +467,7 @@ class EspnHandler {
         enabled: useEspnPlus,
         meta: {
           use_ppv: useEspnPpv,
+          category_filter: '',
         },
         name: 'espnplus',
         tokens: data,

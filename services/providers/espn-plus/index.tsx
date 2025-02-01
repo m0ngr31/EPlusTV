@@ -48,6 +48,47 @@ espnplus.put('/toggle-ppv', async c => {
   return c.html(<ESPNPlusBody enabled={enabled} tokens={tokens} />);
 });
 
+espnplus.post('/category-filter', async c => {
+  const body = await c.req.parseBody();
+  const category_filter = body['espnplus-category-filter'];
+
+  await db.providers.update(
+    {name: 'espnplus'},
+    {$set: {meta: {category_filter}}}
+  );
+
+  await removeEvents();
+  await scheduleEvents();
+
+  return c.html(
+    <label>
+      <span>
+        Category Filter (<a href="https://www.espn.com/espnplus/browse/" target="_blank">examples</a>){' '}
+        <span
+          class="warning-red"
+          data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
+          data-placement="right"
+        >
+          **
+        </span>
+      </span>
+      <fieldset role="group">
+        <input
+          type="text"
+          placeholder="comma-separated list of categories to include, leave blank for all"
+          value={category_filter}
+          data-value={category_filter}
+          name="espnplus-category-filter"
+        />
+        <button type="submit" id="category-filter-button">
+          Save
+        </button>
+      </fieldset>
+    </label>, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved category filter"}}`,
+  });
+});
+
 espnplus.get('/login/check/:code', async c => {
   const code = c.req.param('code');
 

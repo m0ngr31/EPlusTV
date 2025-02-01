@@ -50,11 +50,53 @@ export const ESPNPlus: FC = async () => {
             </label>
           </fieldset>
         </div>
+        <div class="grid">
+          <form id="category-filter" hx-post="/providers/espnplus/category-filter" hx-trigger="submit">
+            <label>
+              <span>
+                Category Filter (<a href="https://www.espn.com/espnplus/browse/" target="_blank">examples</a>){' '}
+                <span
+                  class="warning-red"
+                  data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
+                  data-placement="right"
+                >
+                  **
+                </span>
+              </span>
+              <fieldset role="group">
+                <input
+                  type="text"
+                  placeholder="comma-separated list of categories to include, leave blank for all"
+                  value={meta.category_filter}
+                  data-value={meta.category_filter}
+                  name="espnplus-category-filter"
+                />
+                <button type="submit" id="category-filter-button">
+                  Save
+                </button>
+              </fieldset>
+            </label>
+          </form>
+        </div>
         <div id="espnplus-body" hx-swap="innerHTML">
           <ESPNPlusBody enabled={enabled} tokens={tokens} />
         </div>
       </section>
       <hr />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+          var rebuildEpgForm = document.getElementById('category-filter');
+
+          if (rebuildEpgForm) {
+            rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
+              this.querySelector('#category-filter-button').setAttribute('aria-busy', 'true');
+              this.querySelector('#category-filter-button').setAttribute('aria-label', 'Loading…');
+            });
+          }
+        `,
+        }}
+      />
     </div>
   );
 };
