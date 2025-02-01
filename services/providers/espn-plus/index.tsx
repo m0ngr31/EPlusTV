@@ -30,6 +30,8 @@ espnplus.put('/toggle', async c => {
     return c.html(<></>);
   }
 
+  await espnHandler.refreshInMarketTeams();
+
   return c.html(<Login />);
 });
 
@@ -48,85 +50,62 @@ espnplus.put('/toggle-ppv', async c => {
   return c.html(<ESPNPlusBody enabled={enabled} tokens={tokens} />);
 });
 
-espnplus.post('/category-filter', async c => {
+espnplus.put('/save-filters', async c => {
   const body = await c.req.parseBody();
-  const category_filter = body['espnplus-category-filter'];
+  const category_filter = body['espnplus-category-filter'].toString();
+  const title_filter = body['espnplus-title-filter'].toString();
 
   await db.providers.update(
     {name: 'espnplus'},
-    {$set: {'meta.category_filter': category_filter}}
+    {$set: {'meta.category_filter': category_filter, 'meta.title_filter': title_filter}}
   );
 
   await removeEvents();
   await scheduleEvents();
 
   return c.html(
-    <label>
+    <div>
       <span>
-        Category Filter (<a href="https://www.espn.com/espnplus/browse/" target="_blank">examples</a>){' '}
-        <span
-          class="warning-red"
-          data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
-          data-placement="right"
-        >
-          **
-        </span>
+        Category Filter
       </span>
       <fieldset role="group">
         <input
           type="text"
           placeholder="comma-separated list of categories to include, leave blank for all"
-          value={category_filter.toString()}
-          data-value={category_filter.toString()}
+          value={category_filter}
+          data-value={category_filter}
           name="espnplus-category-filter"
         />
-        <button type="submit" id="category-filter-button">
-          Save
-        </button>
       </fieldset>
-    </label>, 200, {
-    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved category filter"}}`,
-  });
-});
-
-espnplus.post('/title-filter', async c => {
-  const body = await c.req.parseBody();
-  const title_filter = body['espnplus-title-filter'];
-
-  await db.providers.update(
-    {name: 'espnplus'},
-    {$set: {'meta.title_filter': title_filter}}
-  );
-
-  await removeEvents();
-  await scheduleEvents();
-
-  return c.html(
-    <label>
       <span>
-        Title Filter{' '}
-        <span
-          class="warning-red"
-          data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
-          data-placement="right"
-        >
-          **
-        </span>
+        Title Filter
       </span>
       <fieldset role="group">
         <input
           type="text"
           placeholder="if specified, only include events with matching titles; supports regular expressions"
-          value={title_filter.toString()}
-          data-value={title_filter.toString()}
+          value={title_filter}
+          data-value={title_filter}
           name="espnplus-title-filter"
         />
-        <button type="submit" id="title-filter-button">
-          Save
-        </button>
       </fieldset>
-    </label>, 200, {
-    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved title filter"}}`,
+      <button type="submit" id="espnplus-save-filters-button">
+        Save and Apply Filters
+      </button>
+    </div>, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved and applied filters"}}`,
+  });
+});
+
+espnplus.put('/refresh-in-market-teams', async c => {
+  const {zip_code, in_market_teams} = await espnHandler.refreshInMarketTeams();
+
+  return c.html(
+    <div>
+      <pre>{in_market_teams} ({zip_code})</pre>
+      <button id="espnplus-refresh-in-market-teams-button" disabled>Refresh In-Market Teams</button>
+    </div>, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully refreshed in-market teams"}}`,
   });
 });
 

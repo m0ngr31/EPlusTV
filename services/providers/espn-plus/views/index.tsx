@@ -50,81 +50,89 @@ export const ESPNPlus: FC = async () => {
             </label>
           </fieldset>
         </div>
-        <div class="grid">
-          <form id="category-filter" hx-post="/providers/espnplus/category-filter" hx-trigger="submit">
-            <label>
-              <span>
-                Category Filter (<a href="https://www.espn.com/espnplus/browse/" target="_blank">examples</a>){' '}
-                <span
-                  class="warning-red"
-                  data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
-                  data-placement="right"
-                >
-                  **
-                </span>
-              </span>
-              <fieldset role="group">
-                <input
-                  type="text"
-                  placeholder="comma-separated list of categories to include, leave blank for all"
-                  value={meta.category_filter}
-                  data-value={meta.category_filter}
-                  name="espnplus-category-filter"
-                />
-                <button type="submit" id="category-filter-button">
-                  Save
-                </button>
-              </fieldset>
-            </label>
-          </form>
-        </div>
-        <div class="grid">
-          <form id="title-filter" hx-post="/providers/espnplus/title-filter" hx-trigger="submit">
-            <label>
-              <span>
-                Title Filter{' '}
-                <span
-                  class="warning-red"
-                  data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
-                  data-placement="right"
-                >
-                  **
-                </span>
-              </span>
-              <fieldset role="group">
-                <input
-                  type="text"
-                  placeholder="if specified, only include events with matching titles; supports regular expressions"
-                  value={meta.title_filter}
-                  data-value={meta.title_filter}
-                  name="espnplus-title-filter"
-                />
-                <button type="submit" id="title-filter-button">
-                  Save
-                </button>
-              </fieldset>
-            </label>
-          </form>
-        </div>
         <div id="espnplus-body" hx-swap="innerHTML">
           <ESPNPlusBody enabled={enabled} tokens={tokens} />
         </div>
+        <div class="grid">
+          <details>
+            <summary>ESPN+ Options{' '}
+              <span
+                class="warning-red"
+                data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
+                data-placement="right"
+              >
+                **
+              </span>
+            </summary>
+            <span>
+              In-Market Teams
+            </span>
+            <fieldset role="group">
+              <form id="espnplus-refresh-in-market-teams" hx-put="/providers/espnplus/refresh-in-market-teams" hx-trigger="submit">
+                <div>
+                  <pre>{meta.in_market_teams} ({meta.zip_code})</pre>
+                  <button id="espnplus-refresh-in-market-teams-button">Refresh In-Market Teams</button>
+                </div>
+              </form>
+            </fieldset>
+            <form id="espnplus-event-filters" hx-put="/providers/espnplus/save-filters" hx-trigger="submit">
+              <div>
+                <span>
+                  Category Filter
+                </span>
+                <fieldset role="group">
+                  <input
+                    type="text"
+                    placeholder="comma-separated list of categories to include, leave blank for all"
+                    value={meta.category_filter}
+                    data-value={meta.category_filter}
+                    name="espnplus-category-filter"
+                  />
+                </fieldset>
+                <span>
+                  Title Filter
+                </span>
+                <fieldset role="group">
+                  <input
+                    type="text"
+                    placeholder="if specified, only include events with matching titles; supports regular expressions"
+                    value={meta.title_filter}
+                    data-value={meta.title_filter}
+                    name="espnplus-title-filter"
+                  />
+                </fieldset>
+                <button type="submit" id="espnplus-save-filters-button">
+                  Save and Apply Filters
+                </button>
+              </div>
+            </form>
+          </details>
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            var rebuildEpgForm = document.getElementById('espnplus-event-filters');
+
+            if (rebuildEpgForm) {
+              rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
+                this.querySelector('#espnplus-save-filters-button').setAttribute('aria-busy', 'true');
+                this.querySelector('#espnplus-save-filters-button').setAttribute('aria-label', 'Loading…');
+              });
+            }
+
+            var rebuildEpgForm = document.getElementById('espnplus-refresh-in-market-teams');
+
+            if (rebuildEpgForm) {
+              rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
+                this.querySelector('#espnplus-refresh-in-market-teams-button').setAttribute('aria-busy', 'true');
+                this.querySelector('#espnplus-refresh-in-market-teams-button').setAttribute('aria-label', 'Loading…');
+              });
+            }
+          `,
+          }}
+        />
       </section>
       <hr />
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-          var rebuildEpgForm = document.getElementById('category-filter');
-
-          if (rebuildEpgForm) {
-            rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
-              this.querySelector('#category-filter-button').setAttribute('aria-busy', 'true');
-              this.querySelector('#category-filter-button').setAttribute('aria-label', 'Loading…');
-            });
-          }
-        `,
-        }}
-      />
     </div>
   );
 };

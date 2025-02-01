@@ -115,6 +115,8 @@ export interface IEspnPlusMeta {
   use_ppv?: boolean;
   category_filter?: string;
   title_filter?: string;
+  zip_code?: string;
+  in_market_teams?: string;
 }
 
 export interface IEspnMeta {
@@ -360,6 +362,8 @@ const parseAirings = async events => {
   const title_filter = (plusMeta?.title_filter && (plusMeta?.title_filter.trim().length > 0)) ? new RegExp(plusMeta?.title_filter) : false;
   const useMultiple = await usesMultiple();
 
+  const in_market_team_filter = (plusMeta?.in_market_teams && (plusMeta?.in_market_teams.length > 0)) ? plusMeta?.in_market_teams.split(',') : false;
+
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
@@ -378,13 +382,19 @@ const parseAirings = async events => {
         continue;
       }
 
-      const categories = parseCategories(event);
-
-      if ( category_filter && !category_filter.some(v => categories.map(category => category.toLowerCase()).includes(v)) ) {
+      if ( in_market_team_filter && event.network && (event.network.id === 'bam_dtc') && event.name.includes(in_market_team_filter) ) {
+        //console.log('Omitting event ' + event.name + ' due to in market team');
         continue;
       }
 
-      const formattedEvent = {
+      const categories = parseCategories(event);
+
+      if ( category_filter && !category_filter.some(v => categories.map(category => category.toLowerCase()).includes(v)) ) {
+        //console.log('Omitting event ' + event.name + ' due to category filter');
+        continue;
+      }
+
+      const entryEvent = {
         categories: categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -404,13 +414,14 @@ const parseAirings = async events => {
         xmltvEnd: xmltvEnd.valueOf(),
       }
 
-      if ( title_filter && !formatEntryName(formattedEvent, useMultiple).match(title_filter) ) {
+      if ( title_filter && !formatEntryName(entryEvent, useMultiple).match(title_filter) ) {
+        //console.log('Omitting event ' + event.name + ' due to title filter');
         continue;
       }
 
       console.log('Adding event: ', event.name);
 
-      await db.entries.insert<IEntry>(formattedEvent);
+      await db.entries.insert<IEntry>(entryEvent);
     }
   }
 };
@@ -479,6 +490,8 @@ class EspnHandler {
           use_ppv: useEspnPpv,
           category_filter: '',
           title_filter: '',
+          zip_code: '',
+          in_market_teams: '',
         },
         name: 'espnplus',
         tokens: data,
@@ -590,6 +603,14 @@ class EspnHandler {
 
     if (!enabled) {
       return;
+    }
+
+    const { meta: plusMeta} = await db.providers.findOne<
+      IProvider<TESPNPlusTokens, IEspnPlusMeta>
+    >({name: 'espnplus'});
+
+    if ( !plusMeta?.zip_code || !plusMeta?.in_market_teams ) {
+      await this.refreshInMarketTeams();
     }
 
     // Load tokens from local file and make sure they are valid
@@ -1117,6 +1138,87 @@ class EspnHandler {
     }
 
     return false;
+  };
+
+  public refreshInMarketTeams = async () => {
+    try {
+      const deviceUrl = [
+        'https://',
+        'espn.api.edge.bamgrid.com',
+        '/graph/v1/',
+        'device/graphql',
+      ].join('');
+
+      const {data: deviceData} = await axios.post(deviceUrl,
+        {
+          'query': '\n    mutation registerDevice($input: RegisterDeviceInput!) {\n        registerDevice(registerDevice: $input) {\n            grant {\n                grantType\n                assertion\n            }\n        }\n    }\n',
+          'variables': {
+            'input': {
+              'deviceFamily': 'browser',
+              'applicationRuntime': 'chrome',
+              'deviceProfile': 'macosx',
+              'deviceLanguage': 'en-US',
+              'attributes': {
+                'osDeviceIds': [],
+                'manufacturer': 'apple',
+                'model': null,
+                'operatingSystem': 'macintosh',
+                'operatingSystemVersion': '10.15.7',
+                'browserName': 'chrome',
+                'browserVersion': '128.0.0',
+                'brand': 'web'
+              },
+              'devicePlatformId': 'browser'
+            }
+          },
+          'operationName': 'registerDevice'
+        },
+        {
+          headers: {
+            'Authorization': BAM_API_KEY,
+            'Content-Type': 'application/json',
+            'User-Agent': userAgent,
+          },
+        },
+      );
+
+      const zip_code = deviceData.extensions.sdk.session.location.zipCode;
+
+      await db.providers.update(
+        {name: 'espnplus'},
+        {$set: {'meta.zip_code': zip_code}}
+      );
+
+      const lookupUrl = [
+        'https://',
+        'api-web.nhle.com',
+        '/v1/postal-lookup/',
+        zip_code,
+      ].join('');
+
+      const {data: lookupData} = await axios.get(lookupUrl,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': userAgent,
+          },
+        },
+      );
+
+      const teams = lookupData.map(team => team.teamName.default);
+      const in_market_teams = teams.join(',');
+      console.log('Detected in-market teams ' + in_market_teams + ' (' + zip_code + ')');
+
+      await db.providers.update(
+        {name: 'espnplus'},
+        {$set: {'meta.in_market_teams': in_market_teams}}
+      );
+
+      return {zip_code, in_market_teams};
+    } catch (e) {
+      console.error(e);
+      console.log('Could not refresh in-market teams data!');
+    }
   };
 
   private getAppConfig = async () => {
