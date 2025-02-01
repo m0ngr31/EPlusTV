@@ -78,6 +78,34 @@ export const ESPNPlus: FC = async () => {
             </label>
           </form>
         </div>
+        <div class="grid">
+          <form id="title-filter" hx-post="/providers/espnplus/title-filter" hx-trigger="submit">
+            <label>
+              <span>
+                Title Filter{' '}
+                <span
+                  class="warning-red"
+                  data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
+                  data-placement="right"
+                >
+                  **
+                </span>
+              </span>
+              <fieldset role="group">
+                <input
+                  type="text"
+                  placeholder="if specified, only include events with matching titles; supports regular expressions"
+                  value={meta.title_filter}
+                  data-value={meta.title_filter}
+                  name="espnplus-title-filter"
+                />
+                <button type="submit" id="title-filter-button">
+                  Save
+                </button>
+              </fieldset>
+            </label>
+          </form>
+        </div>
         <div id="espnplus-body" hx-swap="innerHTML">
           <ESPNPlusBody enabled={enabled} tokens={tokens} />
         </div>

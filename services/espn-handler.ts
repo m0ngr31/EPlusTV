@@ -39,6 +39,7 @@ import {
 import {db} from './database';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
+import {formatEntryName, usesMultiple} from './generate-xmltv';
 
 global.WebSocket = ws;
 
@@ -113,6 +114,7 @@ interface ITokens extends IToken {
 export interface IEspnPlusMeta {
   use_ppv?: boolean;
   category_filter?: string;
+  title_filter?: string;
 }
 
 export interface IEspnMeta {
@@ -353,8 +355,10 @@ const parseAirings = async events => {
     IProvider<TESPNPlusTokens, IEspnPlusMeta>
   >({name: 'espnplus'});
 
-  const category_filter = plusMeta?.category_filter;
-  const lowercaseCategoryFilters = (category_filter.trim().length > 0) ? category_filter.split(',').map(category => category.toLowerCase().trim()) : false;
+  const category_filter = (plusMeta?.category_filter && (plusMeta?.category_filter.trim().length > 0)) ? plusMeta?.category_filter.split(',').map(category => category.toLowerCase().trim()) : false;
+
+  const title_filter = (plusMeta?.title_filter && (plusMeta?.title_filter.trim().length > 0)) ? new RegExp(plusMeta?.title_filter) : false;
+  const useMultiple = await usesMultiple();
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
@@ -376,13 +380,11 @@ const parseAirings = async events => {
 
       const categories = parseCategories(event);
 
-      if ( lowercaseCategoryFilters && !lowercaseCategoryFilters.some(v => categories.map(category => category.toLowerCase()).includes(v)) ) {
+      if ( category_filter && !category_filter.some(v => categories.map(category => category.toLowerCase()).includes(v)) ) {
         continue;
       }
 
-      console.log('Adding event: ', event.name);
-
-      await db.entries.insert<IEntry>({
+      const formattedEvent = {
         categories: categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -400,7 +402,15 @@ const parseAirings = async events => {
           linear: true,
         }),
         xmltvEnd: xmltvEnd.valueOf(),
-      });
+      }
+
+      if ( title_filter && !formatEntryName(formattedEvent, useMultiple).match(title_filter) ) {
+        continue;
+      }
+
+      console.log('Adding event: ', event.name);
+
+      await db.entries.insert<IEntry>(formattedEvent);
     }
   }
 };
@@ -468,6 +478,7 @@ class EspnHandler {
         meta: {
           use_ppv: useEspnPpv,
           category_filter: '',
+          title_filter: '',
         },
         name: 'espnplus',
         tokens: data,
@@ -734,6 +745,7 @@ class EspnHandler {
       await parseAirings(entries);
     } catch (e) {
       console.log('Could not parse events');
+      console.log(e.message);
     }
   };
 

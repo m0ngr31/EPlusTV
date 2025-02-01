@@ -9,13 +9,13 @@ import {getLinearStartChannel, getNumberOfChannels, getStartChannel, xmltvPaddin
 
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
 
-const usesMultiple = async (): Promise<boolean> => {
+export const usesMultiple = async (): Promise<boolean> => {
   const enabledProviders = await db.providers.count({enabled: true});
 
   return enabledProviders > 1;
 };
 
-const formatEntryName = (entry: IEntry, usesMultiple: boolean) => {
+export const formatEntryName = (entry: IEntry, usesMultiple: boolean) => {
   let entryName = entry.name;
 
   if (entry.feed) {
