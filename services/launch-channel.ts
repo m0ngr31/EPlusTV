@@ -107,13 +107,15 @@ export const launchChannel = async (channelId: string, appUrl: string): Promise<
 
   const now = new Date().valueOf();
   const channel = isNumber ? parseInt(`${channelNum}`, 10) : channelNum;
+
+  // Find the entry with the most recent start time (if there are overlapping)
   const playingNow = await db.entries
     .findOneAsync<IEntry>({
       channel,
       end: {$gt: now},
       start: {$lt: now},
     })
-    .sort({start: 1});
+    .sort({start: -1});
 
   if (playingNow && playingNow.id) {
     console.log(`Channel #${channelId} has an active event (${playingNow.name}). Going to start the stream.`);
