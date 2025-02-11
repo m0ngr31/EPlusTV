@@ -639,6 +639,10 @@ class GothamHandler {
         },
       );
 
+      if (data.gameError?.description && !data.GetOAuthAccessTokenv2ResponseMessage?.accessToken) {
+        throw new Error(data.gameError?.description || 'Wrong Username or Password');
+      }
+
       this.auth_token = data.GetOAuthAccessTokenv2ResponseMessage.accessToken;
       this.refresh_token = data.GetOAuthAccessTokenv2ResponseMessage.refreshToken;
       this.expiresIn = +data.GetOAuthAccessTokenv2ResponseMessage.expiresIn;
