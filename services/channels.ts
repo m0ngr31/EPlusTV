@@ -153,6 +153,14 @@ export const CHANNELS = {
         stationId: '119153',
         tvgName: 'MLBTVBI',
       },
+      41: {
+        checkChannelEnabled: () => checkChannelEnabled('mlbtv', 'MLBN'),
+        id: 'MLBN',
+        logo: 'https://tmsimg.fancybits.co/assets/s62079_ll_h15_aa.png?w=360&h=270',
+        name: 'MLB Network',
+        stationId: '62079',
+        tvgName: 'MLBN',
+      },
       50: {
         checkChannelEnabled: () => checkChannelEnabled('nesn', 'NESN'),
         id: 'NESN',

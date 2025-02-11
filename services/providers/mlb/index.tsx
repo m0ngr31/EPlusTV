@@ -17,7 +17,7 @@ const scheduleEvents = async () => {
 };
 
 const removeEvents = async () => {
-  await removeEntriesProvider('mlbtvtv');
+  await removeEntriesProvider('mlbtv');
 };
 
 mlbtv.put('/toggle', async c => {
@@ -42,7 +42,7 @@ mlbtv.put('/toggle-free', async c => {
 
   scheduleEvents();
 
-  return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} onlyFree={onlyFree} />);
+  return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
 });
 
 mlbtv.get('/auth/:code', async c => {
@@ -54,7 +54,7 @@ mlbtv.get('/auth/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens, linear_channels, meta} = await db.providers.update<IProvider<TMLBTokens>>(
+  const {tokens, linear_channels} = await db.providers.update<IProvider<TMLBTokens>>(
     {name: 'mlbtv'},
     {$set: {enabled: true}},
     {returnUpdatedDocs: true},
@@ -63,7 +63,7 @@ mlbtv.get('/auth/:code', async c => {
   // Kickoff event scheduler
   scheduleEvents();
 
-  return c.html(<MlbBody enabled={true} tokens={tokens} open={true} channels={linear_channels} onlyFree={meta.onlyFree} />, 200, {
+  return c.html(<MlbBody enabled={true} tokens={tokens} open={true} channels={linear_channels} />, 200, {
     'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled MLB.tv"}}`,
   });
 });
@@ -72,46 +72,16 @@ mlbtv.put('/reauth', async c => {
   return c.html(<Login />);
 });
 
-mlbtv.put('/channels/toggle/:id', async c => {
-  const channelId = c.req.param('id');
-  const {linear_channels} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+mlbtv.put('/mlbn-access', async c => {
+  const {linear_channels: originalChannels} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+  const updatedValue = await mlbHandler.recheckMlbNetworkAccess();
 
-  const body = await c.req.parseBody();
-  const enabled = body['channel-enabled'] === 'on';
-
-  let updatedChannel = channelId;
-
-  const updatedChannels = linear_channels.map(channel => {
-    if (channel.id === channelId) {
-      updatedChannel = channel.name;
-      return {...channel, enabled: !channel.enabled};
-    }
-    return channel;
-  });
-
-  if (updatedChannel !== channelId) {
-    await db.providers.update<IProvider>({name: 'mlbtv'}, {$set: {linear_channels: updatedChannels}});
-
-    // Kickoff event scheduler
-    scheduleEvents();
-
-    return c.html(
-      <input
-        hx-target="this"
-        hx-swap="outerHTML"
-        type="checkbox"
-        checked={enabled ? true : false}
-        data-enabled={enabled ? 'true' : 'false'}
-        hx-put={`/providers/mlb/channels/toggle/${channelId}`}
-        hx-trigger="change"
-        name="channel-enabled"
-      />,
-      200,
-      {
-        ...(enabled && {
-          'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        }),
-      },
-    );
+  if (updatedValue && !originalChannels[0].enabled) {
+    await mlbHandler.getSchedule();
+    await scheduleEntries();
   }
+
+  const {enabled, tokens, linear_channels} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+
+  return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
 });

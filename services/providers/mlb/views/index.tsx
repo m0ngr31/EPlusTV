@@ -53,7 +53,7 @@ export const MlbTv: FC = async () => {
           </fieldset>
         </div>
         <div id="mlbtv-body" hx-swap="innerHTML">
-          <MlbBody enabled={enabled} tokens={tokens} channels={channels} onlyFree={onlyFree} />
+          <MlbBody enabled={enabled} tokens={tokens} channels={channels} />
         </div>
       </section>
       <hr />

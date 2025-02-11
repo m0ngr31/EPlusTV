@@ -4,6 +4,7 @@ import path from 'path';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import moment, {Moment} from 'moment-timezone';
+import _ from 'lodash';
 
 import {okHttpUserAgent, userAgent, androidMlbUserAgent} from './user-agent';
 import {configPath} from './config';
@@ -36,6 +37,19 @@ interface IGameContent {
     freeGame: boolean;
     enhancedGame: boolean;
   };
+}
+
+interface IMLBNetworkEvent {
+  utcDate: string;
+  originalShowSynopsis: string;
+  synopsis: string;
+  episodetitle: string;
+  seriestitle: string;
+  live: string;
+  startdate: string;
+  starttime: string;
+  enddate: string;
+  endtime: string;
 }
 
 interface ITeam {
@@ -71,6 +85,7 @@ interface IVideoFeed {
 
 interface IGameFeed {
   gamePk: string;
+  blackedOutVideo?: boolean;
   videoFeeds: IVideoFeed[];
 }
 
@@ -83,6 +98,10 @@ interface ICombinedGame {
 
 interface IProviderMeta {
   onlyFree?: boolean;
+}
+
+interface IEntitlement {
+  code: string;
 }
 
 const CLIENT_ID = [
@@ -134,7 +153,7 @@ const parseAirings = async (events: ICombinedGame) => {
   const onlyFree = meta?.onlyFree ?? false;
 
   for (const pk in events) {
-    if (!events[pk].feed || !events[pk].entry) {
+    if (!events[pk].feed || !events[pk].entry || events[pk].feed.blackedOutVideo) {
       continue;
     }
 
@@ -203,7 +222,7 @@ const parseBigInnings = async (dates: Moment[][]) => {
       end: end.valueOf(),
       from: 'mlbtv',
       id: gameName,
-      image: 'https://i.imgur.com/8JHoeFA.png',
+      image: 'https://tmsimg.fancybits.co/assets/s119153_ll_h15_aa.png?w=360&h=270',
       name: gameName,
       network: 'MLBTVBI',
       sport: 'MLB',
@@ -213,6 +232,51 @@ const parseBigInnings = async (dates: Moment[][]) => {
         linear: true,
       }),
     });
+  }
+};
+
+const parseMlbNetwork = async (events: IMLBNetworkEvent[]): Promise<void> => {
+  const now = moment();
+  const endDate = moment().add(2, 'days').endOf('day');
+
+  for (const event of events) {
+    const entryExists = await db.entries.findOne<IEntry>({id: `MLB Network - ${event.utcDate}`});
+
+    if (!entryExists) {
+      const start = moment(`${event.startdate} ${event.starttime}`, 'MM/DD/YYYY h:mm A');
+      const end = moment(`${event.enddate} ${event.endtime}`, 'MM/DD/YYYY h:mm A');
+
+      const duration = moment.duration(end.diff(start)).asSeconds();
+
+      if (end.isBefore(now) || start.isAfter(endDate)) {
+        continue;
+      }
+
+      let name = 'MLB Network Event';
+
+      if (event.episodetitle && event.seriestitle) {
+        name = `${event.seriestitle}: ${event.episodetitle}`;
+      } else if ((!event.episodetitle || event.episodetitle.length === 0) && event.seriestitle) {
+        name = event.seriestitle;
+      }
+
+      console.log('Adding event: ', name);
+
+      await db.entries.insert<IEntry>({
+        categories: ['MLB Network', 'MLB', 'Baseball'],
+        channel: 'MLBN',
+        duration,
+        end: end.valueOf(),
+        from: 'mlbtv',
+        id: `MLB Network - ${event.utcDate}`,
+        image: 'https://tmsimg.fancybits.co/assets/s62079_ll_h15_aa.png?w=360&h=270',
+        linear: true,
+        name,
+        network: 'MLBN',
+        sport: 'MLB',
+        start: start.valueOf(),
+      });
+    }
   }
 };
 
@@ -239,6 +303,7 @@ class MLBHandler {
   public expires_at?: number;
   public access_token?: string;
   public session_id?: string;
+  public entitlements?: IEntitlement[];
 
   public initialize = async () => {
     const setup = (await db.providers.count({name: 'mlbtv'})) > 0 ? true : false;
@@ -291,7 +356,6 @@ class MLBHandler {
       return;
     }
 
-    // Load tokens from local file and make sure they are valid
     await this.load();
   };
 
@@ -352,6 +416,13 @@ class MLBHandler {
       if (!meta.onlyFree) {
         const bigInnings = await this.getBigInnings();
         await parseBigInnings(bigInnings);
+
+        const mlbNetworkEnabled = await this.checkMlbNetworkAccess();
+
+        if (mlbNetworkEnabled) {
+          const mlbNetworkSchedule = await this.getMlbNetworkSchedule();
+          await parseMlbNetwork(mlbNetworkSchedule);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -366,6 +437,10 @@ class MLBHandler {
       if (mediaId.indexOf('Big Inning - ') > -1) {
         const streamInfoUrl = await this.getBigInningInfo();
         const streamUrl = await this.getBigInningStream(streamInfoUrl);
+
+        return [streamUrl, {}];
+      } else if (mediaId.indexOf('MLB Network - ') > -1) {
+        const streamUrl = await this.getMlbNetworkStream();
 
         return [streamUrl, {}];
       }
@@ -419,6 +494,11 @@ class MLBHandler {
       console.error(e);
       console.log('Could not start playback');
     }
+  };
+
+  public recheckMlbNetworkAccess = async (): Promise<boolean> => {
+    await this.getSession();
+    return await this.checkMlbNetworkAccess();
   };
 
   private getBigInningInfo = async (): Promise<string> => {
@@ -494,6 +574,74 @@ class MLBHandler {
     } catch (e) {
       // console.error(e);
       console.log('Could not get Big Inning data');
+    }
+  };
+
+  private checkMlbNetworkAccess = async (): Promise<boolean> => {
+    if (!this.entitlements) {
+      await this.getSession();
+    }
+
+    const useLinear = await usesLinear();
+
+    let enabled = false;
+
+    if (this.entitlements?.some(n => n.code === 'MLBN') && useLinear) {
+      enabled = true;
+    }
+
+    await db.providers.update(
+      {name: 'mlbtv'},
+      {
+        $set: {
+          linear_channels: [
+            {
+              enabled,
+              id: 'MLBN',
+              name: 'MLB Network',
+              tmsId: '62079',
+            },
+          ],
+        },
+      },
+    );
+
+    return enabled;
+  };
+
+  private getMlbNetworkSchedule = async (): Promise<IMLBNetworkEvent[]> => {
+    try {
+      const url = 'https://mlbn.mlbstatic.com/schedule.json';
+
+      const {data} = await axios.get<{shows: IMLBNetworkEvent[]}>(url, {
+        headers: {
+          'User-Agent': userAgent,
+          'x-requested-with': 'com.bamnetworks.mobile.android.gameday.atbat',
+        },
+      });
+
+      return data.shows;
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get MLB Network schedule');
+    }
+  };
+
+  private getMlbNetworkStream = async (): Promise<string> => {
+    try {
+      const url = ['https://', 'falcon.mlbinfra.com', '/api/v1/', 'mvpds/mlbn/feeds'].join('');
+
+      const {data} = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${this.access_token}`,
+          'User-Agent': userAgent,
+        },
+      });
+
+      return data.url;
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get MLB Network stream info');
     }
   };
 
@@ -607,6 +755,7 @@ class MLBHandler {
       this.refresh_token = data.refresh_token;
 
       await this.save();
+      await this.recheckMlbNetworkAccess();
 
       return true;
     } catch (e) {
@@ -682,6 +831,7 @@ class MLBHandler {
       });
 
       this.session_id = data.data.initSession.sessionId;
+      this.entitlements = data.data.initSession.entitlements;
     } catch (e) {
       console.error(e);
       console.log('Could not get session id');
@@ -689,7 +839,7 @@ class MLBHandler {
   };
 
   private save = async () => {
-    await db.providers.update({name: 'mlbtv'}, {$set: {tokens: this}});
+    await db.providers.update({name: 'mlbtv'}, {$set: {tokens: _.omit(this, 'entitlements', 'session_id')}});
   };
 
   private load = async (): Promise<void> => {
