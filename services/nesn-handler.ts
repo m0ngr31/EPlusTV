@@ -212,7 +212,9 @@ interface INesnEvent {
 }
 
 const isTokenValid = (token?: string): boolean => {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
 
   try {
     const decoded: IJWToken = jwt_decode(token);

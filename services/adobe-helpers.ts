@@ -34,7 +34,9 @@ export const createAdobeAuthHeader = (
 };
 
 export const isAdobeTokenValid = (token?: IAdobeAuth): boolean => {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
 
   try {
     const parsedExp = parseInt(token.expires, 10);
@@ -45,7 +47,9 @@ export const isAdobeTokenValid = (token?: IAdobeAuth): boolean => {
 };
 
 export const isAdobeFoxTokenValid = (token?: IAdobeAuthFox): boolean => {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
 
   const now = new Date().valueOf();
 

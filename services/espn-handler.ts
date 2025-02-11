@@ -180,7 +180,9 @@ const urlBuilder = (endpoint: string, provider: string) =>
   `${DISNEY_ROOT_URL}${endpoint}`.replace('{id-provider}', provider);
 
 const isTokenValid = (token?: string): boolean => {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
 
   try {
     const decoded: IJWToken = jwt_decode(token);
@@ -191,7 +193,9 @@ const isTokenValid = (token?: string): boolean => {
 };
 
 const willTokenExpire = (token?: string): boolean => {
-  if (!token) return true;
+  if (!token) {
+    return true;
+  }
 
   try {
     const decoded: IJWToken = jwt_decode(token);
@@ -200,6 +204,14 @@ const willTokenExpire = (token?: string): boolean => {
   } catch (e) {
     return true;
   }
+};
+
+const willTimestampExpire = (timestamp?: number): boolean => {
+  if (!timestamp) {
+    return true;
+  }
+
+  return moment(timestamp).isBefore(moment().add(2, 'hour'));
 };
 
 const getApiKey = async (provider: string) => {
@@ -907,29 +919,17 @@ class EspnHandler {
         await this.refreshAuth();
       }
 
-      if (
-        !this.device_token_exchange ||
-        !this.device_token_exchange_expires ||
-        moment(this.device_token_exchange_expires).isBefore(moment().add(2, 'hour'))
-      ) {
+      if (!this.device_token_exchange || willTimestampExpire(this.device_token_exchange_expires)) {
         console.log('Refreshing device token (ESPN+)');
         await this.getDeviceTokenExchange();
       }
 
-      if (
-        !this.device_refresh_token ||
-        !this.device_refresh_token_expires ||
-        moment(this.device_refresh_token_expires).isBefore(moment().add(2, 'hour'))
-      ) {
+      if (!this.device_refresh_token || willTimestampExpire(this.device_refresh_token_expires)) {
         console.log('Refreshing device refresh token (ESPN+)');
         await this.getDeviceRefreshToken();
       }
 
-      if (
-        !this.account_token ||
-        !this.account_token_expires ||
-        moment(this.account_token_expires).isBefore(moment().add(2, 'hour'))
-      ) {
+      if (!this.account_token || willTimestampExpire(this.account_token_expires)) {
         console.log('Refreshing BAM access token (ESPN+)');
         await this.getBamAccessToken();
       }
@@ -1277,11 +1277,7 @@ class EspnHandler {
   private getDeviceTokenExchange = async () => {
     await this.createDeviceGrant();
 
-    if (
-      !this.device_token_exchange ||
-      !this.device_token_exchange_expires ||
-      moment(this.device_token_exchange_expires).isBefore(moment().add(2, 'hour'))
-    ) {
+    if (!this.device_token_exchange || willTimestampExpire(this.device_token_exchange_expires)) {
       try {
         this.device_token_exchange = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -1305,11 +1301,7 @@ class EspnHandler {
   private getDeviceRefreshToken = async () => {
     await this.getDeviceTokenExchange();
 
-    if (
-      !this.device_refresh_token ||
-      !this.device_refresh_token_expires ||
-      moment(this.device_refresh_token_expires).isBefore(moment().add(2, 'hour'))
-    ) {
+    if (!this.device_refresh_token || willTimestampExpire(this.device_refresh_token_expires)) {
       try {
         this.device_refresh_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'refresh_token',
@@ -1332,11 +1324,7 @@ class EspnHandler {
   private getBamAccessToken = async () => {
     await this.createAccountGrant();
 
-    if (
-      !this.account_token ||
-      !this.account_token_expires ||
-      moment(this.account_token_expires).isBefore(moment().add(2, 'hour'))
-    ) {
+    if (!this.account_token || willTimestampExpire(this.account_token_expires)) {
       try {
         this.account_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
