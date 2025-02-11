@@ -113,7 +113,7 @@ export class PlaylistHandler {
         headers: resHeaders,
       } = await axios.get<string>(manifestUrl, {
         headers: {
-          'Accept-Encodixng': 'identity',
+          'Accept-Encoding': 'identity',
           'User-Agent': userAgent,
           ...headers,
         },
