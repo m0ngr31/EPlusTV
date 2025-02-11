@@ -50,12 +50,10 @@ export const ESPNPlus: FC = async () => {
             </label>
           </fieldset>
         </div>
-        <div id="espnplus-body" hx-swap="innerHTML">
-          <ESPNPlusBody enabled={enabled} tokens={tokens} />
-        </div>
         <div class="grid">
           <details>
-            <summary>ESPN+ Options{' '}
+            <summary>
+              ESPN+ Options{' '}
               <span
                 class="warning-red"
                 data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
@@ -64,22 +62,30 @@ export const ESPNPlus: FC = async () => {
                 **
               </span>
             </summary>
-            <span>
-              In-Market Teams
-            </span>
+            <span>In-Market Teams</span>
             <fieldset role="group">
-              <form id="espnplus-refresh-in-market-teams" hx-put="/providers/espnplus/refresh-in-market-teams" hx-trigger="submit">
+              <form
+                id="espnplus-refresh-in-market-teams"
+                hx-put="/providers/espnplus/refresh-in-market-teams"
+                hx-trigger="submit"
+              >
                 <div>
-                  <pre>{meta.in_market_teams} ({meta.zip_code})</pre>
+                  <pre>
+                    {meta.in_market_teams} ({meta.zip_code})
+                  </pre>
                   <button id="espnplus-refresh-in-market-teams-button">Refresh In-Market Teams</button>
                 </div>
               </form>
             </fieldset>
-            <form id="espnplus-event-filters" hx-put="/providers/espnplus/save-filters" hx-trigger="submit" hx-swap="outerHTML" hx-target="#espnplus-save-filters-button">
+            <form
+              id="espnplus-event-filters"
+              hx-put="/providers/espnplus/save-filters"
+              hx-trigger="submit"
+              hx-swap="outerHTML"
+              hx-target="#espnplus-save-filters-button"
+            >
               <div>
-                <span>
-                  Category Filter
-                </span>
+                <span>Category Filter</span>
                 <fieldset role="group">
                   <input
                     type="text"
@@ -89,9 +95,7 @@ export const ESPNPlus: FC = async () => {
                     name="espnplus-category-filter"
                   />
                 </fieldset>
-                <span>
-                  Title Filter
-                </span>
+                <span>Title Filter</span>
                 <fieldset role="group">
                   <input
                     type="text"
@@ -107,6 +111,9 @@ export const ESPNPlus: FC = async () => {
               </div>
             </form>
           </details>
+        </div>
+        <div id="espnplus-body" hx-swap="innerHTML">
+          <ESPNPlusBody enabled={enabled} tokens={tokens} />
         </div>
         <script
           dangerouslySetInnerHTML={{

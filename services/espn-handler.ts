@@ -97,6 +97,7 @@ interface IAppConfig {
 interface IToken {
   access_token: string;
   refresh_token: string;
+  expires_in: number;
 }
 
 interface IGrant {
@@ -200,9 +201,6 @@ const willTokenExpire = (token?: string): boolean => {
     return true;
   }
 };
-
-const isAccessTokenValid = (token?: IToken) => isTokenValid(token?.access_token);
-const isRefreshTokenValid = (token?: IToken) => isTokenValid(token?.refresh_token);
 
 const getApiKey = async (provider: string) => {
   try {
@@ -356,17 +354,18 @@ const parseAirings = async events => {
     name: 'espnplus',
   });
 
+  const useMultiple = await usesMultiple();
+
   const category_filter =
     plusMeta?.category_filter && plusMeta?.category_filter.trim().length > 0
       ? plusMeta?.category_filter.split(',').map(category => category.toLowerCase().trim())
-      : false;
+      : [];
 
   const title_filter =
-    plusMeta?.title_filter && plusMeta?.title_filter.trim().length > 0 ? new RegExp(plusMeta?.title_filter) : false;
-  const useMultiple = await usesMultiple();
+    plusMeta?.title_filter && plusMeta?.title_filter.trim().length > 0 && new RegExp(plusMeta?.title_filter);
 
   const in_market_team_filter =
-    plusMeta?.in_market_teams && plusMeta?.in_market_teams.length > 0 ? plusMeta?.in_market_teams.split(',') : false;
+    plusMeta?.in_market_teams && plusMeta?.in_market_teams.length > 0 ? plusMeta?.in_market_teams.split(',') : [];
 
   for (const event of events) {
     const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
@@ -386,19 +385,14 @@ const parseAirings = async events => {
         continue;
       }
 
-      if (
-        in_market_team_filter &&
-        event.network &&
-        event.network.id === 'bam_dtc' &&
-        event.name.includes(in_market_team_filter)
-      ) {
+      if (event.network?.id === 'bam_dtc' && in_market_team_filter.some(tn => event.name.indexOf(tn) > -1)) {
         continue;
       }
 
       const categories = parseCategories(event);
 
       if (
-        category_filter &&
+        category_filter.length > 0 &&
         !category_filter.some(v => categories.map(category => category.toLowerCase()).includes(v))
       ) {
         continue;
@@ -469,6 +463,9 @@ class EspnHandler {
   public device_refresh_token?: IToken;
   public device_grant?: IGrant;
   public id_token_grant?: IGrant;
+  public device_token_exchange_expires?: number;
+  public device_refresh_token_expires?: number;
+  public account_token_expires?: number;
 
   public adobe_device_id?: string;
   public adobe_auth?: IAdobeAuth;
@@ -899,7 +896,7 @@ class EspnHandler {
       await this.save();
     } catch (e) {
       console.error(e);
-      console.log('Could not get auth refresh token');
+      console.log('Could not get auth refresh token (ESPN+)');
     }
   };
 
@@ -912,29 +909,29 @@ class EspnHandler {
 
       if (
         !this.device_token_exchange ||
-        !isTokenValid(this.device_token_exchange.access_token) ||
-        willTokenExpire(this.device_token_exchange.access_token)
+        !this.device_token_exchange_expires ||
+        moment(this.device_token_exchange_expires).isBefore(moment().add(2, 'hour'))
       ) {
         console.log('Refreshing device token (ESPN+)');
-        await this.getDeviceTokenExchange(true);
+        await this.getDeviceTokenExchange();
       }
 
       if (
         !this.device_refresh_token ||
-        !isTokenValid(this.device_refresh_token.access_token) ||
-        willTokenExpire(this.device_refresh_token.access_token)
+        !this.device_refresh_token_expires ||
+        moment(this.device_refresh_token_expires).isBefore(moment().add(2, 'hour'))
       ) {
         console.log('Refreshing device refresh token (ESPN+)');
-        await this.getDeviceRefreshToken(true);
+        await this.getDeviceRefreshToken();
       }
 
       if (
         !this.account_token ||
-        !isTokenValid(this.account_token.access_token) ||
-        willTokenExpire(this.account_token.access_token)
+        !this.account_token_expires ||
+        moment(this.account_token_expires).isBefore(moment().add(2, 'hour'))
       ) {
         console.log('Refreshing BAM access token (ESPN+)');
-        await this.getBamAccessToken(true);
+        await this.getBamAccessToken();
       }
     },
     60 * 1000,
@@ -1277,10 +1274,14 @@ class EspnHandler {
     }
   };
 
-  private getDeviceTokenExchange = async (force?: boolean) => {
+  private getDeviceTokenExchange = async () => {
     await this.createDeviceGrant();
 
-    if (!this.device_token_exchange || !isRefreshTokenValid(this.device_token_exchange) || force) {
+    if (
+      !this.device_token_exchange ||
+      !this.device_token_exchange_expires ||
+      moment(this.device_token_exchange_expires).isBefore(moment().add(2, 'hour'))
+    ) {
       try {
         this.device_token_exchange = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -1291,6 +1292,7 @@ class EspnHandler {
           subject_token: this.device_grant.assertion,
           subject_token_type: 'urn:bamtech:params:oauth:token-type:device',
         });
+        this.device_token_exchange_expires = moment().add(this.device_token_exchange.expires_in, 'seconds').valueOf();
 
         await this.save();
       } catch (e) {
@@ -1300,10 +1302,14 @@ class EspnHandler {
     }
   };
 
-  private getDeviceRefreshToken = async (force?: boolean) => {
+  private getDeviceRefreshToken = async () => {
     await this.getDeviceTokenExchange();
 
-    if (!this.device_refresh_token || !isAccessTokenValid(this.device_refresh_token) || force) {
+    if (
+      !this.device_refresh_token ||
+      !this.device_refresh_token_expires ||
+      moment(this.device_refresh_token_expires).isBefore(moment().add(2, 'hour'))
+    ) {
       try {
         this.device_refresh_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'refresh_token',
@@ -1313,6 +1319,7 @@ class EspnHandler {
           refresh_token: this.device_token_exchange.refresh_token,
           setCookie: false,
         });
+        this.device_refresh_token_expires = moment().add(this.device_refresh_token.expires_in, 'seconds').valueOf();
 
         await this.save();
       } catch (e) {
@@ -1322,10 +1329,14 @@ class EspnHandler {
     }
   };
 
-  private getBamAccessToken = async (force?: boolean) => {
+  private getBamAccessToken = async () => {
     await this.createAccountGrant();
 
-    if (!this.account_token || !isAccessTokenValid(this.account_token) || force) {
+    if (
+      !this.account_token ||
+      !this.account_token_expires ||
+      moment(this.account_token_expires).isBefore(moment().add(2, 'hour'))
+    ) {
       try {
         this.account_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -1336,6 +1347,7 @@ class EspnHandler {
           subject_token: this.id_token_grant.assertion,
           subject_token_type: 'urn:bamtech:params:oauth:token-type:account',
         });
+        this.account_token_expires = moment().add(this.account_token.expires_in, 'seconds').valueOf();
 
         await this.save();
       } catch (e) {
@@ -1356,8 +1368,17 @@ class EspnHandler {
 
   private load = async (): Promise<void> => {
     const {tokens: plusTokens} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens>>({name: 'espnplus'});
-    const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
-      plusTokens;
+    const {
+      tokens,
+      device_grant,
+      device_token_exchange,
+      device_refresh_token,
+      id_token_grant,
+      account_token,
+      device_token_exchange_expires,
+      device_refresh_token_expires,
+      account_token_expires,
+    } = plusTokens;
 
     this.tokens = tokens;
     this.device_grant = device_grant;
@@ -1365,6 +1386,9 @@ class EspnHandler {
     this.device_refresh_token = device_refresh_token;
     this.id_token_grant = id_token_grant;
     this.account_token = account_token;
+    this.device_token_exchange_expires = device_token_exchange_expires;
+    this.device_refresh_token_expires = device_refresh_token_expires;
+    this.account_token_expires = account_token_expires;
 
     const {tokens: linearTokens} = await db.providers.findOneAsync<IProvider<TESPNTokens>>({name: 'espn'});
     const {adobe_device_id, adobe_auth} = linearTokens;
