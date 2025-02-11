@@ -10,7 +10,7 @@ import {getLinearStartChannel, getNumberOfChannels, getStartChannel, xmltvPaddin
 const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
 
 export const usesMultiple = async (): Promise<boolean> => {
-  const enabledProviders = await db.providers.count({enabled: true});
+  const enabledProviders = await db.providers.countAsync({enabled: true});
 
   return enabledProviders > 1;
 };
@@ -142,7 +142,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
   }
 
   const scheduledEntries = await db.entries
-    .find<IEntry>({channel: {$exists: true}, linear: linear ? true : {$exists: false}})
+    .findAsync<IEntry>({channel: {$exists: true}, linear: linear ? true : {$exists: false}})
     .sort({start: 1});
 
   for (const entry of scheduledEntries) {

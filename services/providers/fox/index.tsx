@@ -29,7 +29,7 @@ fox.put('/toggle', async c => {
   const enabled = body['fox-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'foxsports'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'foxsports'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -42,9 +42,9 @@ fox.put('/toggle-4k-only', async c => {
   const body = await c.req.parseBody();
   const only4k = body['fox-enabled-4k-only'] === 'on';
 
-  const {meta} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+  const {meta} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
 
-  const {enabled, tokens, linear_channels} = await db.providers.update<IProvider>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFoxTokens>, any>(
     {name: 'foxsports'},
     {
       $set: {
@@ -58,6 +58,7 @@ fox.put('/toggle-4k-only', async c => {
       returnUpdatedDocs: true,
     },
   );
+  const {enabled, tokens, linear_channels} = affectedDocuments as IProvider<TFoxTokens>;
 
   removeAndSchedule();
 
@@ -68,14 +69,23 @@ fox.put('/toggle-uhd', async c => {
   const body = await c.req.parseBody();
   const uhd = body['fox-enabled-uhd'] === 'on';
 
-  const {meta} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+  const {meta} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
 
-  const {enabled, tokens, linear_channels} = await db.providers.update<IProvider<TFoxTokens>>({name: 'foxsports'}, {$set: {meta: {
-    ...meta,
-    uhd,
-  }}}, {
-    returnUpdatedDocs: true,
-  });
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFoxTokens>, any>(
+    {name: 'foxsports'},
+    {
+      $set: {
+        meta: {
+          ...meta,
+          uhd,
+        },
+      },
+    },
+    {
+      returnUpdatedDocs: true,
+    },
+  );
+  const {enabled, tokens, linear_channels} = affectedDocuments as IProvider<TFoxTokens>;
 
   return c.html(<FoxBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
 });
@@ -89,7 +99,8 @@ fox.get('/tve-login/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TFoxTokens>>({name: 'foxsports'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFoxTokens>, any>({name: 'foxsports'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {tokens, linear_channels} = affectedDocuments as IProvider<TFoxTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

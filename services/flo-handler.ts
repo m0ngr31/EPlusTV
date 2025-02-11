@@ -52,7 +52,7 @@ const parseAirings = async (events: IFloEvent[]) => {
 
   for (const event of events) {
     for (const stream of event.live_event_metadata.streams) {
-      const entryExists = await db.entries.findOne<IEntry>({id: `flo-${stream.stream_id}`});
+      const entryExists = await db.entries.findOneAsync<IEntry>({id: `flo-${stream.stream_id}`});
 
       if (!entryExists) {
         const start = moment(event.label_1_parts.start_date_time);
@@ -67,7 +67,7 @@ const parseAirings = async (events: IFloEvent[]) => {
 
         console.log('Adding event: ', gameName);
 
-        await db.entries.insert<IEntry>({
+        await db.entries.insertAsync<IEntry>({
           categories: [...new Set([event.footer_1, 'FloSports', event.action.analytics.site_name])],
           duration: end.diff(start, 'seconds'),
           end: end.valueOf(),
@@ -95,7 +95,7 @@ class FloSportsHandler {
   public device_id?: string;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'flosports'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'flosports'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TFloSportsTokens = {};
@@ -110,7 +110,7 @@ class FloSportsHandler {
         data.refresh_expires_at = this.refresh_expires_at;
       }
 
-      await db.providers.insert<IProvider<TFloSportsTokens>>({
+      await db.providers.insertAsync<IProvider<TFloSportsTokens>>({
         enabled: useFloSports,
         name: 'flosports',
         tokens: data,
@@ -125,7 +125,7 @@ class FloSportsHandler {
       console.log('Using FLOSPORTS variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider<TFloSportsTokens>>({name: 'flosports'});
 
     if (!enabled) {
       return;
@@ -136,7 +136,7 @@ class FloSportsHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider<TFloSportsTokens>>({name: 'flosports'});
 
     if (!enabled) {
       return;
@@ -148,7 +148,7 @@ class FloSportsHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider<TFloSportsTokens>>({name: 'flosports'});
 
     if (!enabled) {
       return;
@@ -323,11 +323,11 @@ class FloSportsHandler {
   };
 
   private save = async () => {
-    await db.providers.update({name: 'flosports'}, {$set: {tokens: this}});
+    await db.providers.updateAsync({name: 'flosports'}, {$set: {tokens: this}});
   };
 
   private load = async () => {
-    const {tokens} = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TFloSportsTokens>>({name: 'flosports'});
     const {device_id, access_token, expires_at, refresh_token, refresh_expires_at} = tokens;
 
     this.device_id = device_id;

@@ -136,7 +136,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
   const [now, inTwoDays] = normalTimeRange();
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: `${event.videoContentId}`});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `${event.videoContentId}`});
 
     if (!entryExists) {
       const start = moment(event.startTimestamp);
@@ -155,7 +155,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
 
       console.log('Adding event: ', event.title);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -193,7 +193,7 @@ class ParamountHandler {
   private dma: IDma;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'paramount'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'paramount'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TParamountTokens = {};
@@ -208,7 +208,7 @@ class ParamountHandler {
         data.profileId = this.profileId;
       }
 
-      await db.providers.insert<IProvider<TParamountTokens>>({
+      await db.providers.insertAsync<IProvider<TParamountTokens>>({
         enabled: useParamount.plus,
         linear_channels: [
           {
@@ -243,7 +243,7 @@ class ParamountHandler {
       console.log('Using CBSSPORTSHQ variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'paramount'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'paramount'});
 
     if (!enabled || isParamountDisabled) {
       return;
@@ -262,7 +262,7 @@ class ParamountHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'paramount'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'paramount'});
 
     if (!enabled || isParamountDisabled) {
       return;
@@ -274,7 +274,7 @@ class ParamountHandler {
   };
 
   public getSchedule = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'paramount'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'paramount'});
 
     if (!enabled || isParamountDisabled) {
       return;
@@ -310,7 +310,7 @@ class ParamountHandler {
         try {
           const {data} = await instance.get(
             `/apps-api/v3.0/androidphone/live/channels/${c.slug}/listings.json?${new URLSearchParams({
-              _clientRegion: this.appConfig.country,
+              _clientRegion: this.appConfig.countAsyncry,
               at: TOKEN,
               locale: 'en-us',
               rows: '125',
@@ -470,7 +470,7 @@ class ParamountHandler {
     try {
       const {data} = await instance.get<{carousel: IChannel[]}>(
         `/apps-api/v3.0/androidphone/home/configurator/channels.json?${new URLSearchParams({
-          _clientRegion: this.appConfig.country_code,
+          _clientRegion: this.appConfig.countAsyncry_code,
           at: TOKEN,
           dma: this.dma?.dma,
           locale: 'en-us',
@@ -490,7 +490,7 @@ class ParamountHandler {
         }
 
         if (useLinear) {
-          const {linear_channels} = await db.providers.findOne<IProvider>({name: 'paramount'});
+          const {linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'paramount'});
 
           const useCbsSportsHq = linear_channels.find(c => c.id === 'cbssportshq');
           const useGolazo = linear_channels.find(c => c.id === 'golazo');
@@ -735,11 +735,11 @@ class ParamountHandler {
   };
 
   private save = async () => {
-    await db.providers.update({name: 'paramount'}, {$set: {tokens: _.omit(this, 'appConfig', 'ip', 'dma')}});
+    await db.providers.updateAsync({name: 'paramount'}, {$set: {tokens: _.omit(this, 'appConfig', 'ip', 'dma')}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TParamountTokens>>({name: 'paramount'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TParamountTokens>>({name: 'paramount'});
     const {device_id, hashed_token, cookies, expires} = tokens || {};
 
     this.device_id = device_id;

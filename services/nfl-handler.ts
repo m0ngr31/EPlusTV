@@ -175,7 +175,7 @@ const parseAirings = async (events: INFLEvent[]) => {
   const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: event.externalId});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.externalId});
 
     if (!entryExists) {
       const start = moment(event.startTime);
@@ -204,7 +204,7 @@ const parseAirings = async (events: INFLEvent[]) => {
         categories.push(home, away);
       }
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: [...new Set(categories)],
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -250,7 +250,7 @@ class NflHandler {
   public youTubeUUID?: string;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'nfl'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'nfl'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TNFLTokens = {};
@@ -277,7 +277,7 @@ class NflHandler {
         data.youTubeUserId = this.youTubeUserId;
       }
 
-      await db.providers.insert<IProvider<TNFLTokens>>({
+      await db.providers.insertAsync<IProvider<TNFLTokens>>({
         enabled: useNfl.plus,
         linear_channels: [
           {
@@ -330,7 +330,7 @@ class NflHandler {
       console.log('Using NFL_SUNDAY_TICKET variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'nfl'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'nfl'});
 
     if (!enabled) {
       return;
@@ -341,7 +341,7 @@ class NflHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'nfl'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'nfl'});
 
     if (!enabled) {
       return;
@@ -351,7 +351,7 @@ class NflHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'nfl'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'nfl'});
 
     if (!enabled) {
       return;
@@ -459,7 +459,7 @@ class NflHandler {
     try {
       await this.refreshTokens();
 
-      const event = await db.entries.findOne<IEntry>({id});
+      const event = await db.entries.findOneAsync<IEntry>({id});
 
       const isGame =
         event.channel !== 'NFLNETWORK' && event.channel !== 'NFLDIGITAL1_OO_v3' && event.channel !== 'NFLNRZ';
@@ -493,7 +493,7 @@ class NflHandler {
   };
 
   private updateChannelAccess = async (index: number, enabled: boolean): Promise<void> => {
-    const {linear_channels} = await db.providers.findOne<IProvider<TNFLTokens>>({name: 'nfl'});
+    const {linear_channels} = await db.providers.findOneAsync<IProvider<TNFLTokens>>({name: 'nfl'});
 
     const updatedChannels = linear_channels.map((c, i) => {
       if (i !== index) {
@@ -504,7 +504,7 @@ class NflHandler {
       return c;
     });
 
-    await db.providers.update({name: 'nfl'}, {$set: {linear_channels: updatedChannels}});
+    await db.providers.updateAsync({name: 'nfl'}, {$set: {linear_channels: updatedChannels}});
   };
 
   private checkRedZoneAccess = async (): Promise<boolean> => {
@@ -553,7 +553,7 @@ class NflHandler {
 
   private checkChannelAccess = async (): Promise<boolean> => {
     try {
-      const {linear_channels} = await db.providers.findOne<IProvider<TNFLTokens>>({name: 'nfl'});
+      const {linear_channels} = await db.providers.findOneAsync<IProvider<TNFLTokens>>({name: 'nfl'});
 
       return linear_channels[2].enabled;
     } catch (e) {}
@@ -932,11 +932,11 @@ class NflHandler {
   };
 
   private save = async (): Promise<void> => {
-    await db.providers.update({name: 'nfl'}, {$set: {tokens: this}});
+    await db.providers.updateAsync({name: 'nfl'}, {$set: {tokens: this}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TNFLTokens>>({name: 'nfl'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TNFLTokens>>({name: 'nfl'});
     const {
       device_id,
       access_token,

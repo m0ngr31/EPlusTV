@@ -21,7 +21,7 @@ mw.put('/toggle', async c => {
   const body = await c.req.parseBody();
   const enabled = body['mw-enabled'] === 'on';
 
-  await db.providers.update<IProvider>({name: 'mw'}, {$set: {enabled}});
+  await db.providers.updateAsync<IProvider, any>({name: 'mw'}, {$set: {enabled}});
 
   if (enabled) {
     scheduleEvents();

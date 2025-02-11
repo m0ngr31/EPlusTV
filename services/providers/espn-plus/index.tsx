@@ -24,7 +24,7 @@ espnplus.put('/toggle', async c => {
   const enabled = body['espnplus-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'espnplus'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'espnplus'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -39,11 +39,12 @@ espnplus.put('/toggle-ppv', async c => {
   const body = await c.req.parseBody();
   const use_ppv = body['espnplus-ppv-enabled'] === 'on';
 
-  const {enabled, tokens} = await db.providers.update<IProvider<TESPNPlusTokens, IEspnPlusMeta>>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>, any>(
     {name: 'espnplus'},
     {$set: {'meta.use_ppv': use_ppv}},
     {returnUpdatedDocs: true},
   );
+  const {enabled, tokens} = affectedDocuments as IProvider<TESPNPlusTokens, IEspnPlusMeta>;
 
   scheduleEvents();
 
@@ -55,9 +56,9 @@ espnplus.put('/save-filters', async c => {
   const category_filter = body['espnplus-category-filter'].toString();
   const title_filter = body['espnplus-title-filter'].toString();
 
-  await db.providers.update(
+  await db.providers.updateAsync(
     {name: 'espnplus'},
-    {$set: {'meta.category_filter': category_filter, 'meta.title_filter': title_filter}}
+    {$set: {'meta.category_filter': category_filter, 'meta.title_filter': title_filter}},
   );
 
   await removeEvents();
@@ -92,7 +93,8 @@ espnplus.get('/login/check/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens} = await db.providers.update<IProvider<TESPNPlusTokens>>({name: 'espnplus'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNPlusTokens>, any>({name: 'espnplus'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {tokens} = affectedDocuments as IProvider<TESPNPlusTokens, IEspnPlusMeta>;
 
   // Kickoff event scheduler
   scheduleEvents();

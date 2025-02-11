@@ -25,7 +25,7 @@ flosports.put('/toggle', async c => {
   const enabled = body['flosports-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'flosports'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'flosports'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -43,11 +43,12 @@ flosports.get('/auth/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens} = await db.providers.update<IProvider<TFloSportsTokens>>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFloSportsTokens>, any>(
     {name: 'flosports'},
     {$set: {enabled: true}},
     {returnUpdatedDocs: true},
   );
+  const {tokens} = affectedDocuments as IProvider<TFloSportsTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

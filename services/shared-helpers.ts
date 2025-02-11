@@ -39,18 +39,18 @@ export const getRandomHex = (): string => crypto.randomUUID().replace(/-/g, '');
 export const getRandomUUID = (): string => crypto.randomUUID();
 
 export const resetSchedule = async (): Promise<void> => {
-  await db.schedule.remove({}, {multi: true});
-  await db.entries.update<IEntry>({linear: {$exists: false}}, {$unset: {channel: true}}, {multi: true});
+  await db.schedule.removeAsync({}, {multi: true});
+  await db.entries.updateAsync<IEntry, any>({linear: {$exists: false}}, {$unset: {channel: true}}, {multi: true});
 };
 
 export const cleanEntries = async (): Promise<void> => {
   const now = new Date().valueOf();
-  await db.entries.remove({end: {$lt: now}}, {multi: true});
+  await db.entries.removeAsync({end: {$lt: now}}, {multi: true});
 };
 
 export const removeAllEntries = async (): Promise<void> => {
-  await db.schedule.remove({}, {multi: true});
-  await db.entries.remove({}, {multi: true});
+  await db.schedule.removeAsync({}, {multi: true});
+  await db.entries.removeAsync({}, {multi: true});
 };
 
 export const removeChannelStatus = (channelId: string | number): void => {

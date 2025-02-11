@@ -7,7 +7,7 @@ import { TFloSportsTokens } from '@/services/flo-handler';
 import { FloSportsBody } from './CardBody';
 
 export const FloSports: FC = async () => {
-  const parmount = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+  const parmount = await db.providers.findOneAsync<IProvider<TFloSportsTokens>>({name: 'flosports'});
   const enabled = parmount?.enabled;
   const tokens = parmount?.tokens;
 

@@ -7,7 +7,7 @@ import { IEspnPlusMeta, TESPNPlusTokens } from '@/services/espn-handler';
 import { ESPNPlusBody } from './CardBody';
 
 export const ESPNPlus: FC = async () => {
-  const {enabled, tokens, meta} = await db.providers.findOne<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+  const {enabled, tokens, meta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
     name: 'espnplus',
   });
 

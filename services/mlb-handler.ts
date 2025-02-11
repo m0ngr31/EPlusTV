@@ -149,7 +149,7 @@ const generateThumb = (home: ITeam, away: ITeam): string =>
 const parseAirings = async (events: ICombinedGame) => {
   const [now, endDate] = normalTimeRange();
 
-  const {meta} = await db.providers.findOne<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+  const {meta} = await db.providers.findOneAsync<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
   const onlyFree = meta?.onlyFree ?? false;
 
   for (const pk in events) {
@@ -162,7 +162,7 @@ const parseAirings = async (events: ICombinedGame) => {
 
     for (const epg of eventFeed.videoFeeds) {
       if (epg.mediaId) {
-        const entryExists = await db.entries.findOne<IEntry>({id: epg.mediaId});
+        const entryExists = await db.entries.findOneAsync<IEntry>({id: epg.mediaId});
 
         if (!entryExists) {
           if (onlyFree && !epg.freeGame) {
@@ -181,7 +181,7 @@ const parseAirings = async (events: ICombinedGame) => {
 
           console.log('Adding event: ', gameName);
 
-          await db.entries.insert<IEntry>({
+          await db.entries.insertAsync<IEntry>({
             categories: ['Baseball', 'MLB', event.teams.home.team.name, event.teams.away.team.name],
             duration: end.diff(start, 'seconds'),
             end: end.valueOf(),
@@ -209,7 +209,7 @@ const parseBigInnings = async (dates: Moment[][]) => {
     const [start, end] = day;
     const gameName = `Big Inning - ${start.format('dddd, MMMM Do YYYY')}`;
 
-    const entryExists = await db.entries.findOne<IEntry>({id: gameName});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: gameName});
 
     if (start.isAfter(endDate) || end.isBefore(now) || entryExists) {
       continue;
@@ -217,7 +217,7 @@ const parseBigInnings = async (dates: Moment[][]) => {
 
     console.log('Adding event: ', gameName);
 
-    await db.entries.insert<IEntry>({
+    await db.entries.insertAsync<IEntry>({
       categories: ['Baseball', 'MLB', 'Big Inning'],
       duration: end.diff(start, 'seconds'),
       end: end.valueOf(),
@@ -240,7 +240,7 @@ const parseMlbNetwork = async (events: IMLBNetworkEvent[]): Promise<void> => {
   const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: `MLB Network - ${event.utcDate}`});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `MLB Network - ${event.utcDate}`});
 
     if (!entryExists) {
       const start = moment(`${event.startdate} ${event.starttime}`, 'MM/DD/YYYY h:mm A');
@@ -262,7 +262,7 @@ const parseMlbNetwork = async (events: IMLBNetworkEvent[]): Promise<void> => {
 
       console.log('Adding event: ', name);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: ['MLB Network', 'MLB', 'Baseball'],
         channel: 'MLBN',
         duration,
@@ -306,7 +306,7 @@ class MLBHandler {
   public entitlements?: IEntitlement[];
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'mlbtv'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'mlbtv'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TMLBTokens = {};
@@ -321,7 +321,7 @@ class MLBHandler {
         data.session_id = this.session_id;
       }
 
-      await db.providers.insert<IProvider<TMLBTokens, IProviderMeta>>({
+      await db.providers.insertAsync<IProvider<TMLBTokens, IProviderMeta>>({
         enabled: useMLBtv,
         linear_channels: [
           {
@@ -350,7 +350,7 @@ class MLBHandler {
       console.log('Using MLBTV_ONLY_FREE variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+    const {enabled} = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
 
     if (!enabled) {
       return;
@@ -360,7 +360,7 @@ class MLBHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+    const {enabled} = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
 
     if (!enabled) {
       return;
@@ -372,7 +372,7 @@ class MLBHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {meta, enabled} = await db.providers.findOne<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+    const {meta, enabled} = await db.providers.findOneAsync<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
 
     if (!enabled) {
       return;
@@ -590,7 +590,7 @@ class MLBHandler {
       enabled = true;
     }
 
-    await db.providers.update(
+    await db.providers.updateAsync(
       {name: 'mlbtv'},
       {
         $set: {
@@ -837,11 +837,11 @@ class MLBHandler {
   };
 
   private save = async () => {
-    await db.providers.update({name: 'mlbtv'}, {$set: {tokens: _.omit(this, 'entitlements', 'session_id')}});
+    await db.providers.updateAsync({name: 'mlbtv'}, {$set: {tokens: _.omit(this, 'entitlements', 'session_id')}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
     const {device_id, access_token, expires_at, refresh_token} = tokens;
 
     this.device_id = device_id;

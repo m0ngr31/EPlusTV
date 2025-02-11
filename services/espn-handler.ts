@@ -352,7 +352,9 @@ const parseAirings = async events => {
 
   const [now, endSchedule] = normalTimeRange();
 
-  const {meta: plusMeta} = await db.providers.findOne<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({name: 'espnplus'});
+  const {meta: plusMeta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+    name: 'espnplus',
+  });
 
   const category_filter =
     plusMeta?.category_filter && plusMeta?.category_filter.trim().length > 0
@@ -367,7 +369,7 @@ const parseAirings = async events => {
     plusMeta?.in_market_teams && plusMeta?.in_market_teams.length > 0 ? plusMeta?.in_market_teams.split(',') : false;
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
 
     if (!entryExists) {
       const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.some(n => n === event.network?.id);
@@ -423,26 +425,25 @@ const parseAirings = async events => {
       };
 
       if (title_filter && !formatEntryName(entryEvent, useMultiple).match(title_filter)) {
-        //console.log('Omitting event ' + event.name + ' due to title filter');
         continue;
       }
 
       console.log('Adding event: ', event.name);
 
-      await db.entries.insert<IEntry>(entryEvent);
+      await db.entries.insertAsync<IEntry>(entryEvent);
     }
   }
 };
 
 const isEnabled = async (which?: string): Promise<boolean> => {
-  const {enabled: espnPlusEnabled, meta: plusMeta} = await db.providers.findOne<
+  const {enabled: espnPlusEnabled, meta: plusMeta} = await db.providers.findOneAsync<
     IProvider<TESPNPlusTokens, IEspnPlusMeta>
   >({name: 'espnplus'});
   const {
     enabled: espnLinearEnabled,
     linear_channels,
     meta: linearMeta,
-  } = await db.providers.findOne<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
+  } = await db.providers.findOneAsync<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
 
   if (which === 'linear') {
     return espnLinearEnabled && _.some(linear_channels, c => c.enabled);
@@ -476,7 +477,7 @@ class EspnHandler {
   private graphQlApiKey: string;
 
   public initialize = async () => {
-    const setupPlus = (await db.providers.count({name: 'espnplus'})) > 0 ? true : false;
+    const setupPlus = (await db.providers.countAsync({name: 'espnplus'})) > 0 ? true : false;
 
     if (!setupPlus) {
       const data: TESPNPlusTokens = {};
@@ -492,7 +493,7 @@ class EspnHandler {
         data.account_token = this.account_token;
       }
 
-      await db.providers.insert<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+      await db.providers.insertAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
         enabled: useEspnPlus,
         meta: {
           category_filter: '',
@@ -510,7 +511,7 @@ class EspnHandler {
       }
     }
 
-    const setupLinear = (await db.providers.count({name: 'espn'})) > 0 ? true : false;
+    const setupLinear = (await db.providers.countAsync({name: 'espn'})) > 0 ? true : false;
 
     if (!setupLinear) {
       const data: TESPNTokens = {};
@@ -522,7 +523,7 @@ class EspnHandler {
         data.adobe_auth = this.adobe_auth;
       }
 
-      await db.providers.insert<IProvider<TESPNTokens, IEspnMeta>>({
+      await db.providers.insertAsync<IProvider<TESPNTokens, IEspnMeta>>({
         enabled: requiresEspnProvider,
         linear_channels: [
           {
@@ -613,7 +614,9 @@ class EspnHandler {
       return;
     }
 
-    const {meta: plusMeta} = await db.providers.findOne<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({name: 'espnplus'});
+    const {meta: plusMeta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+      name: 'espnplus',
+    });
 
     if (!plusMeta?.zip_code || !plusMeta?.in_market_teams) {
       await this.refreshInMarketTeams();
@@ -650,7 +653,7 @@ class EspnHandler {
     const espn3Enabled = await isEnabled('espn3');
     const accnxEnabled = await isEnabled('accnx');
 
-    const {linear_channels} = await db.providers.findOne<IProvider>({name: 'espn'});
+    const {linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'espn'});
 
     const isChannelEnabled = (channelId: string): boolean =>
       espnLinearEnabled && linear_channels.some(c => c.id === channelId && c.enabled);
@@ -1160,14 +1163,14 @@ class EspnHandler {
             input: {
               applicationRuntime: 'chrome',
               attributes: {
-                browserName: 'chrome',
                 brand: 'web',
-                manufacturer: 'apple',
+                browserName: 'chrome',
                 browserVersion: '128.0.0',
+                manufacturer: 'apple',
                 model: null,
                 operatingSystem: 'macintosh',
-                osDeviceIds: [],
                 operatingSystemVersion: '10.15.7',
+                osDeviceIds: [],
               },
               deviceFamily: 'browser',
               deviceLanguage: 'en-US',
@@ -1187,7 +1190,7 @@ class EspnHandler {
 
       const zip_code = deviceData.extensions.sdk.session.location.zipCode;
 
-      await db.providers.update({name: 'espnplus'}, {$set: {'meta.zip_code': zip_code}});
+      await db.providers.updateAsync({name: 'espnplus'}, {$set: {'meta.zip_code': zip_code}});
 
       const lookupUrl = ['https://', 'api-web.nhle.com', '/v1/postal-lookup/', zip_code].join('');
 
@@ -1200,9 +1203,9 @@ class EspnHandler {
 
       const teams = lookupData.map(team => team.teamName.default);
       const in_market_teams = teams.join(',');
-      console.log('Detected in-market teams ' + in_market_teams + ' (' + zip_code + ')');
+      console.log(`Detected in-market teams ${in_market_teams} (${zip_code})`);
 
-      await db.providers.update({name: 'espnplus'}, {$set: {'meta.in_market_teams': in_market_teams}});
+      await db.providers.updateAsync({name: 'espnplus'}, {$set: {'meta.in_market_teams': in_market_teams}});
 
       return {in_market_teams, zip_code};
     } catch (e) {
@@ -1343,16 +1346,16 @@ class EspnHandler {
   };
 
   private save = async (): Promise<void> => {
-    await db.providers.update(
+    await db.providers.updateAsync(
       {name: 'espnplus'},
       {$set: {tokens: _.omit(this, 'appConfig', 'graphQlApiKey', 'adobe_auth', 'adobe_device_id')}},
     );
 
-    await db.providers.update({name: 'espn'}, {$set: {tokens: _.pick(this, 'adobe_auth', 'adobe_device_id')}});
+    await db.providers.updateAsync({name: 'espn'}, {$set: {tokens: _.pick(this, 'adobe_auth', 'adobe_device_id')}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens: plusTokens} = await db.providers.findOne<IProvider<TESPNPlusTokens>>({name: 'espnplus'});
+    const {tokens: plusTokens} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens>>({name: 'espnplus'});
     const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
       plusTokens;
 
@@ -1363,7 +1366,7 @@ class EspnHandler {
     this.id_token_grant = id_token_grant;
     this.account_token = account_token;
 
-    const {tokens: linearTokens} = await db.providers.findOne<IProvider<TESPNTokens>>({name: 'espn'});
+    const {tokens: linearTokens} = await db.providers.findOneAsync<IProvider<TESPNTokens>>({name: 'espn'});
     const {adobe_device_id, adobe_auth} = linearTokens;
 
     this.adobe_device_id = adobe_device_id;

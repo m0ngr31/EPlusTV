@@ -238,12 +238,12 @@ const parseAirings = async (events: INesnEvent[]) => {
   const useLinear = await usesLinear();
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
 
     if (!entryExists) {
       console.log('Adding event: ', event.name);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: event.categories,
         duration: event.end.diff(event.start, 'seconds'),
         end: useLinear ? event.end.valueOf() : moment(event.end).add(1, 'hour').valueOf(),
@@ -283,7 +283,7 @@ class NesnHandler {
   private adobe_auth_token?: string;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'nesn'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'nesn'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TNesnTokens = {};
@@ -303,7 +303,7 @@ class NesnHandler {
         data.user_id = this.user_id;
       }
 
-      await db.providers.insert<IProvider<TNesnTokens>>({
+      await db.providers.insertAsync<IProvider<TNesnTokens>>({
         enabled: useNesn,
         linear_channels: [
           {
@@ -332,7 +332,7 @@ class NesnHandler {
       console.log('Using NESN variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'nesn'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'nesn'});
 
     if (!enabled) {
       return;
@@ -347,7 +347,7 @@ class NesnHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'nesn'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'nesn'});
 
     if (!enabled) {
       return;
@@ -359,7 +359,7 @@ class NesnHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'nesn'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'nesn'});
 
     if (!enabled) {
       return;
@@ -443,7 +443,7 @@ class NesnHandler {
 
       const playbackToken = await this.getPlaybackToken();
 
-      const event = await db.entries.findOne<IEntry>({id: eventId});
+      const event = await db.entries.findOneAsync<IEntry>({id: eventId});
 
       if (!event) {
         throw new Error('Could not locate event');
@@ -822,11 +822,11 @@ class NesnHandler {
   };
 
   private save = async (): Promise<void> => {
-    await db.providers.update({name: 'nesn'}, {$set: {tokens: this}});
+    await db.providers.updateAsync({name: 'nesn'}, {$set: {tokens: this}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TNesnTokens>>({name: 'nesn'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TNesnTokens>>({name: 'nesn'});
     const {
       cognito_access_token,
       cognito_id,

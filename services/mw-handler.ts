@@ -29,7 +29,7 @@ const parseAirings = async (events: IMWEvent[]) => {
       return;
     }
 
-    const entryExists = await db.entries.findOne<IEntry>({id: `mw-${event.id}`});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `mw-${event.id}`});
 
     if (!entryExists) {
       const start = moment(event.start_time);
@@ -42,7 +42,7 @@ const parseAirings = async (events: IMWEvent[]) => {
 
       console.log('Adding event: ', event.title);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: [...new Set(['Mountain West', 'The MW', event.sport_category_title])],
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -62,11 +62,11 @@ const parseAirings = async (events: IMWEvent[]) => {
 
 class MountainWestHandler {
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'mw'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'mw'})) > 0 ? true : false;
 
     // First time setup
     if (!setup) {
-      await db.providers.insert<IProvider>({
+      await db.providers.insertAsync<IProvider>({
         enabled: useMountainWest,
         name: 'mw',
       });
@@ -76,7 +76,7 @@ class MountainWestHandler {
       console.log('Using MTNWEST variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'mw'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'mw'});
 
     if (!enabled) {
       return;
@@ -84,7 +84,7 @@ class MountainWestHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'mw'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'mw'});
 
     if (!enabled) {
       return;
@@ -112,7 +112,7 @@ class MountainWestHandler {
 
   public getEventData = async (id: string): Promise<TChannelPlaybackInfo> => {
     try {
-      const event = await db.entries.findOne<IEntry>({id});
+      const event = await db.entries.findOneAsync<IEntry>({id});
 
       if (event) {
         return [event.url, {}];

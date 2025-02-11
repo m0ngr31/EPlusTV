@@ -24,7 +24,7 @@ nesn.put('/toggle', async c => {
   const enabled = body['nesn-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'nesn'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider<TNesnTokens>, any>({name: 'nesn'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -46,7 +46,8 @@ nesn.get('/tve-login/:code/:token/:hashedurl', async c => {
     return c.html(<Login code={code} adobeCode={adobeToken} url={decodedUrl} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TNesnTokens>>({name: 'nesn'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNesnTokens>, any>({name: 'nesn'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {tokens, linear_channels} = affectedDocuments as IProvider<TNesnTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

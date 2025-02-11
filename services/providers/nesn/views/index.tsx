@@ -7,7 +7,7 @@ import { TNesnTokens } from '@/services/nesn-handler';
 import { NesnBody } from './CardBody';
 
 export const Nesn: FC = async () => {
-  const nesn = await db.providers.findOne<IProvider<TNesnTokens>>({name: 'nesn'});
+  const nesn = await db.providers.findOneAsync<IProvider<TNesnTokens>>({name: 'nesn'});
   const enabled = nesn?.enabled;
   const tokens = nesn?.tokens;
   const channels = nesn?.linear_channels || [];

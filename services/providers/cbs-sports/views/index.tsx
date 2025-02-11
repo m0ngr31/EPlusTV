@@ -6,7 +6,7 @@ import { TCBSTokens } from '@/services/cbs-handler';
 import { CBSBody } from './CardBody';
 
 export const CBSSports: FC = async () => {
-  const cbs = await db.providers.findOne<IProvider<TCBSTokens>>({name: 'cbs'});
+  const cbs = await db.providers.findOneAsync<IProvider<TCBSTokens>>({name: 'cbs'});
   const enabled = cbs?.enabled;
   const tokens = cbs?.tokens || {};
 

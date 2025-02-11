@@ -4,7 +4,7 @@ import { db } from '@/services/database';
 import { IProvider } from '@/services/shared-interfaces';
 
 export const MntWest: FC = async () => {
-  const mw = await db.providers.findOne<IProvider>({name: 'mw'});
+  const mw = await db.providers.findOneAsync<IProvider>({name: 'mw'});
   const enabled = mw?.enabled;
 
   return (

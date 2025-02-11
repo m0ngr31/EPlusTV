@@ -25,7 +25,7 @@ mlbtv.put('/toggle', async c => {
   const enabled = body['mlbtv-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'mlbtv'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'mlbtv'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -38,8 +38,12 @@ mlbtv.put('/toggle-free', async c => {
   const body = await c.req.parseBody();
   const onlyFree = body['mlbtv-onlyfree-enabled'] === 'on';
 
-  const {enabled, tokens, linear_channels} = await db.providers.update<IProvider>({name: 'mlbtv'}, {$set: {meta: {onlyFree}}}, {returnUpdatedDocs: true});
-
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TMLBTokens>, any>(
+    {name: 'mlbtv'},
+    {$set: {meta: {onlyFree}}},
+    {returnUpdatedDocs: true},
+  );
+  const {enabled, tokens, linear_channels} = affectedDocuments as IProvider<TMLBTokens>;
   scheduleEvents();
 
   return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
@@ -54,11 +58,12 @@ mlbtv.get('/auth/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TMLBTokens>>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TMLBTokens>, any>(
     {name: 'mlbtv'},
     {$set: {enabled: true}},
     {returnUpdatedDocs: true},
   );
+  const {tokens, linear_channels} = affectedDocuments as IProvider<TMLBTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();
@@ -73,7 +78,7 @@ mlbtv.put('/reauth', async c => {
 });
 
 mlbtv.put('/mlbn-access', async c => {
-  const {linear_channels: originalChannels} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+  const {linear_channels: originalChannels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
   const updatedValue = await mlbHandler.recheckMlbNetworkAccess();
 
   if (updatedValue && !originalChannels[0].enabled) {
@@ -81,7 +86,7 @@ mlbtv.put('/mlbn-access', async c => {
     await scheduleEntries();
   }
 
-  const {enabled, tokens, linear_channels} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+  const {enabled, tokens, linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
 
   return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
 });

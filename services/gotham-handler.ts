@@ -151,7 +151,7 @@ const parseAirings = async (events: any[]) => {
   const [now, inTwoDays] = normalTimeRange();
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: `${event.contentId}`});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `${event.contentId}`});
 
     if (!entryExists) {
       const start = moment(event.start);
@@ -169,7 +169,7 @@ const parseAirings = async (events: any[]) => {
 
       console.log('Adding event: ', event.title);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: event.categories.filter(a => a),
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -203,10 +203,10 @@ class GothamHandler {
   public adobe_token_expires?: number;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'gotham'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'gotham'})) > 0 ? true : false;
 
     if (!setup) {
-      await db.providers.insert<IProvider<TGothamTokens>>({
+      await db.providers.insertAsync<IProvider<TGothamTokens>>({
         enabled: false,
         linear_channels: [
           {
@@ -245,7 +245,7 @@ class GothamHandler {
       });
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'gotham'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
 
     if (!enabled) {
       return;
@@ -272,7 +272,7 @@ class GothamHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'gotham'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
 
     if (!enabled) {
       return;
@@ -304,7 +304,7 @@ class GothamHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'gotham'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
 
     if (!enabled) {
       return;
@@ -422,7 +422,7 @@ class GothamHandler {
     try {
       const [, channelId] = eventId.split('----');
 
-      const event = await db.entries.findOne<IEntry>({id: eventId});
+      const event = await db.entries.findOneAsync<IEntry>({id: eventId});
 
       const network = event.network === 'YES' ? 'YESN' : 'MSGGO';
 
@@ -982,14 +982,14 @@ class GothamHandler {
   };
 
   private save = async () => {
-    await db.providers.update(
+    await db.providers.updateAsync(
       {name: 'gotham'},
       {$set: {tokens: _.omit(this, 'appConfig', 'access_token', 'entitlement_token')}},
     );
   };
 
   private load = async () => {
-    const {tokens} = await db.providers.findOne<IProvider<TGothamTokens>>({name: 'gotham'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TGothamTokens>>({name: 'gotham'});
     const {device_id, auth_token, refresh_token, expiresIn, adobe_token_expires, adobe_token} = tokens || {};
 
     this.device_id = device_id;

@@ -25,16 +25,16 @@ const nextStartChannel = (end: number, buffer: number): number => {
 };
 
 export const initMiscDb = async (): Promise<void> => {
-  const setupLinear = (await db.misc.count({name: 'use_linear'})) > 0 ? true : false;
+  const setupLinear = (await db.misc.countAsync({name: 'use_linear'})) > 0 ? true : false;
 
   if (!setupLinear) {
-    await db.misc.insert<IMiscDbEntry<boolean>>({
+    await db.misc.insertAsync<IMiscDbEntry<boolean>>({
       name: 'use_linear',
       value: linearChannelsEnv === 'true' ? true : false,
     });
   }
 
-  const setupStartChannel = (await db.misc.count({name: 'start_channel'})) > 0 ? true : false;
+  const setupStartChannel = (await db.misc.countAsync({name: 'start_channel'})) > 0 ? true : false;
 
   if (!setupStartChannel) {
     let startChannel = _.toNumber(startChannelEnv);
@@ -43,13 +43,13 @@ export const initMiscDb = async (): Promise<void> => {
       startChannel = 1;
     }
 
-    await db.misc.insert<IMiscDbEntry<number>>({
+    await db.misc.insertAsync<IMiscDbEntry<number>>({
       name: 'start_channel',
       value: startChannel,
     });
   }
 
-  const setupNumOfChannels = (await db.misc.count({name: 'num_channels'})) > 0 ? true : false;
+  const setupNumOfChannels = (await db.misc.countAsync({name: 'num_channels'})) > 0 ? true : false;
 
   if (!setupNumOfChannels) {
     let numOfChannels = _.toNumber(numOfChannelsEnv);
@@ -58,37 +58,37 @@ export const initMiscDb = async (): Promise<void> => {
       numOfChannels = 200;
     }
 
-    await db.misc.insert<IMiscDbEntry<number>>({
+    await db.misc.insertAsync<IMiscDbEntry<number>>({
       name: 'num_channels',
       value: numOfChannels,
     });
   }
 
-  const setupLinearStartChannel = (await db.misc.count({name: 'linear_start_channel'})) > 0 ? true : false;
+  const setupLinearStartChannel = (await db.misc.countAsync({name: 'linear_start_channel'})) > 0 ? true : false;
 
   if (!setupLinearStartChannel) {
     const startChannel = await getStartChannel();
     const numOfChannels = await getNumberOfChannels();
 
-    await db.misc.insert<IMiscDbEntry<number>>({
+    await db.misc.insertAsync<IMiscDbEntry<number>>({
       name: 'linear_start_channel',
       value: nextStartChannel(startChannel + numOfChannels, BUFFER_CHANNELS),
     });
   }
 
-  const setupProxySegments = (await db.misc.count({name: 'proxy_segments'})) > 0 ? true : false;
+  const setupProxySegments = (await db.misc.countAsync({name: 'proxy_segments'})) > 0 ? true : false;
 
   if (!setupProxySegments) {
-    await db.misc.insert<IMiscDbEntry<boolean>>({
+    await db.misc.insertAsync<IMiscDbEntry<boolean>>({
       name: 'proxy_segments',
       value: proxySegmentsEnv === 'true' ? true : false,
     });
   }
 
-  const setupXmltvPadding = (await db.misc.count({name: 'xmltv_padding'})) > 0 ? true : false;
+  const setupXmltvPadding = (await db.misc.countAsync({name: 'xmltv_padding'})) > 0 ? true : false;
 
   if (!setupXmltvPadding) {
-    await db.misc.insert<IMiscDbEntry<boolean>>({
+    await db.misc.insertAsync<IMiscDbEntry<boolean>>({
       name: 'xmltv_padding',
       value: true,
     });
@@ -109,25 +109,25 @@ export const initMiscDb = async (): Promise<void> => {
 };
 
 export const usesLinear = async (): Promise<boolean> => {
-  const {value} = await db.misc.findOne<IMiscDbEntry<boolean>>({name: 'use_linear'});
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<boolean>>({name: 'use_linear'});
 
   return value;
 };
 
 export const setLinear = async (value: boolean): Promise<number> =>
-  db.misc.update<IMiscDbEntry<boolean>>({name: 'use_linear'}, {$set: {value}});
+  (await db.misc.updateAsync<IMiscDbEntry<boolean>, any>({name: 'use_linear'}, {$set: {value}})).numAffected;
 
 export const getStartChannel = async (): Promise<number> => {
-  const {value} = await db.misc.findOne<IMiscDbEntry<number>>({name: 'start_channel'});
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<number>>({name: 'start_channel'});
 
   return value;
 };
 
 export const setStartChannel = async (channelNum: number): Promise<number> =>
-  db.misc.update({name: 'start_channel'}, {$set: {value: channelNum}});
+  (await db.misc.updateAsync({name: 'start_channel'}, {$set: {value: channelNum}})).numAffected;
 
 export const getLinearStartChannel = async (): Promise<number> => {
-  const {value} = await db.misc.findOne<IMiscDbEntry<number>>({name: 'linear_start_channel'});
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<number>>({name: 'linear_start_channel'});
 
   return value;
 };
@@ -136,7 +136,7 @@ export const resetLinearStartChannel = async (): Promise<void> => {
   const startChannel = await getStartChannel();
   const numOfChannels = await getNumberOfChannels();
 
-  await db.misc.update<IMiscDbEntry<number>>(
+  await db.misc.updateAsync<IMiscDbEntry<number>, any>(
     {
       name: 'linear_start_channel',
     },
@@ -149,28 +149,28 @@ export const resetLinearStartChannel = async (): Promise<void> => {
 };
 
 export const getNumberOfChannels = async (): Promise<number> => {
-  const {value} = await db.misc.findOne<IMiscDbEntry<number>>({name: 'num_channels'});
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<number>>({name: 'num_channels'});
 
   return value;
 };
 
 export const setNumberofChannels = async (numChannels: number): Promise<number> =>
-  db.misc.update({name: 'num_channels'}, {$set: {value: numChannels}});
+  (await db.misc.updateAsync({name: 'num_channels'}, {$set: {value: numChannels}})).numAffected;
 
 export const proxySegments = async (): Promise<boolean> => {
-  const {value} = await db.misc.findOne<IMiscDbEntry<boolean>>({name: 'proxy_segments'});
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<boolean>>({name: 'proxy_segments'});
 
   return value;
 };
 
 export const setProxySegments = async (value: boolean): Promise<number> =>
-  db.misc.update({name: 'proxy_segments'}, {$set: {value}});
+  (await db.misc.updateAsync({name: 'proxy_segments'}, {$set: {value}})).numAffected;
 
 export const xmltvPadding = async (): Promise<boolean> => {
-  const {value} = await db.misc.findOne<IMiscDbEntry<boolean>>({name: 'xmltv_padding'});
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<boolean>>({name: 'xmltv_padding'});
 
   return value;
 };
 
 export const setXmltvPadding = async (value: boolean): Promise<number> =>
-  db.misc.update({name: 'xmltv_padding'}, {$set: {value}});
+  (await db.misc.updateAsync({name: 'xmltv_padding'}, {$set: {value}})).affectedDocuments;

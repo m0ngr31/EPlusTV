@@ -25,7 +25,7 @@ gotham.put('/toggle', async c => {
   const enabled = body['gotham-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'gotham'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'gotham'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -45,7 +45,7 @@ gotham.post('/login', async c => {
     return c.html(<Login invalid={true} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TGothamTokens>>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TGothamTokens>, any>(
     {name: 'gotham'},
     {
       $set: {
@@ -58,6 +58,7 @@ gotham.post('/login', async c => {
     },
     {returnUpdatedDocs: true},
   );
+  const {linear_channels, tokens} = affectedDocuments as IProvider<TGothamTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();
@@ -71,7 +72,7 @@ gotham.put('/auth/tve', async c => {
   const body = await c.req.parseBody();
   const enabled = body[`gotham-tve-enabled`] === 'on';
 
-  const {tokens} = await db.providers.findOne<IProvider<TGothamTokens>>({name: 'gotham'});
+  const {tokens} = await db.providers.findOneAsync<IProvider<TGothamTokens>>({name: 'gotham'});
 
   const updatedTokens = {...tokens};
 
@@ -79,11 +80,12 @@ gotham.put('/auth/tve', async c => {
     delete updatedTokens.adobe_token;
     delete updatedTokens.adobe_token_expires;
 
-    const {linear_channels, tokens} = await db.providers.update<IProvider<TGothamTokens>>(
+    const {affectedDocuments} = await db.providers.updateAsync<IProvider<TGothamTokens>, any>(
       {name: 'gotham'},
       {$set: {tokens: updatedTokens}},
       {returnUpdatedDocs: true},
     );
+    const {linear_channels, tokens} = affectedDocuments as IProvider<TGothamTokens>;
 
     return c.html(<GothamBody channels={linear_channels} enabled={true} open={false} tokens={tokens} />);
   }
@@ -100,11 +102,12 @@ gotham.get('/tve-login/:link', async c => {
     return c.html(<TVELogin link={link} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TGothamTokens>>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TGothamTokens>, any>(
     {name: 'gotham'},
     {$set: {enabled: true}},
     {returnUpdatedDocs: true},
   );
+  const {linear_channels, tokens} = affectedDocuments as IProvider<TGothamTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

@@ -24,7 +24,7 @@ cbs.put('/toggle', async c => {
   const enabled = body['cbs-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'cbs'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'cbs'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -44,7 +44,12 @@ cbs.get('/tve-login/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens} = await db.providers.update<IProvider<TCBSTokens>>({name: 'cbs'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TCBSTokens>, any>(
+    {name: 'cbs'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
+  const {tokens} = affectedDocuments as IProvider<TCBSTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

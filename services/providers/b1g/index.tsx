@@ -25,7 +25,7 @@ b1g.put('/toggle', async c => {
   const enabled = body['b1g-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'b1g'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider<TB1GTokens>, any>({name: 'b1g'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -45,10 +45,11 @@ b1g.post('/login', async c => {
     return c.html(<Login invalid={true} />);
   }
 
-  const {tokens} = await db.providers.update<IProvider<TB1GTokens>>({name: 'b1g'}, {$set: {enabled: true, meta: {
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TB1GTokens>, any>({name: 'b1g'}, {$set: {enabled: true, meta: {
     password,
     username,
   }}}, {returnUpdatedDocs: true});
+  const {tokens} = affectedDocuments as IProvider<TB1GTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

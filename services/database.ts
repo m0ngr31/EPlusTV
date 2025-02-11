@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import Datastore from 'nedb-promises';
+import Datastore from '@seald-io/nedb';
 
 import {configPath} from './config';
 
@@ -14,10 +14,10 @@ export interface IDocument {
 }
 
 export const db = {
-  entries: Datastore.create(entriesDb),
-  misc: Datastore.create(miscDb),
-  providers: Datastore.create(providersDb),
-  schedule: Datastore.create(scheduleDb),
+  entries: new Datastore({autoload: true, filename: entriesDb}),
+  misc: new Datastore({autoload: true, filename: miscDb}),
+  providers: new Datastore({autoload: true, filename: providersDb}),
+  schedule: new Datastore({autoload: true, filename: scheduleDb}),
 };
 
 export const initializeEntries = (): void => fs.writeFileSync(entriesDb, '');

@@ -116,7 +116,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
     const gameData = getEventData(event);
 
     for (const content of event.content) {
-      const entryExists = await db.entries.findOne<IEntry>({id: `b1g-${content.id}`});
+      const entryExists = await db.entries.findOneAsync<IEntry>({id: `b1g-${content.id}`});
 
       if (!entryExists) {
         const start = moment(event.startTime);
@@ -129,7 +129,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
 
         console.log('Adding event: ', gameData.name);
 
-        await db.entries.insert<IEntry>({
+        await db.entries.insertAsync<IEntry>({
           categories: gameData.categories,
           duration: end.diff(start, 'seconds'),
           end: end.valueOf(),
@@ -152,7 +152,7 @@ class B1GHandler {
   public expires_at?: number;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'b1g'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'b1g'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TB1GTokens = {};
@@ -164,7 +164,7 @@ class B1GHandler {
         data.expires_at = this.expires_at;
       }
 
-      await db.providers.insert<IProvider<TB1GTokens, IB1GMeta>>({
+      await db.providers.insertAsync<IProvider<TB1GTokens, IB1GMeta>>({
         enabled: useB1GPlus,
         meta: {
           password: process.env.B1GPLUS_PASS,
@@ -189,7 +189,7 @@ class B1GHandler {
       console.log('Using B1GPLUS_PASS variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'b1g'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'b1g'});
 
     if (!enabled) {
       return;
@@ -200,7 +200,7 @@ class B1GHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'b1g'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'b1g'});
 
     if (!enabled) {
       return;
@@ -212,7 +212,7 @@ class B1GHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'b1g'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'b1g'});
 
     if (!enabled) {
       return;
@@ -376,7 +376,7 @@ class B1GHandler {
         'content-type': 'application/json',
       };
 
-      const {meta} = await db.providers.findOne<IProvider<any, IB1GMeta>>({name: 'b1g'});
+      const {meta} = await db.providers.findOneAsync<IProvider<any, IB1GMeta>>({name: 'b1g'});
 
       const params = {
         email: username || meta.username,
@@ -402,11 +402,11 @@ class B1GHandler {
   };
 
   private save = async (): Promise<void> => {
-    await db.providers.update({name: 'b1g'}, {$set: {tokens: this}});
+    await db.providers.updateAsync({name: 'b1g'}, {$set: {tokens: this}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TB1GTokens>>({name: 'b1g'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TB1GTokens>>({name: 'b1g'});
     const {access_token, expires_at} = tokens;
 
     this.access_token = access_token;
