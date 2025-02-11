@@ -11,7 +11,7 @@ import {configPath} from './config';
 import {useNesn} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IJWToken, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {getRandomHex, getRandomUUID} from './shared-helpers';
+import {getRandomHex, getRandomUUID, normalTimeRange} from './shared-helpers';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
 
@@ -246,12 +246,13 @@ const parseAirings = async (events: INesnEvent[]) => {
       await db.entries.insert<IEntry>({
         categories: event.categories,
         duration: event.end.diff(event.start, 'seconds'),
-        end: event.end.valueOf(),
+        end: useLinear ? event.end.valueOf() : moment(event.end).add(1, 'hour').valueOf(),
         from: 'nesn',
         id: event.id,
         image: event.image,
         name: event.name,
         network: event.network,
+        originalEnd: moment(event.end).valueOf(),
         replay: event.replay,
         sport: event.sport,
         start: event.start.valueOf(),
@@ -368,8 +369,7 @@ class NesnHandler {
 
     const entries: INesnEvent[] = [];
 
-    const now = moment();
-    const end = moment().add(2, 'days').endOf('day');
+    const [now, end] = normalTimeRange();
 
     try {
       for (const schedule of SCHEDULES) {

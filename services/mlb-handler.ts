@@ -13,6 +13,7 @@ import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from '
 import {db} from './database';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
+import {normalTimeRange} from './shared-helpers';
 
 interface IGameContent {
   media: {
@@ -146,8 +147,7 @@ const generateThumb = (home: ITeam, away: ITeam): string =>
   `https://img.mlbstatic.com/mlb-photos/image/upload/ar_167:215,c_crop/fl_relative,l_team:${home.team.id}:fill:spot.png,w_1.0,h_1,x_0.5,y_0,fl_no_overflow,e_distort:100p:0:200p:0:200p:100p:0:100p/fl_relative,l_team:${away.team.id}:logo:spot:current,w_0.38,x_-0.25,y_-0.16/fl_relative,l_team:${home.team.id}:logo:spot:current,w_0.38,x_0.25,y_0.16/w_750/team/${away.team.id}/fill/spot.png`;
 
 const parseAirings = async (events: ICombinedGame) => {
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   const {meta} = await db.providers.findOne<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
   const onlyFree = meta?.onlyFree ?? false;
@@ -170,8 +170,8 @@ const parseAirings = async (events: ICombinedGame) => {
           }
 
           const start = moment(event.gameDate);
-          const end = moment(event.gameDate).add(5, 'hours');
-          const xmltvEnd = moment(event.gameDate).add(3, 'hours');
+          const end = moment(event.gameDate).add(4, 'hours');
+          const originalEnd = moment(event.gameDate).add(3, 'hours');
 
           if (end.isBefore(now) || start.isAfter(endDate)) {
             continue;
@@ -190,9 +190,9 @@ const parseAirings = async (events: ICombinedGame) => {
             image: generateThumb(event.teams.home, event.teams.away),
             name: gameName,
             network: epg.callLetters,
+            originalEnd: originalEnd.valueOf(),
             sport: 'MLB',
             start: start.valueOf(),
-            xmltvEnd: xmltvEnd.valueOf(),
           });
         }
       }
@@ -203,8 +203,7 @@ const parseAirings = async (events: ICombinedGame) => {
 const parseBigInnings = async (dates: Moment[][]) => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   for (const day of dates) {
     const [start, end] = day;
@@ -238,8 +237,7 @@ const parseBigInnings = async (dates: Moment[][]) => {
 };
 
 const parseMlbNetwork = async (events: IMLBNetworkEvent[]): Promise<void> => {
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: `MLB Network - ${event.utcDate}`});
@@ -651,8 +649,7 @@ class MLBHandler {
     let entries = [];
 
     try {
-      const startDate = moment();
-      const endDate = moment().add(2, 'days').endOf('day');
+      const [startDate, endDate] = normalTimeRange();
 
       const url = [
         'https://statsapi.mlb.com',
@@ -679,8 +676,7 @@ class MLBHandler {
 
   private getFeeds = async (): Promise<IGameFeed[]> => {
     try {
-      const startDate = moment();
-      const endDate = moment().add(2, 'days').endOf('day');
+      const [startDate, endDate] = normalTimeRange();
 
       const url = [
         'https://mastapi.mobile.mlbinfra.com/api/epg/v3/search?exp=MLB',

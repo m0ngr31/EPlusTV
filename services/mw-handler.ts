@@ -6,6 +6,7 @@ import {useMountainWest} from './networks';
 import {IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
+import {normalTimeRange} from './shared-helpers';
 
 interface IMWEvent {
   image: string;
@@ -21,8 +22,7 @@ interface IMWEvent {
 }
 
 const parseAirings = async (events: IMWEvent[]) => {
-  const now = moment();
-  const endSchedule = moment().add(2, 'days').endOf('day');
+  const [now, endSchedule] = normalTimeRange();
 
   for (const event of events) {
     if (!event || !event.id) {
@@ -34,7 +34,7 @@ const parseAirings = async (events: IMWEvent[]) => {
     if (!entryExists) {
       const start = moment(event.start_time);
       const end = moment(event.end_time).add(1, 'hours');
-      const xmltvEnd = moment(event.end_time);
+      const originalEnd = moment(event.end_time);
 
       if (end.isBefore(now) || event.format !== 'video' || start.isAfter(endSchedule)) {
         continue;
@@ -51,10 +51,10 @@ const parseAirings = async (events: IMWEvent[]) => {
         image: event.image || event.thumbnail,
         name: event.title,
         network: 'MW',
+        originalEnd: originalEnd.valueOf(),
         sport: event.sport_category_title,
         start: start.valueOf(),
         url: event.value,
-        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

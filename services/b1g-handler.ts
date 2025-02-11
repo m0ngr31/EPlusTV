@@ -11,6 +11,7 @@ import {useB1GPlus} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
+import {normalTimeRange} from './shared-helpers';
 
 interface IEventCategory {
   name: string;
@@ -105,8 +106,7 @@ const getEventData = (event: IB1GEvent): IGameData => {
 };
 
 const parseAirings = async (events: IB1GEvent[]) => {
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
     if (!event || !event.id) {
@@ -121,7 +121,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
       if (!entryExists) {
         const start = moment(event.startTime);
         const end = moment(event.startTime).add(4, 'hours');
-        const xmltvEnd = moment(event.startTime).add(3, 'hours');
+        const originalEnd = moment(start).add(3, 'hours');
 
         if (end.isBefore(now) || start.isAfter(endDate) || content.enableDrmProtection) {
           continue;
@@ -138,9 +138,9 @@ const parseAirings = async (events: IB1GEvent[]) => {
           image: gameData.image,
           name: gameData.name,
           network: 'B1G+',
+          originalEnd: originalEnd.valueOf(),
           sport: gameData.sport,
           start: start.valueOf(),
-          xmltvEnd: xmltvEnd.valueOf(),
         });
       }
     }
@@ -225,6 +225,8 @@ class B1GHandler {
       let page = 1;
       let events: IB1GEvent[] = [];
 
+      const [fromDate, toDate] = normalTimeRange();
+
       while (hasNextPage) {
         const url = [
           'https://',
@@ -235,8 +237,8 @@ class B1GHandler {
           '&device_category_id=2',
           '&language=en',
           `&metadata_id=${encodeURIComponent('159283,167702')}`,
-          `&date_time_from=${encodeURIComponent(moment().format())}`,
-          `&date_time_to=${encodeURIComponent(moment().add(2, 'days').endOf('day').format())}`,
+          `&date_time_from=${encodeURIComponent(fromDate.format())}`,
+          `&date_time_to=${encodeURIComponent(toDate.format())}`,
           page > 1 ? `&page=${page}` : '',
         ].join('');
 

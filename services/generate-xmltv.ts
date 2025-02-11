@@ -150,7 +150,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
 
     const entryName = formatEntryName(entry, useMultiple);
 
-    const end = (xmltvPadded || !entry.xmltvEnd) ? entry.end : entry.xmltvEnd;
+    const end = xmltvPadded || !entry.originalEnd ? entry.end : entry.originalEnd;
 
     wrap.tv.push({
       programme: [

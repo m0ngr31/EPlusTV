@@ -9,7 +9,7 @@ import {configPath} from './config';
 import {useFloSports} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {getRandomUUID} from './shared-helpers';
+import {getRandomUUID, normalTimeRange} from './shared-helpers';
 import {debug} from './debug';
 
 interface IFloEventsRes {
@@ -48,8 +48,7 @@ interface IFloEvent {
 }
 
 const parseAirings = async (events: IFloEvent[]) => {
-  const now = moment();
-  const endSchedule = moment().add(2, 'days').endOf('day');
+  const [now, endSchedule] = normalTimeRange();
 
   for (const event of events) {
     for (const stream of event.live_event_metadata.streams) {
@@ -58,7 +57,7 @@ const parseAirings = async (events: IFloEvent[]) => {
       if (!entryExists) {
         const start = moment(event.label_1_parts.start_date_time);
         const end = moment(event.label_1_parts.start_date_time).add(4, 'hours');
-        const xmltvEnd = moment(event.label_1_parts.start_date_time).add(3, 'hours');
+        const originalEnd = moment(start).add(3, 'hours');
 
         if (end.isBefore(now) || start.isAfter(endSchedule)) {
           continue;
@@ -77,9 +76,9 @@ const parseAirings = async (events: IFloEvent[]) => {
           image: event.preview_image.url,
           name: gameName,
           network: event.action.analytics.site_name,
+          originalEnd: originalEnd.valueOf(),
           sport: event.footer_1,
           start: start.valueOf(),
-          xmltvEnd: xmltvEnd.valueOf(),
         });
       }
     }
@@ -163,7 +162,7 @@ class FloSportsHandler {
       const events: IFloEvent[] = [];
       const limit = 100;
 
-      const endSchedule = moment().add(2, 'days').endOf('day');
+      const [, endSchedule] = normalTimeRange();
 
       while (hasNextPage) {
         const url = [

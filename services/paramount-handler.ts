@@ -9,7 +9,7 @@ import jwt_decode from 'jwt-decode';
 
 import {configPath} from './config';
 import {useParamount} from './networks';
-import {getRandomHex} from './shared-helpers';
+import {getRandomHex, normalTimeRange} from './shared-helpers';
 import {db} from './database';
 import {ClassTypeWithoutMethods, IEntry, IHeaders, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {debug} from './debug';
@@ -133,8 +133,7 @@ const paramountConfigPath = path.join(configPath, 'paramount_tokens.json');
 const ALLOWED_LOCAL_SPORTS = ['College Basketball', 'College Football', 'NFL Football', 'Super Bowl LVIII'];
 
 const parseAirings = async (events: IParamountEvent[]) => {
-  const now = moment();
-  const inTwoDays = moment().add(2, 'days').endOf('day');
+  const [now, inTwoDays] = normalTimeRange();
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: `${event.videoContentId}`});
@@ -142,7 +141,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
     if (!entryExists) {
       const start = moment(event.startTimestamp);
       const end = moment(event.endTimestamp);
-      const xmltvEnd = moment(event.endTimestamp);
+      const originalEnd = moment(end);
 
       if (!event.linear) {
         end.add(1, 'hour');
@@ -165,6 +164,7 @@ const parseAirings = async (events: IParamountEvent[]) => {
         image: `${BASE_THUMB_URL}${event.filePathThumb?.replace('files/', '')}`,
         name: event.title,
         network: 'Paramount+',
+        originalEnd: originalEnd.valueOf(),
         start: start.valueOf(),
         ...(event.linear
           ? {
@@ -174,7 +174,6 @@ const parseAirings = async (events: IParamountEvent[]) => {
           : {
               sport: event.channelName,
             }),
-        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }

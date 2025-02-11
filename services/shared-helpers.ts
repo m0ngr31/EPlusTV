@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import {appStatus} from './app-status';
 import {db} from './database';
 import {IEntry, IStringObj} from './shared-interfaces';
+import moment, {Moment} from 'moment';
 
 const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMnumCharsOPQRSTUVWXYZ0123456789';
 
@@ -72,3 +73,5 @@ export const clearChannels = (): void => {
 
   appStatus.channels = {};
 };
+
+export const normalTimeRange = (): [Moment, Moment] => [moment(), moment().add(2, 'days').endOf('day')];

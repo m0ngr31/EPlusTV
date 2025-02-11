@@ -9,7 +9,7 @@ import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useFoxOnly4k, useFoxSports} from './networks';
 import {IAdobeAuthFox} from './adobe-helpers';
-import {getRandomHex} from './shared-helpers';
+import {getRandomHex, normalTimeRange} from './shared-helpers';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
@@ -124,8 +124,7 @@ const parseCategories = (event: IFoxEvent) => {
 const parseAirings = async (events: IFoxEvent[]) => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const inTwoDays = moment().add(2, 'days').endOf('day');
+  const [now, inTwoDays] = normalTimeRange();
 
   const {meta} = await db.providers.findOne<IProvider<any, IFoxMeta>>({name: 'foxsports'});
 
@@ -135,7 +134,8 @@ const parseAirings = async (events: IFoxEvent[]) => {
     if (!entryExists) {
       const start = moment(event.startDate);
       const end = moment(event.endDate);
-      const xmltvEnd = moment(event.endDate);
+      const originalEnd = moment(event.endDate);
+
       const isLinear = event.network !== 'fox' && useLinear;
 
       if (!isLinear) {
@@ -165,13 +165,13 @@ const parseAirings = async (events: IFoxEvent[]) => {
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD || event.images.seriesList?.FHD,
         name: eventName,
         network: event.callSign,
+        originalEnd: originalEnd.valueOf(),
         replay: event.airingType !== 'live',
         start: start.valueOf(),
         ...(isLinear && {
           channel: event.network,
           linear: true,
         }),
-        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }
@@ -421,9 +421,10 @@ class FoxHandler {
 
     const events: IFoxEvent[] = [];
 
-    const now = moment().startOf('day');
+    const [now, inTwoDays] = normalTimeRange();
+    now.startOf('day');
 
-    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').endOf('day').toISOString()}`;
+    const dateRange = `${now.toISOString()}..${inTwoDays.toISOString()}`;
 
     try {
       const {data} = await axios.get<IFoxEventsData>(

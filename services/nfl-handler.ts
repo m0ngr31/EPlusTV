@@ -10,7 +10,7 @@ import {configPath} from './config';
 import {useNfl} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {getRandomUUID} from './shared-helpers';
+import {getRandomUUID, normalTimeRange} from './shared-helpers';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
 
@@ -172,8 +172,7 @@ interface INFLJwt {
 const parseAirings = async (events: INFLEvent[]) => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: event.externalId});
@@ -181,7 +180,7 @@ const parseAirings = async (events: INFLEvent[]) => {
     if (!entryExists) {
       const start = moment(event.startTime);
       const end = moment(start).add(event.duration, 'seconds');
-      const xmltvEnd = moment(start).add(event.duration, 'seconds');
+      const originalEnd = moment(end);
 
       const isLinear =
         useLinear &&
@@ -215,6 +214,7 @@ const parseAirings = async (events: INFLEvent[]) => {
         image: event.preferredImage,
         name: gameName,
         network: 'NFL+',
+        originalEnd: originalEnd.valueOf(),
         sport: 'NFL',
         start: start.valueOf(),
         ...(isLinear && {
@@ -222,7 +222,6 @@ const parseAirings = async (events: INFLEvent[]) => {
           linear: true,
           replay: event.callSign === 'NFLDIGITAL1_OO_v3' || event.broadcastAiringType === 'REAIR',
         }),
-        xmltvEnd: xmltvEnd.valueOf(),
       });
     }
   }
@@ -376,8 +375,8 @@ class NflHandler {
     const events: INFLEvent[] = [];
 
     try {
-      const now = moment().subtract(12, 'hours');
-      const endSchedule = moment().add(2, 'days').endOf('day');
+      const [now, endSchedule] = normalTimeRange();
+      now.subtract(12, 'hours');
 
       const url = ['https://', 'api.nfl.com', '/experience/v1/livestreams'].join('');
 

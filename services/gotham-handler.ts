@@ -4,7 +4,7 @@ import jwt_decode from 'jwt-decode';
 import moment from 'moment';
 import CryptoJS from 'crypto-js';
 
-import {getRandomUUID} from './shared-helpers';
+import {getRandomUUID, normalTimeRange} from './shared-helpers';
 import {db} from './database';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {okHttpUserAgent} from './user-agent';
@@ -148,8 +148,7 @@ const CHANNEL_MAP = {
 const parseAirings = async (events: any[]) => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const inTwoDays = moment().add(2, 'days').endOf('day');
+  const [now, inTwoDays] = normalTimeRange();
 
   for (const event of events) {
     const entryExists = await db.entries.findOne<IEntry>({id: `${event.contentId}`});
@@ -157,9 +156,11 @@ const parseAirings = async (events: any[]) => {
     if (!entryExists) {
       const start = moment(event.start);
       const end = moment(event.end);
+      const originalEnd = moment(event.end);
 
       if (!useLinear) {
         start.subtract(30, 'minutes'); // For Pre-game
+        end.add(1, 'hour');
       }
 
       if (end.isBefore(now) || start.isAfter(inTwoDays)) {
@@ -177,6 +178,7 @@ const parseAirings = async (events: any[]) => {
         image: event.artwork,
         name: event.title,
         network: event.network || 'MSG',
+        originalEnd: originalEnd.valueOf(),
         sport: event.sport,
         start: start.valueOf(),
         ...(event.linear && {
@@ -312,8 +314,7 @@ class GothamHandler {
 
     const useLinear = await usesLinear();
 
-    const now = moment();
-    const end = moment(now).add(2, 'days').endOf('day');
+    const [now, end] = normalTimeRange();
 
     const entries: any[] = [];
 

@@ -11,7 +11,7 @@ import {configPath} from './config';
 import {useCBSSports} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {getRandomUUID} from './shared-helpers';
+import {getRandomUUID, normalTimeRange} from './shared-helpers';
 import {createAdobeAuthHeader} from './adobe-helpers';
 import {debug} from './debug';
 
@@ -249,8 +249,7 @@ const getEventData = (event: ICBSEvent): IGameData => {
 };
 
 const parseAirings = async (events: ICBSEvent[]) => {
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
     if (!event || !event.id) {
@@ -263,7 +262,8 @@ const parseAirings = async (events: ICBSEvent[]) => {
 
     if (!entryExists) {
       const start = moment(event.video.schedule.videoStartDate * 1000);
-      const end = moment(event.video.schedule.videoEndDate * 1000);
+      const end = moment(event.video.schedule.videoEndDate * 1000).add(1, 'hour');
+      const originalEnd = moment(event.video.schedule.videoEndDate * 1000);
 
       if (end.isBefore(now) || start.isAfter(endDate)) {
         continue;
@@ -281,6 +281,7 @@ const parseAirings = async (events: ICBSEvent[]) => {
         image: gameData.image,
         name: gameData.name,
         network: 'CBS Sports',
+        originalEnd: originalEnd.valueOf(),
         sport: gameData.sport,
         start: start.valueOf(),
         ...((event.video.sources.hls.urlNoAd || event.video.sources.hls.url) && {
@@ -359,8 +360,8 @@ class CBSHandler {
 
     const entries: ICBSEvent[] = [];
 
-    const now = moment().subtract(12, 'hours');
-    const endSchedule = moment().add(2, 'days').endOf('day');
+    const [now, endSchedule] = normalTimeRange();
+    now.subtract(12, 'hours');
 
     try {
       const url = [
