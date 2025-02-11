@@ -173,4 +173,4 @@ export const xmltvPadding = async (): Promise<boolean> => {
 };
 
 export const setXmltvPadding = async (value: boolean): Promise<number> =>
-  (await db.misc.updateAsync({name: 'xmltv_padding'}, {$set: {value}})).affectedDocuments;
+  (await db.misc.updateAsync({name: 'xmltv_padding'}, {$set: {value}})).numAffected;

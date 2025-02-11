@@ -7,7 +7,7 @@ import {calculateChannelFromName, CHANNELS} from './channels';
 import {IEntry} from './shared-interfaces';
 import {getLinearStartChannel, getNumberOfChannels, getStartChannel, xmltvPadding} from './misc-db-service';
 
-const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
+const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports', 'E+TV', 'EPlusTV'];
 
 export const usesMultiple = async (): Promise<boolean> => {
   const enabledProviders = await db.providers.countAsync({enabled: true});
@@ -15,7 +15,7 @@ export const usesMultiple = async (): Promise<boolean> => {
   return enabledProviders > 1;
 };
 
-export const formatEntryName = (entry: IEntry, usesMultiple: boolean) => {
+export const formatEntryName = (entry: IEntry, usesMultiple: boolean): string => {
   let entryName = entry.name;
 
   if (entry.feed) {
