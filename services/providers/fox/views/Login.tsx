@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { foxHandler } from '@/services/fox-handler';
+import {foxHandler} from '@/services/fox-handler';
 
 interface ILogin {
   code?: string;

@@ -1,13 +1,13 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { FloSportsBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {FloSportsBody} from './views/CardBody';
 
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { floSportsHandler, TFloSportsTokens } from '@/services/flo-handler';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {floSportsHandler, TFloSportsTokens} from '@/services/flo-handler';
 
 export const flosports = new Hono().basePath('/flosports');
 

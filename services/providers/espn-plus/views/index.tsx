@@ -1,10 +1,10 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { IEspnPlusMeta, TESPNPlusTokens } from '@/services/espn-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {IEspnPlusMeta, TESPNPlusTokens} from '@/services/espn-handler';
 
-import { ESPNPlusBody } from './CardBody';
+import {ESPNPlusBody} from './CardBody';
 
 export const ESPNPlus: FC = async () => {
   const {enabled, tokens, meta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({

@@ -1,13 +1,13 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { B1GBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {B1GBody} from './views/CardBody';
 
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { b1gHandler, TB1GTokens } from '@/services/b1g-handler';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {b1gHandler, TB1GTokens} from '@/services/b1g-handler';
 
 export const b1g = new Hono().basePath('/b1g');
 
@@ -45,10 +45,19 @@ b1g.post('/login', async c => {
     return c.html(<Login invalid={true} />);
   }
 
-  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TB1GTokens>, any>({name: 'b1g'}, {$set: {enabled: true, meta: {
-    password,
-    username,
-  }}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TB1GTokens>, any>(
+    {name: 'b1g'},
+    {
+      $set: {
+        enabled: true,
+        meta: {
+          password,
+          username,
+        },
+      },
+    },
+    {returnUpdatedDocs: true},
+  );
   const {tokens} = affectedDocuments as IProvider<TB1GTokens>;
 
   // Kickoff event scheduler

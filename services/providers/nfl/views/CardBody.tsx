@@ -1,8 +1,8 @@
 import {FC} from 'hono/jsx';
 
-import { TNFLTokens } from '@/services/nfl-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
-import { usesLinear } from '@/services/misc-db-service';
+import {TNFLTokens} from '@/services/nfl-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
+import {usesLinear} from '@/services/misc-db-service';
 
 interface INFLBodyProps {
   enabled: boolean;
@@ -23,10 +23,7 @@ export const NFLBody: FC<INFLBodyProps> = async ({enabled, tokens, open, channel
   return (
     <div hx-swap="innerHTML" hx-target="this">
       <summary>
-        <span
-          data-tooltip="These are only enabled with Dedicated Linear Channels enabled"
-          data-placement="right"
-        >
+        <span data-tooltip="These are only enabled with Dedicated Linear Channels enabled" data-placement="right">
           Linear Channels
         </span>
       </summary>

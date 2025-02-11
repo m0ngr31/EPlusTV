@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { espnHandler, IEspnMeta, TESPNTokens } from '@/services/espn-handler';
-import { ESPNBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {espnHandler, IEspnMeta, TESPNTokens} from '@/services/espn-handler';
+import {ESPNBody} from './views/CardBody';
 
 export const espn = new Hono().basePath('/espn');
 
@@ -42,7 +42,11 @@ espn.get('/tve-login/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNTokens, IEspnMeta>, any>({name: 'espn'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNTokens, IEspnMeta>, any>(
+    {name: 'espn'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
   const {tokens, linear_channels, meta} = affectedDocuments as IProvider<TESPNTokens, IEspnMeta>;
 
   // Kickoff event scheduler
@@ -95,7 +99,7 @@ espn.put('/channels/toggle/:id', async c => {
       {
         ...(enabled && {
           'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        })
+        }),
       },
     );
   }
@@ -114,10 +118,17 @@ espn.put('/features/toggle/:id', async c => {
     sec_plus: 'SEC Network+',
   };
 
-  await db.providers.updateAsync<IProvider, any>({name: 'espn'}, {$set: {meta: {
-    ...meta,
-    [featureId]: enabled,
-  }}});
+  await db.providers.updateAsync<IProvider, any>(
+    {name: 'espn'},
+    {
+      $set: {
+        meta: {
+          ...meta,
+          [featureId]: enabled,
+        },
+      },
+    },
+  );
 
   // Kickoff event scheduler
   scheduleEvents();

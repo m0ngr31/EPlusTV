@@ -1,13 +1,13 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { MlbBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {MlbBody} from './views/CardBody';
 
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { mlbHandler, TMLBTokens } from '@/services/mlb-handler';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {mlbHandler, TMLBTokens} from '@/services/mlb-handler';
 
 export const mlbtv = new Hono().basePath('/mlbtv');
 

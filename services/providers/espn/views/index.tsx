@@ -1,13 +1,18 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { IEspnMeta, TESPNTokens } from '@/services/espn-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {IEspnMeta, TESPNTokens} from '@/services/espn-handler';
 
-import { ESPNBody } from './CardBody';
+import {ESPNBody} from './CardBody';
 
 export const ESPN: FC = async () => {
-  const {enabled, tokens, linear_channels: channels, meta} = await db.providers.findOneAsync<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
+  const {
+    enabled,
+    tokens,
+    linear_channels: channels,
+    meta,
+  } = await db.providers.findOneAsync<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
 
   return (
     <div>

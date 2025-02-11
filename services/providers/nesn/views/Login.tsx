@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { nesnHandler } from '@/services/nesn-handler';
+import {nesnHandler} from '@/services/nesn-handler';
 
 interface ILogin {
   url?: string;

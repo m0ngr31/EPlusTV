@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { nesnHandler, TNesnTokens } from '@/services/nesn-handler';
-import { NesnBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {nesnHandler, TNesnTokens} from '@/services/nesn-handler';
+import {NesnBody} from './views/CardBody';
 
 export const nesn = new Hono().basePath('/nesn');
 
@@ -46,7 +46,11 @@ nesn.get('/tve-login/:code/:token/:hashedurl', async c => {
     return c.html(<Login code={code} adobeCode={adobeToken} url={decodedUrl} />);
   }
 
-  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNesnTokens>, any>({name: 'nesn'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNesnTokens>, any>(
+    {name: 'nesn'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
   const {tokens, linear_channels} = affectedDocuments as IProvider<TNesnTokens>;
 
   // Kickoff event scheduler

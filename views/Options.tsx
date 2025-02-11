@@ -1,6 +1,12 @@
 import type {FC} from 'hono/jsx';
 
-import { getNumberOfChannels, getStartChannel, proxySegments, usesLinear, xmltvPadding } from '@/services/misc-db-service';
+import {
+  getNumberOfChannels,
+  getStartChannel,
+  proxySegments,
+  usesLinear,
+  xmltvPadding,
+} from '@/services/misc-db-service';
 
 export const Options: FC = async () => {
   const startChannel = await getStartChannel();

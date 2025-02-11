@@ -1,7 +1,7 @@
 import {FC} from 'hono/jsx';
 
-import { TFoxTokens } from '@/services/fox-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
+import {TFoxTokens} from '@/services/fox-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
 
 interface IFoxBodyProps {
   enabled: boolean;
@@ -20,9 +20,7 @@ export const FoxBody: FC<IFoxBodyProps> = ({enabled, tokens, open, channels}) =>
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span>
-          Linear Channels
-        </span>
+        <span>Linear Channels</span>
       </summary>
       <table class="striped">
         <thead>
@@ -42,10 +40,7 @@ export const FoxBody: FC<IFoxBodyProps> = ({enabled, tokens, open, channels}) =>
         <summary>Tokens</summary>
         <div>
           <pre>{parsedTokens}</pre>
-          <form
-            hx-put="/providers/fox/reauth"
-            hx-trigger="submit"
-          >
+          <form hx-put="/providers/fox/reauth" hx-trigger="submit">
             <button id="fox-reauth">Re-Authenticate</button>
           </form>
         </div>

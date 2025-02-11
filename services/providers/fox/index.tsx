@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { foxHandler, TFoxTokens } from '@/services/fox-handler';
-import { FoxBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {foxHandler, TFoxTokens} from '@/services/fox-handler';
+import {FoxBody} from './views/CardBody';
 
 export const fox = new Hono().basePath('/fox');
 
@@ -99,7 +99,11 @@ fox.get('/tve-login/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFoxTokens>, any>({name: 'foxsports'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFoxTokens>, any>(
+    {name: 'foxsports'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
   const {tokens, linear_channels} = affectedDocuments as IProvider<TFoxTokens>;
 
   // Kickoff event scheduler

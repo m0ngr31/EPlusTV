@@ -1,10 +1,10 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TB1GTokens } from '@/services/b1g-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TB1GTokens} from '@/services/b1g-handler';
 
-import { B1GBody } from './CardBody';
+import {B1GBody} from './CardBody';
 
 export const B1G: FC = async () => {
   const b1g = await db.providers.findOneAsync<IProvider<TB1GTokens>>({name: 'b1g'});

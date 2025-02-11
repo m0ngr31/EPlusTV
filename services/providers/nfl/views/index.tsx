@@ -1,10 +1,10 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TNFLTokens } from '@/services/nfl-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TNFLTokens} from '@/services/nfl-handler';
 
-import { NFLBody } from './CardBody';
+import {NFLBody} from './CardBody';
 
 export const NFL: FC = async () => {
   const nfl = await db.providers.findOneAsync<IProvider<TNFLTokens>>({name: 'nfl'});

@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { espnHandler, IEspnPlusMeta, TESPNPlusTokens } from '@/services/espn-handler';
-import { ESPNPlusBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {espnHandler, IEspnPlusMeta, TESPNPlusTokens} from '@/services/espn-handler';
+import {ESPNPlusBody} from './views/CardBody';
 
 export const espnplus = new Hono().basePath('/espnplus');
 
@@ -67,9 +67,12 @@ espnplus.put('/save-filters', async c => {
   return c.html(
     <button type="submit" id="espnplus-save-filters-button">
       Save and Apply Filters
-    </button>, 200, {
-    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved and applied filters"}}`,
-  });
+    </button>,
+    200,
+    {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved and applied filters"}}`,
+    },
+  );
 });
 
 espnplus.put('/refresh-in-market-teams', async c => {
@@ -77,11 +80,18 @@ espnplus.put('/refresh-in-market-teams', async c => {
 
   return c.html(
     <div>
-      <pre>{in_market_teams} ({zip_code})</pre>
-      <button id="espnplus-refresh-in-market-teams-button" disabled>Refresh In-Market Teams</button>
-    </div>, 200, {
-    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully refreshed in-market teams"}}`,
-  });
+      <pre>
+        {in_market_teams} ({zip_code})
+      </pre>
+      <button id="espnplus-refresh-in-market-teams-button" disabled>
+        Refresh In-Market Teams
+      </button>
+    </div>,
+    200,
+    {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully refreshed in-market teams"}}`,
+    },
+  );
 });
 
 espnplus.get('/login/check/:code', async c => {
@@ -93,7 +103,11 @@ espnplus.get('/login/check/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNPlusTokens>, any>({name: 'espnplus'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNPlusTokens>, any>(
+    {name: 'espnplus'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
   const {tokens} = affectedDocuments as IProvider<TESPNPlusTokens, IEspnPlusMeta>;
 
   // Kickoff event scheduler

@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { espnHandler } from '@/services/espn-handler';
+import {espnHandler} from '@/services/espn-handler';
 
 interface ILoginProps {
   code?: string;
@@ -14,7 +14,12 @@ export const Login: FC<ILoginProps> = async ({code}) => {
   }
 
   return (
-    <div hx-target="this" hx-swap="outerHTML" hx-trigger="every 5s" hx-get={`/providers/espnplus/login/check/${shownCode}`}>
+    <div
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger="every 5s"
+      hx-get={`/providers/espnplus/login/check/${shownCode}`}
+    >
       <div class="grid-container">
         <div>
           <h5>ESPN+ Login:</h5>

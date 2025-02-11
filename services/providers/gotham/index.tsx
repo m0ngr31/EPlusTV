@@ -1,13 +1,13 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
+import {Login} from './views/Login';
 import {TVELogin} from './views/TveLogin';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { gothamHandler, TGothamTokens } from '@/services/gotham-handler';
-import { GothamBody } from './views/CardBody';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {gothamHandler, TGothamTokens} from '@/services/gotham-handler';
+import {GothamBody} from './views/CardBody';
 
 export const gotham = new Hono().basePath('/gotham');
 

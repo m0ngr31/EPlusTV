@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { TFloSportsTokens } from '@/services/flo-handler';
+import {TFloSportsTokens} from '@/services/flo-handler';
 
 interface IFloSportsBodyProps {
   enabled: boolean;
@@ -21,10 +21,7 @@ export const FloSportsBody: FC<IFloSportsBodyProps> = ({enabled, tokens, open}) 
         <summary>Tokens</summary>
         <div>
           <pre>{parsedTokens}</pre>
-          <form
-            hx-put="/providers/flosports/reauth"
-            hx-trigger="submit"
-          >
+          <form hx-put="/providers/flosports/reauth" hx-trigger="submit">
             <button id="flosports-reauth">Re-Authenticate</button>
           </form>
         </div>

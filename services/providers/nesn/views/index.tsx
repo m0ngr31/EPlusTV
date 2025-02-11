@@ -1,10 +1,10 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TNesnTokens } from '@/services/nesn-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TNesnTokens} from '@/services/nesn-handler';
 
-import { NesnBody } from './CardBody';
+import {NesnBody} from './CardBody';
 
 export const Nesn: FC = async () => {
   const nesn = await db.providers.findOneAsync<IProvider<TNesnTokens>>({name: 'nesn'});

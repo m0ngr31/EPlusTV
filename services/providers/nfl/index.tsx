@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { nflHandler, TNFLTokens, TOtherAuth } from '@/services/nfl-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {nflHandler, TNFLTokens, TOtherAuth} from '@/services/nfl-handler';
 
-import { Login } from './views/Login';
-import { NFLBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {NFLBody} from './views/CardBody';
 
 export const nfl = new Hono().basePath('/nfl');
 
@@ -65,7 +65,11 @@ nfl.put('/auth/:provider', async c => {
   }
 
   if (!enabled) {
-    const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNFLTokens>, any>({name: 'nfl'}, {$set: {tokens: updatedTokens}}, {returnUpdatedDocs: true});
+    const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNFLTokens>, any>(
+      {name: 'nfl'},
+      {$set: {tokens: updatedTokens}},
+      {returnUpdatedDocs: true},
+    );
     const {linear_channels, tokens} = affectedDocuments as IProvider<TNFLTokens>;
 
     return c.html(<NFLBody channels={linear_channels} enabled={true} open={false} tokens={tokens} />);
@@ -156,7 +160,7 @@ nfl.put('/channels/toggle/:id', async c => {
       {
         ...(enabled && {
           'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        })
+        }),
       },
     );
   }

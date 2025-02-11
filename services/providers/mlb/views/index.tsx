@@ -1,8 +1,8 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TMLBTokens } from '@/services/mlb-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TMLBTokens} from '@/services/mlb-handler';
 
 import {MlbBody} from './CardBody';
 

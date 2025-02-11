@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { paramountHandler, TParamountTokens } from '@/services/paramount-handler';
-import { ParamountBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {paramountHandler, TParamountTokens} from '@/services/paramount-handler';
+import {ParamountBody} from './views/CardBody';
 
 export const paramount = new Hono().basePath('/paramount');
 
@@ -43,23 +43,18 @@ paramount.get('/tve-login/:code/:token', async c => {
     return c.html(<Login code={code} deviceToken={token} />);
   }
 
-  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TParamountTokens>, any>({name: 'paramount'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TParamountTokens>, any>(
+    {name: 'paramount'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
   const {tokens, linear_channels} = affectedDocuments as IProvider<TParamountTokens>;
   // Kickoff event scheduler
   scheduleEvents();
 
-  return c.html(
-    <ParamountBody
-      enabled={true}
-      tokens={tokens}
-      open={true}
-      channels={linear_channels}
-    />,
-    200,
-    {
-      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled Paramount+"}}`,
-    },
-  );
+  return c.html(<ParamountBody enabled={true} tokens={tokens} open={true} channels={linear_channels} />, 200, {
+    'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled Paramount+"}}`,
+  });
 });
 
 paramount.put('/reauth', async c => {
@@ -104,7 +99,7 @@ paramount.put('/channels/toggle/:id', async c => {
       {
         ...(enabled && {
           'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        })
+        }),
       },
     );
   }

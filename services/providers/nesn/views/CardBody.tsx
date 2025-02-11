@@ -1,7 +1,7 @@
 import {FC} from 'hono/jsx';
 
-import { TNesnTokens } from '@/services/nesn-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
+import {TNesnTokens} from '@/services/nesn-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
 
 interface INesnBodyProps {
   enabled: boolean;
@@ -20,10 +20,7 @@ export const NesnBody: FC<INesnBodyProps> = ({enabled, tokens, open, channels}) 
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span
-          data-tooltip="These are only enabled with Dedicated Linear Channels enabled"
-          data-placement="right"
-        >
+        <span data-tooltip="These are only enabled with Dedicated Linear Channels enabled" data-placement="right">
           Linear Channels
         </span>
       </summary>
@@ -45,10 +42,7 @@ export const NesnBody: FC<INesnBodyProps> = ({enabled, tokens, open, channels}) 
         <summary>Tokens</summary>
         <div>
           <pre>{parsedTokens}</pre>
-          <form
-            hx-put="/providers/nesn/reauth"
-            hx-trigger="submit"
-          >
+          <form hx-put="/providers/nesn/reauth" hx-trigger="submit">
             <button id="nesn-reauth">Re-Authenticate</button>
           </form>
         </div>

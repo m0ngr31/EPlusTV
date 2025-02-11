@@ -1,7 +1,7 @@
 import {FC} from 'hono/jsx';
 
-import { IEspnMeta, TESPNTokens } from '@/services/espn-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
+import {IEspnMeta, TESPNTokens} from '@/services/espn-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
 
 interface IESPNBodyProps {
   enabled: boolean;
@@ -21,9 +21,7 @@ export const ESPNBody: FC<IESPNBodyProps> = ({enabled, tokens, open, channels, m
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span>
-          Linear Channels
-        </span>
+        <span>Linear Channels</span>
       </summary>
       <table class="striped">
         <thead>

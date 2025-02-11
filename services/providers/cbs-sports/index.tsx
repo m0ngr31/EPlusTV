@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { Login } from './views/Login';
-import { CBSBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {CBSBody} from './views/CardBody';
 
-import { db } from '@/services/database';
-import { cbsHandler, TCBSTokens } from '@/services/cbs-handler';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
+import {db} from '@/services/database';
+import {cbsHandler, TCBSTokens} from '@/services/cbs-handler';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
 
 export const cbs = new Hono().basePath('/cbs');
 
@@ -30,9 +30,7 @@ cbs.put('/toggle', async c => {
     return c.html(<></>);
   }
 
-  return c.html(
-    <Login />
-  );
+  return c.html(<Login />);
 });
 
 cbs.get('/tve-login/:code', async c => {
