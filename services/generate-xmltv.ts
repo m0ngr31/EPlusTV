@@ -5,17 +5,17 @@ import moment from 'moment';
 import {db} from './database';
 import {calculateChannelFromName, CHANNELS} from './channels';
 import {IEntry} from './shared-interfaces';
-import {getLinearStartChannel, getNumberOfChannels, getStartChannel} from './misc-db-service';
+import {getLinearStartChannel, getNumberOfChannels, getStartChannel, xmltvPadding} from './misc-db-service';
 
-const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports'];
+const baseCategories = ['HD', 'HDTV', 'Sports event', 'Sports', 'E+TV', 'EPlusTV'];
 
-const usesMultiple = async (): Promise<boolean> => {
-  const enabledProviders = await db.providers.count({enabled: true});
+export const usesMultiple = async (): Promise<boolean> => {
+  const enabledProviders = await db.providers.countAsync({enabled: true});
 
   return enabledProviders > 1;
 };
 
-const formatEntryName = (entry: IEntry, usesMultiple: boolean) => {
+export const formatEntryName = (entry: IEntry, usesMultiple: boolean): string => {
   let entryName = entry.name;
 
   if (entry.feed) {
@@ -49,6 +49,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
   const startChannel = await getStartChannel();
   const numOfChannels = await getNumberOfChannels();
   const linearStartChannel = await getLinearStartChannel();
+  const xmltvPadded = await xmltvPadding();
 
   const wrap: any = {
     tv: [
@@ -141,7 +142,7 @@ export const generateXml = async (linear = false): Promise<xml> => {
   }
 
   const scheduledEntries = await db.entries
-    .find<IEntry>({channel: {$exists: true}, linear: linear ? true : {$exists: false}})
+    .findAsync<IEntry>({channel: {$exists: true}, linear: linear ? true : {$exists: false}})
     .sort({start: 1});
 
   for (const entry of scheduledEntries) {
@@ -149,13 +150,15 @@ export const generateXml = async (linear = false): Promise<xml> => {
 
     const entryName = formatEntryName(entry, useMultiple);
 
+    const end = xmltvPadded || !entry.originalEnd ? entry.end : entry.originalEnd;
+
     wrap.tv.push({
       programme: [
         {
           _attr: {
             channel: `${channelNum}.eplustv`,
             start: moment(entry.start).format('YYYYMMDDHHmmss ZZ'),
-            stop: moment(entry.end).format('YYYYMMDDHHmmss ZZ'),
+            stop: moment(end).format('YYYYMMDDHHmmss ZZ'),
           },
         },
         {

@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { paramountHandler } from '@/services/paramount-handler';
+import {paramountHandler} from '@/services/paramount-handler';
 
 interface ILogin {
   code?: string;
@@ -16,7 +16,12 @@ export const Login: FC<ILogin> = async ({code, deviceToken}) => {
   }
 
   return (
-    <div hx-target="this" hx-swap="outerHTML" hx-trigger="every 5s" hx-get={`/providers/paramount/tve-login/${shownCode}/${token}`}>
+    <div
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger="every 5s"
+      hx-get={`/providers/paramount/tve-login/${shownCode}/${token}`}
+    >
       <div class="grid-container">
         <div>
           <h5>Paramount+ Login:</h5>

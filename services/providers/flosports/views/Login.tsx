@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { floSportsHandler } from '@/services/flo-handler';
+import {floSportsHandler} from '@/services/flo-handler';
 
 interface ILogin {
   code?: string;
@@ -14,12 +14,7 @@ export const Login: FC<ILogin> = async ({code}) => {
   }
 
   return (
-    <div
-      hx-target="this"
-      hx-swap="outerHTML"
-      hx-trigger="every 5s"
-      hx-get={`/providers/flosports/auth/${shownCode}`}
-    >
+    <div hx-target="this" hx-swap="outerHTML" hx-trigger="every 5s" hx-get={`/providers/flosports/auth/${shownCode}`}>
       <div class="grid-container">
         <div>
           <h5>FloSports Login:</h5>

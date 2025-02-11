@@ -1,8 +1,8 @@
 import {FC} from 'hono/jsx';
 
-import { TParamountTokens } from '@/services/paramount-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
-import { usesLinear } from '@/services/misc-db-service';
+import {TParamountTokens} from '@/services/paramount-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
+import {usesLinear} from '@/services/misc-db-service';
 
 interface IParamountBodyProps {
   enabled: boolean;
@@ -23,10 +23,7 @@ export const ParamountBody: FC<IParamountBodyProps> = async ({enabled, tokens, o
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
-        <span
-          data-tooltip="These are only enabled with Dedicated Linear Channels enabled"
-          data-placement="right"
-        >
+        <span data-tooltip="These are only enabled with Dedicated Linear Channels enabled" data-placement="right">
           Linear Channels
         </span>
       </summary>

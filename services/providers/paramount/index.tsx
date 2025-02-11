@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { paramountHandler, TParamountTokens } from '@/services/paramount-handler';
-import { ParamountBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {paramountHandler, TParamountTokens} from '@/services/paramount-handler';
+import {ParamountBody} from './views/CardBody';
 
 export const paramount = new Hono().basePath('/paramount');
 
@@ -24,7 +24,7 @@ paramount.put('/toggle', async c => {
   const enabled = body['paramount-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'paramount'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'paramount'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -43,8 +43,12 @@ paramount.get('/tve-login/:code/:token', async c => {
     return c.html(<Login code={code} deviceToken={token} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TParamountTokens>>({name: 'paramount'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
-
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TParamountTokens>, any>(
+    {name: 'paramount'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
+  const {tokens, linear_channels} = affectedDocuments as IProvider<TParamountTokens>;
   // Kickoff event scheduler
   scheduleEvents();
 
@@ -59,7 +63,7 @@ paramount.put('/reauth', async c => {
 
 paramount.put('/channels/toggle/:id', async c => {
   const channelId = c.req.param('id');
-  const {linear_channels} = await db.providers.findOne<IProvider>({name: 'paramount'});
+  const {linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'paramount'});
 
   const body = await c.req.parseBody();
   const enabled = body['channel-enabled'] === 'on';
@@ -75,7 +79,7 @@ paramount.put('/channels/toggle/:id', async c => {
   });
 
   if (updatedChannel !== channelId) {
-    await db.providers.update<IProvider>({name: 'paramount'}, {$set: {linear_channels: updatedChannels}});
+    await db.providers.updateAsync<IProvider, any>({name: 'paramount'}, {$set: {linear_channels: updatedChannels}});
 
     // Kickoff event scheduler
     scheduleEvents();
@@ -95,7 +99,7 @@ paramount.put('/channels/toggle/:id', async c => {
       {
         ...(enabled && {
           'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        })
+        }),
       },
     );
   }

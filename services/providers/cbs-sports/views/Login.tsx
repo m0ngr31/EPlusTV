@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { cbsHandler } from '@/services/cbs-handler';
+import {cbsHandler} from '@/services/cbs-handler';
 
 interface ILogin {
   code?: string;
@@ -19,7 +19,8 @@ export const Login: FC<ILogin> = async ({code}) => {
         <div>
           <h5>TVE Login:</h5>
           <span>
-            Open this link and follow instructions:<br/>
+            Open this link and follow instructions:
+            <br />
             <a href={`https://www.cbssports.com/firetv/${shownCode}`} target="_blank">
               {`https://www.cbssports.com/firetv/${shownCode}`}
             </a>

@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { nflHandler, TOtherAuth } from '@/services/nfl-handler';
+import {nflHandler, TOtherAuth} from '@/services/nfl-handler';
 
 interface ILogin {
   code?: string;

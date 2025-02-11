@@ -23,25 +23,31 @@ import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
-import {cleanEntries, clearChannels, removeAllEntries, removeChannelStatus, resetSchedule} from './services/shared-helpers';
+import {
+  cleanEntries,
+  clearChannels,
+  removeAllEntries,
+  removeChannelStatus,
+  resetSchedule,
+} from './services/shared-helpers';
 import {appStatus} from './services/app-status';
 import {SERVER_PORT} from './services/port';
-import { providers } from './services/providers';
+import {providers} from './services/providers';
 
 import {version} from './package.json';
 
-import { Layout } from './views/Layout';
-import { Header } from './views/Header';
-import { Main } from './views/Main';
-import { Links } from './views/Links';
-import { Style } from './views/Style';
-import { Providers } from './views/Providers';
-import { Script } from './views/Script';
+import {Layout} from './views/Layout';
+import {Header} from './views/Header';
+import {Main} from './views/Main';
+import {Links} from './views/Links';
+import {Style} from './views/Style';
+import {Providers} from './views/Providers';
+import {Script} from './views/Script';
 import {Tools} from './views/Tools';
 import {Options} from './views/Options';
 
 import {CBSSports} from './services/providers/cbs-sports/views';
-import { MntWest } from './services/providers/mw/views';
+import {MntWest} from './services/providers/mw/views';
 import {Paramount} from './services/providers/paramount/views';
 import {FloSports} from './services/providers/flosports/views';
 import {MlbTv} from './services/providers/mlb/views';
@@ -52,7 +58,16 @@ import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
 import {Gotham} from './services/providers/gotham/views';
-import { initMiscDb, resetLinearStartChannel, setLinear, setNumberofChannels, setProxySegments, setStartChannel, usesLinear } from './services/misc-db-service';
+import {
+  initMiscDb,
+  resetLinearStartChannel,
+  setLinear,
+  setNumberofChannels,
+  setProxySegments,
+  setStartChannel,
+  usesLinear,
+  setXmltvPadding,
+} from './services/misc-db-service';
 
 // Set timeout of requests to 1 minute
 axios.defaults.timeout = 1000 * 60;
@@ -110,31 +125,31 @@ app.route('/', providers);
 app.get('/', async c => {
   return c.html(
     html`<!DOCTYPE html>${(
-      <Layout>
-        <Header />
-        <Main>
-          <Links baseUrl={getUri(c)} />
-          <Tools />
-          <Options />
-          <Providers>
-            <ESPNPlus />
-            <NFL />
-            <MlbTv />
-            <FoxSports />
-            <CBSSports />
-            <ESPN />
-            <Paramount />
-            <Nesn />
-            <Gotham />
-            <B1G />
-            <FloSports />
-            <MntWest />
-          </Providers>
-        </Main>
-        <Style />
-        <Script />
-      </Layout>
-    )}`,
+        <Layout>
+          <Header />
+          <Main>
+            <Links baseUrl={getUri(c)} />
+            <Tools />
+            <Options />
+            <Providers>
+              <ESPNPlus />
+              <NFL />
+              <MlbTv />
+              <FoxSports />
+              <CBSSports />
+              <ESPN />
+              <Paramount />
+              <Nesn />
+              <Gotham />
+              <B1G />
+              <FloSports />
+              <MntWest />
+            </Providers>
+          </Main>
+          <Style />
+          <Script />
+        </Layout>
+      )}`,
   );
 });
 
@@ -252,6 +267,33 @@ app.post('/proxy-segments', async c => {
       'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully ${
         enabled ? 'enabled' : 'disabled'
       } proxying of segment files"}}`,
+    },
+  );
+});
+
+app.post('/xmltv-padding', async c => {
+  const body = await c.req.parseBody();
+  const enabled = body['xmltv-padding'] === 'on';
+
+  await setXmltvPadding(enabled);
+
+  return c.html(
+    <input
+      hx-post="/xmltv-padding"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger="change"
+      name="xmltv-padding"
+      type="checkbox"
+      role="switch"
+      checked={enabled}
+      data-enabled={enabled ? 'true' : 'false'}
+    />,
+    200,
+    {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully ${
+        enabled ? 'enabled' : 'disabled'
+      } XMLTV padding"}}`,
     },
   );
 });

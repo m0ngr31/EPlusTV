@@ -32,14 +32,13 @@ export const TVELogin: FC<ILogin> = async ({link}) => {
             <span>
               Open this link and follow instructions:
               <br />
-
-                <a href={shownLink} target="_blank">
-                  {shownLink}
-                </a>
+              <a href={shownLink} target="_blank">
+                {shownLink}
+              </a>
             </span>
-            ) : (
-              <span>Trying to refresh Adobe auth...</span>
-            )}
+          ) : (
+            <span>Trying to refresh Adobe auth...</span>
+          )}
         </div>
         <div aria-busy="true" style="align-content: center" />
       </div>

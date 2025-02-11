@@ -5,7 +5,7 @@ import {IProvider} from './shared-interfaces';
 import {getLinearStartChannel, usesLinear} from './misc-db-service';
 
 export const checkChannelEnabled = async (provider: string, channelId: string): Promise<boolean> => {
-  const {enabled, linear_channels} = await db.providers.findOne<IProvider>({name: provider});
+  const {enabled, linear_channels} = await db.providers.findOneAsync<IProvider>({name: provider});
 
   if (!enabled || !linear_channels || !linear_channels.length) {
     return false;
@@ -143,7 +143,7 @@ export const CHANNELS = {
       },
       40: {
         checkChannelEnabled: async (): Promise<boolean> => {
-          const {linear_channels, meta} = await db.providers.findOne<IProvider>({name: 'mlbtv'});
+          const {linear_channels, meta} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
 
           return linear_channels[0].enabled && !meta.onlyFree;
         },
@@ -260,3 +260,5 @@ export const calculateChannelFromName = async (channelName: string): Promise<num
 
   return channelNum;
 };
+
+export const XMLTV_PADDING = process.env.XMLTV_PADDING?.toLowerCase() === 'false' ? false : true;

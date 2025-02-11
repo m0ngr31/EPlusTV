@@ -4,7 +4,7 @@ import jwt_decode from 'jwt-decode';
 import moment from 'moment';
 import CryptoJS from 'crypto-js';
 
-import {getRandomUUID} from './shared-helpers';
+import {getRandomUUID, normalTimeRange} from './shared-helpers';
 import {db} from './database';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {okHttpUserAgent} from './user-agent';
@@ -148,18 +148,19 @@ const CHANNEL_MAP = {
 const parseAirings = async (events: any[]) => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const inTwoDays = moment().add(2, 'days').endOf('day');
+  const [now, inTwoDays] = normalTimeRange();
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: `${event.contentId}`});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `${event.contentId}`});
 
     if (!entryExists) {
       const start = moment(event.start);
       const end = moment(event.end);
+      const originalEnd = moment(event.end);
 
       if (!useLinear) {
         start.subtract(30, 'minutes'); // For Pre-game
+        end.add(1, 'hour');
       }
 
       if (end.isBefore(now) || start.isAfter(inTwoDays)) {
@@ -168,7 +169,7 @@ const parseAirings = async (events: any[]) => {
 
       console.log('Adding event: ', event.title);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: event.categories.filter(a => a),
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -177,6 +178,7 @@ const parseAirings = async (events: any[]) => {
         image: event.artwork,
         name: event.title,
         network: event.network || 'MSG',
+        originalEnd: originalEnd.valueOf(),
         sport: event.sport,
         start: start.valueOf(),
         ...(event.linear && {
@@ -201,10 +203,10 @@ class GothamHandler {
   public adobe_token_expires?: number;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'gotham'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'gotham'})) > 0 ? true : false;
 
     if (!setup) {
-      await db.providers.insert<IProvider<TGothamTokens>>({
+      await db.providers.insertAsync<IProvider<TGothamTokens>>({
         enabled: false,
         linear_channels: [
           {
@@ -243,7 +245,7 @@ class GothamHandler {
       });
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'gotham'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
 
     if (!enabled) {
       return;
@@ -270,7 +272,7 @@ class GothamHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'gotham'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
 
     if (!enabled) {
       return;
@@ -302,7 +304,7 @@ class GothamHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'gotham'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
 
     if (!enabled) {
       return;
@@ -312,8 +314,7 @@ class GothamHandler {
 
     const useLinear = await usesLinear();
 
-    const now = moment();
-    const end = moment(now).add(2, 'days').endOf('day');
+    const [now, end] = normalTimeRange();
 
     const entries: any[] = [];
 
@@ -421,7 +422,7 @@ class GothamHandler {
     try {
       const [, channelId] = eventId.split('----');
 
-      const event = await db.entries.findOne<IEntry>({id: eventId});
+      const event = await db.entries.findOneAsync<IEntry>({id: eventId});
 
       const network = event.network === 'YES' ? 'YESN' : 'MSGGO';
 
@@ -637,6 +638,10 @@ class GothamHandler {
           },
         },
       );
+
+      if (data.gameError?.description && !data.GetOAuthAccessTokenv2ResponseMessage?.accessToken) {
+        throw new Error(data.gameError?.description || 'Wrong Username or Password');
+      }
 
       this.auth_token = data.GetOAuthAccessTokenv2ResponseMessage.accessToken;
       this.refresh_token = data.GetOAuthAccessTokenv2ResponseMessage.refreshToken;
@@ -981,14 +986,14 @@ class GothamHandler {
   };
 
   private save = async () => {
-    await db.providers.update(
+    await db.providers.updateAsync(
       {name: 'gotham'},
       {$set: {tokens: _.omit(this, 'appConfig', 'access_token', 'entitlement_token')}},
     );
   };
 
   private load = async () => {
-    const {tokens} = await db.providers.findOne<IProvider<TGothamTokens>>({name: 'gotham'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TGothamTokens>>({name: 'gotham'});
     const {device_id, auth_token, refresh_token, expiresIn, adobe_token_expires, adobe_token} = tokens || {};
 
     this.device_id = device_id;

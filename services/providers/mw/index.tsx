@@ -1,10 +1,10 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { mwHandler } from '@/services/mw-handler';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {mwHandler} from '@/services/mw-handler';
 
 export const mw = new Hono().basePath('/mw');
 
@@ -21,7 +21,7 @@ mw.put('/toggle', async c => {
   const body = await c.req.parseBody();
   const enabled = body['mw-enabled'] === 'on';
 
-  await db.providers.update<IProvider>({name: 'mw'}, {$set: {enabled}});
+  await db.providers.updateAsync<IProvider, any>({name: 'mw'}, {$set: {enabled}});
 
   if (enabled) {
     scheduleEvents();
@@ -32,6 +32,6 @@ mw.put('/toggle', async c => {
   return c.html(<></>, 200, {
     ...(enabled && {
       'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled Mountain West"}}`,
-    })
+    }),
   });
 });

@@ -1,13 +1,13 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TFoxTokens } from '@/services/fox-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TFoxTokens} from '@/services/fox-handler';
 
-import { FoxBody } from './CardBody';
+import {FoxBody} from './CardBody';
 
 export const FoxSports: FC = async () => {
-  const fox = await db.providers.findOne<IProvider<TFoxTokens>>({name: 'foxsports'});
+  const fox = await db.providers.findOneAsync<IProvider<TFoxTokens>>({name: 'foxsports'});
   const enabled = fox?.enabled;
   const tokens = fox?.tokens;
   const channels = fox?.linear_channels || [];

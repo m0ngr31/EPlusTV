@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { espnHandler } from '@/services/espn-handler';
+import {espnHandler} from '@/services/espn-handler';
 
 interface ILogin {
   code?: string;
@@ -14,12 +14,7 @@ export const Login: FC<ILogin> = async ({code}) => {
   }
 
   return (
-    <div
-      hx-target="this"
-      hx-swap="outerHTML"
-      hx-trigger="every 5s"
-      hx-get={`/providers/espn/tve-login/${shownCode}`}
-    >
+    <div hx-target="this" hx-swap="outerHTML" hx-trigger="every 5s" hx-get={`/providers/espn/tve-login/${shownCode}`}>
       <div class="grid-container">
         <div>
           <h5>TVE Login:</h5>

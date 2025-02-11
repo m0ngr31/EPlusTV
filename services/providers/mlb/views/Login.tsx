@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { mlbHandler } from '@/services/mlb-handler';
+import {mlbHandler} from '@/services/mlb-handler';
 
 interface ILogin {
   code?: string;
@@ -14,12 +14,7 @@ export const Login: FC<ILogin> = async ({code}) => {
   }
 
   return (
-    <div
-      hx-target="this"
-      hx-swap="outerHTML"
-      hx-trigger="every 5s"
-      hx-get={`/providers/mlbtv/auth/${shownCode}`}
-    >
+    <div hx-target="this" hx-swap="outerHTML" hx-trigger="every 5s" hx-get={`/providers/mlbtv/auth/${shownCode}`}>
       <div class="grid-container">
         <div>
           <h5>MLB.tv Login:</h5>

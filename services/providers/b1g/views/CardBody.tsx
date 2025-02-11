@@ -1,6 +1,6 @@
 import {FC} from 'hono/jsx';
 
-import { TB1GTokens } from '@/services/b1g-handler';
+import {TB1GTokens} from '@/services/b1g-handler';
 
 interface IB1GBodyProps {
   enabled: boolean;
@@ -21,10 +21,7 @@ export const B1GBody: FC<IB1GBodyProps> = ({enabled, tokens, open}) => {
         <summary>Tokens</summary>
         <div>
           <pre>{parsedTokens}</pre>
-          <form
-            hx-put="/providers/b1g/reauth"
-            hx-trigger="submit"
-          >
+          <form hx-put="/providers/b1g/reauth" hx-trigger="submit">
             <button id="b1g-reauth">Re-Authenticate</button>
           </form>
         </div>

@@ -28,7 +28,7 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
   let url: string;
   let headers: THeaderInfo;
 
-  const playingNow = await db.entries.findOne<IEntry>({
+  const playingNow = await db.entries.findOneAsync<IEntry>({
     id: appStatus.channels[channelId].current,
   });
 
@@ -107,11 +107,15 @@ export const launchChannel = async (channelId: string, appUrl: string): Promise<
 
   const now = new Date().valueOf();
   const channel = isNumber ? parseInt(`${channelNum}`, 10) : channelNum;
-  const playingNow = await db.entries.findOne<IEntry>({
-    channel,
-    end: {$gt: now},
-    start: {$lt: now},
-  });
+
+  // Find the entry with the most recent start time (if there are overlapping)
+  const playingNow = await db.entries
+    .findOneAsync<IEntry>({
+      channel,
+      end: {$gt: now},
+      start: {$lt: now},
+    })
+    .sort({start: -1});
 
   if (playingNow && playingNow.id) {
     console.log(`Channel #${channelId} has an active event (${playingNow.name}). Going to start the stream.`);
@@ -131,7 +135,7 @@ export const checkNextStream = async (channelId: string): Promise<void> => {
   const now = new Date().valueOf();
 
   const channel = parseInt(channelId, 10);
-  const entries = await db.entries.find<IEntry>({channel, start: {$gt: now}}).sort({start: 1});
+  const entries = await db.entries.findAsync<IEntry>({channel, start: {$gt: now}}).sort({start: 1});
 
   if (entries && entries.length > 0) {
     const diff = entries[0].start - now;

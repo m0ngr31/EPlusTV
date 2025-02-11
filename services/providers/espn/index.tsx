@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { espnHandler, IEspnMeta, TESPNTokens } from '@/services/espn-handler';
-import { ESPNBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {espnHandler, IEspnMeta, TESPNTokens} from '@/services/espn-handler';
+import {ESPNBody} from './views/CardBody';
 
 export const espn = new Hono().basePath('/espn');
 
@@ -24,7 +24,7 @@ espn.put('/toggle', async c => {
   const enabled = body['espn-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'espn'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider, any>({name: 'espn'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -42,7 +42,12 @@ espn.get('/tve-login/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
-  const {tokens, linear_channels, meta} = await db.providers.update<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'}, {$set: {enabled: true}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNTokens, IEspnMeta>, any>(
+    {name: 'espn'},
+    {$set: {enabled: true}},
+    {returnUpdatedDocs: true},
+  );
+  const {tokens, linear_channels, meta} = affectedDocuments as IProvider<TESPNTokens, IEspnMeta>;
 
   // Kickoff event scheduler
   scheduleEvents();
@@ -58,7 +63,7 @@ espn.put('/reauth', async c => {
 
 espn.put('/channels/toggle/:id', async c => {
   const channelId = c.req.param('id');
-  const {linear_channels} = await db.providers.findOne<IProvider>({name: 'espn'});
+  const {linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'espn'});
 
   const body = await c.req.parseBody();
   const enabled = body['channel-enabled'] === 'on';
@@ -74,7 +79,7 @@ espn.put('/channels/toggle/:id', async c => {
   });
 
   if (updatedChannel !== channelId) {
-    await db.providers.update<IProvider>({name: 'espn'}, {$set: {linear_channels: updatedChannels}});
+    await db.providers.updateAsync<IProvider, any>({name: 'espn'}, {$set: {linear_channels: updatedChannels}});
 
     // Kickoff event scheduler
     scheduleEvents();
@@ -94,7 +99,7 @@ espn.put('/channels/toggle/:id', async c => {
       {
         ...(enabled && {
           'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        })
+        }),
       },
     );
   }
@@ -102,7 +107,7 @@ espn.put('/channels/toggle/:id', async c => {
 
 espn.put('/features/toggle/:id', async c => {
   const featureId = c.req.param('id');
-  const {meta} = await db.providers.findOne<IProvider<any, IEspnMeta>>({name: 'espn'});
+  const {meta} = await db.providers.findOneAsync<IProvider<any, IEspnMeta>>({name: 'espn'});
 
   const body = await c.req.parseBody();
   const enabled = body['channel-enabled'] === 'on';
@@ -113,10 +118,17 @@ espn.put('/features/toggle/:id', async c => {
     sec_plus: 'SEC Network+',
   };
 
-  await db.providers.update<IProvider>({name: 'espn'}, {$set: {meta: {
-    ...meta,
-    [featureId]: enabled,
-  }}});
+  await db.providers.updateAsync<IProvider, any>(
+    {name: 'espn'},
+    {
+      $set: {
+        meta: {
+          ...meta,
+          [featureId]: enabled,
+        },
+      },
+    },
+  );
 
   // Kickoff event scheduler
   scheduleEvents();

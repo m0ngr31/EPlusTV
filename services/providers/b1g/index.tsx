@@ -1,13 +1,13 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
+import {db} from '@/services/database';
 
-import { Login } from './views/Login';
-import { B1GBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {B1GBody} from './views/CardBody';
 
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { b1gHandler, TB1GTokens } from '@/services/b1g-handler';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {b1gHandler, TB1GTokens} from '@/services/b1g-handler';
 
 export const b1g = new Hono().basePath('/b1g');
 
@@ -25,7 +25,7 @@ b1g.put('/toggle', async c => {
   const enabled = body['b1g-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'b1g'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider<TB1GTokens>, any>({name: 'b1g'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -45,10 +45,20 @@ b1g.post('/login', async c => {
     return c.html(<Login invalid={true} />);
   }
 
-  const {tokens} = await db.providers.update<IProvider<TB1GTokens>>({name: 'b1g'}, {$set: {enabled: true, meta: {
-    password,
-    username,
-  }}}, {returnUpdatedDocs: true});
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TB1GTokens>, any>(
+    {name: 'b1g'},
+    {
+      $set: {
+        enabled: true,
+        meta: {
+          password,
+          username,
+        },
+      },
+    },
+    {returnUpdatedDocs: true},
+  );
+  const {tokens} = affectedDocuments as IProvider<TB1GTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();

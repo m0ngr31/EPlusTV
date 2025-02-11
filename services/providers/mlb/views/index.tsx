@@ -1,13 +1,13 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TMLBTokens } from '@/services/mlb-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TMLBTokens} from '@/services/mlb-handler';
 
 import {MlbBody} from './CardBody';
 
 export const MlbTv: FC = async () => {
-  const mlbtv = await db.providers.findOne<IProvider<TMLBTokens>>({name: 'mlbtv'});
+  const mlbtv = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
   const enabled = mlbtv?.enabled;
   const tokens = mlbtv?.tokens;
   const channels = mlbtv?.linear_channels || [];

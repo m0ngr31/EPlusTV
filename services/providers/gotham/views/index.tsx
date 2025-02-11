@@ -1,13 +1,13 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TGothamTokens } from '@/services/gotham-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TGothamTokens} from '@/services/gotham-handler';
 
-import { GothamBody } from './CardBody';
+import {GothamBody} from './CardBody';
 
 export const Gotham: FC = async () => {
-  const gotham = await db.providers.findOne<IProvider<TGothamTokens>>({name: 'gotham'});
+  const gotham = await db.providers.findOneAsync<IProvider<TGothamTokens>>({name: 'gotham'});
   const enabled = gotham?.enabled;
   const tokens = gotham?.tokens;
   const channels = gotham?.linear_channels || [];

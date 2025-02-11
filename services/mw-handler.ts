@@ -6,6 +6,7 @@ import {useMountainWest} from './networks';
 import {IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
+import {normalTimeRange} from './shared-helpers';
 
 interface IMWEvent {
   image: string;
@@ -21,19 +22,19 @@ interface IMWEvent {
 }
 
 const parseAirings = async (events: IMWEvent[]) => {
-  const now = moment();
-  const endSchedule = moment().add(2, 'days').endOf('day');
+  const [now, endSchedule] = normalTimeRange();
 
   for (const event of events) {
     if (!event || !event.id) {
       return;
     }
 
-    const entryExists = await db.entries.findOne<IEntry>({id: `mw-${event.id}`});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `mw-${event.id}`});
 
     if (!entryExists) {
       const start = moment(event.start_time);
       const end = moment(event.end_time).add(1, 'hours');
+      const originalEnd = moment(event.end_time);
 
       if (end.isBefore(now) || event.format !== 'video' || start.isAfter(endSchedule)) {
         continue;
@@ -41,7 +42,7 @@ const parseAirings = async (events: IMWEvent[]) => {
 
       console.log('Adding event: ', event.title);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: [...new Set(['Mountain West', 'The MW', event.sport_category_title])],
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -50,6 +51,7 @@ const parseAirings = async (events: IMWEvent[]) => {
         image: event.image || event.thumbnail,
         name: event.title,
         network: 'MW',
+        originalEnd: originalEnd.valueOf(),
         sport: event.sport_category_title,
         start: start.valueOf(),
         url: event.value,
@@ -60,11 +62,11 @@ const parseAirings = async (events: IMWEvent[]) => {
 
 class MountainWestHandler {
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'mw'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'mw'})) > 0 ? true : false;
 
     // First time setup
     if (!setup) {
-      await db.providers.insert<IProvider>({
+      await db.providers.insertAsync<IProvider>({
         enabled: useMountainWest,
         name: 'mw',
       });
@@ -74,7 +76,7 @@ class MountainWestHandler {
       console.log('Using MTNWEST variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'mw'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'mw'});
 
     if (!enabled) {
       return;
@@ -82,7 +84,7 @@ class MountainWestHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'mw'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'mw'});
 
     if (!enabled) {
       return;
@@ -110,7 +112,7 @@ class MountainWestHandler {
 
   public getEventData = async (id: string): Promise<TChannelPlaybackInfo> => {
     try {
-      const event = await db.entries.findOne<IEntry>({id});
+      const event = await db.entries.findOneAsync<IEntry>({id});
 
       if (event) {
         return [event.url, {}];

@@ -1,13 +1,13 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { IEspnPlusMeta, TESPNPlusTokens } from '@/services/espn-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {IEspnPlusMeta, TESPNPlusTokens} from '@/services/espn-handler';
 
-import { ESPNPlusBody } from './CardBody';
+import {ESPNPlusBody} from './CardBody';
 
 export const ESPNPlus: FC = async () => {
-  const {enabled, tokens, meta} = await db.providers.findOne<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+  const {enabled, tokens, meta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
     name: 'espnplus',
   });
 
@@ -50,9 +50,94 @@ export const ESPNPlus: FC = async () => {
             </label>
           </fieldset>
         </div>
+        <div class="grid">
+          <details>
+            <summary>
+              ESPN+ Options{' '}
+              <span
+                class="warning-red"
+                data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
+                data-placement="right"
+              >
+                **
+              </span>
+            </summary>
+            <span>In-Market Teams</span>
+            <fieldset role="group">
+              <form
+                id="espnplus-refresh-in-market-teams"
+                hx-put="/providers/espnplus/refresh-in-market-teams"
+                hx-trigger="submit"
+              >
+                <div>
+                  <pre>
+                    {meta.in_market_teams} ({meta.zip_code})
+                  </pre>
+                  <button id="espnplus-refresh-in-market-teams-button">Refresh In-Market Teams</button>
+                </div>
+              </form>
+            </fieldset>
+            <form
+              id="espnplus-event-filters"
+              hx-put="/providers/espnplus/save-filters"
+              hx-trigger="submit"
+              hx-swap="outerHTML"
+              hx-target="#espnplus-save-filters-button"
+            >
+              <div>
+                <span>Category Filter</span>
+                <fieldset role="group">
+                  <input
+                    type="text"
+                    placeholder="comma-separated list of categories to include, leave blank for all"
+                    value={meta.category_filter}
+                    data-value={meta.category_filter}
+                    name="espnplus-category-filter"
+                  />
+                </fieldset>
+                <span>Title Filter</span>
+                <fieldset role="group">
+                  <input
+                    type="text"
+                    placeholder="if specified, only include events with matching titles; supports regular expressions"
+                    value={meta.title_filter}
+                    data-value={meta.title_filter}
+                    name="espnplus-title-filter"
+                  />
+                </fieldset>
+                <button type="submit" id="espnplus-save-filters-button">
+                  Save and Apply Filters
+                </button>
+              </div>
+            </form>
+          </details>
+        </div>
         <div id="espnplus-body" hx-swap="innerHTML">
           <ESPNPlusBody enabled={enabled} tokens={tokens} />
         </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            var espnPlusEventFilters = document.getElementById('espnplus-event-filters');
+
+            if (espnPlusEventFilters) {
+              espnPlusEventFilters.addEventListener('htmx:beforeRequest', function() {
+                this.querySelector('#espnplus-save-filters-button').setAttribute('aria-busy', 'true');
+                this.querySelector('#espnplus-save-filters-button').setAttribute('aria-label', 'Loading…');
+              });
+            }
+
+            var espnPlusInMarketTeams = document.getElementById('espnplus-refresh-in-market-teams');
+
+            if (espnPlusInMarketTeams) {
+              espnPlusInMarketTeams.addEventListener('htmx:beforeRequest', function() {
+                this.querySelector('#espnplus-refresh-in-market-teams-button').setAttribute('aria-busy', 'true');
+                this.querySelector('#espnplus-refresh-in-market-teams-button').setAttribute('aria-label', 'Loading…');
+              });
+            }
+          `,
+          }}
+        />
       </section>
       <hr />
     </div>

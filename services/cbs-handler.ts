@@ -11,7 +11,7 @@ import {configPath} from './config';
 import {useCBSSports} from './networks';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
-import {getRandomUUID} from './shared-helpers';
+import {getRandomUUID, normalTimeRange} from './shared-helpers';
 import {createAdobeAuthHeader} from './adobe-helpers';
 import {debug} from './debug';
 
@@ -249,8 +249,7 @@ const getEventData = (event: ICBSEvent): IGameData => {
 };
 
 const parseAirings = async (events: ICBSEvent[]) => {
-  const now = moment();
-  const endDate = moment().add(2, 'days').endOf('day');
+  const [now, endDate] = normalTimeRange();
 
   for (const event of events) {
     if (!event || !event.id) {
@@ -259,11 +258,12 @@ const parseAirings = async (events: ICBSEvent[]) => {
 
     const gameData = getEventData(event);
 
-    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
 
     if (!entryExists) {
       const start = moment(event.video.schedule.videoStartDate * 1000);
-      const end = moment(event.video.schedule.videoEndDate * 1000);
+      const end = moment(event.video.schedule.videoEndDate * 1000).add(1, 'hour');
+      const originalEnd = moment(event.video.schedule.videoEndDate * 1000);
 
       if (end.isBefore(now) || start.isAfter(endDate)) {
         continue;
@@ -271,7 +271,7 @@ const parseAirings = async (events: ICBSEvent[]) => {
 
       console.log('Adding event: ', gameData.name);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories: gameData.categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -281,6 +281,7 @@ const parseAirings = async (events: ICBSEvent[]) => {
         image: gameData.image,
         name: gameData.name,
         network: 'CBS Sports',
+        originalEnd: originalEnd.valueOf(),
         sport: gameData.sport,
         start: start.valueOf(),
         ...((event.video.sources.hls.urlNoAd || event.video.sources.hls.url) && {
@@ -297,7 +298,7 @@ class CBSHandler {
   public mvpd_id?: string;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'cbs'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'cbs'})) > 0 ? true : false;
 
     // First time setup
     if (!setup) {
@@ -311,7 +312,7 @@ class CBSHandler {
         data.mvpd_id = this.mvpd_id;
       }
 
-      await db.providers.insert<IProvider<TCBSTokens>>({
+      await db.providers.insertAsync<IProvider<TCBSTokens>>({
         enabled: useCBSSports,
         name: 'cbs',
         tokens: data,
@@ -326,7 +327,7 @@ class CBSHandler {
       console.log('Using CBSSPORTS variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'cbs'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'cbs'});
 
     if (!enabled) {
       return;
@@ -337,7 +338,7 @@ class CBSHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'cbs'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'cbs'});
 
     if (!enabled) {
       return;
@@ -347,7 +348,7 @@ class CBSHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'cbs'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'cbs'});
 
     if (!enabled) {
       return;
@@ -359,8 +360,8 @@ class CBSHandler {
 
     const entries: ICBSEvent[] = [];
 
-    const now = moment().subtract(12, 'hours');
-    const endSchedule = moment().add(2, 'days').endOf('day');
+    const [now, endSchedule] = normalTimeRange();
+    now.subtract(12, 'hours');
 
     try {
       const url = [
@@ -403,7 +404,7 @@ class CBSHandler {
   };
 
   public getEventData = async (eventId: string): Promise<TChannelPlaybackInfo> => {
-    const event = await db.entries.findOne<IEntry>({id: eventId});
+    const event = await db.entries.findOneAsync<IEntry>({id: eventId});
 
     try {
       let streamUrl: string;
@@ -578,7 +579,7 @@ class CBSHandler {
   };
 
   private save = async (): Promise<void> => {
-    await db.providers.update({name: 'cbs'}, {$set: {tokens: this}});
+    await db.providers.updateAsync({name: 'cbs'}, {$set: {tokens: this}});
   };
 
   private loadJSON = () => {
@@ -592,7 +593,7 @@ class CBSHandler {
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TCBSTokens>>({name: 'cbs'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TCBSTokens>>({name: 'cbs'});
     const {device_id, user_id, mvpd_id} = tokens || {};
 
     this.device_id = device_id;

@@ -9,7 +9,7 @@ import {androidFoxUserAgent, userAgent} from './user-agent';
 import {configPath} from './config';
 import {useFoxOnly4k, useFoxSports} from './networks';
 import {IAdobeAuthFox} from './adobe-helpers';
-import {getRandomHex} from './shared-helpers';
+import {getRandomHex, normalTimeRange} from './shared-helpers';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
@@ -124,17 +124,18 @@ const parseCategories = (event: IFoxEvent) => {
 const parseAirings = async (events: IFoxEvent[]) => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const inTwoDays = moment().add(2, 'days').endOf('day');
+  const [now, inTwoDays] = normalTimeRange();
 
-  const {meta} = await db.providers.findOne<IProvider<any, IFoxMeta>>({name: 'foxsports'});
+  const {meta} = await db.providers.findOneAsync<IProvider<any, IFoxMeta>>({name: 'foxsports'});
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
 
     if (!entryExists) {
       const start = moment(event.startDate);
       const end = moment(event.endDate);
+      const originalEnd = moment(event.endDate);
+
       const isLinear = event.network !== 'fox' && useLinear;
 
       if (!isLinear) {
@@ -155,7 +156,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
 
       console.log('Adding event: ', eventName);
 
-      await db.entries.insert<IEntry>({
+      await db.entries.insertAsync<IEntry>({
         categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
@@ -164,6 +165,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD || event.images.seriesList?.FHD,
         name: eventName,
         network: event.callSign,
+        originalEnd: originalEnd.valueOf(),
         replay: event.airingType !== 'live',
         start: start.valueOf(),
         ...(isLinear && {
@@ -201,7 +203,7 @@ class FoxHandler {
   private appConfig: IAppConfig;
 
   public initialize = async () => {
-    const setup = (await db.providers.count({name: 'foxsports'})) > 0 ? true : false;
+    const setup = (await db.providers.countAsync({name: 'foxsports'})) > 0 ? true : false;
 
     if (!setup) {
       const data: TFoxTokens = {};
@@ -214,7 +216,7 @@ class FoxHandler {
         data.adobe_prelim_auth_token = this.adobe_prelim_auth_token;
       }
 
-      await db.providers.insert<IProvider<TFoxTokens, IFoxMeta>>({
+      await db.providers.insertAsync<IProvider<TFoxTokens, IFoxMeta>>({
         enabled: useFoxSports,
         linear_channels: [
           {
@@ -265,7 +267,7 @@ class FoxHandler {
       console.log('Using MAX_RESOLUTION variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
 
     if (!enabled) {
       return;
@@ -278,7 +280,7 @@ class FoxHandler {
   };
 
   public refreshTokens = async () => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
 
     if (!enabled) {
       return;
@@ -296,7 +298,7 @@ class FoxHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOne<IProvider>({name: 'foxsports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
 
     if (!enabled) {
       return;
@@ -356,7 +358,7 @@ class FoxHandler {
   };
 
   private getSteamData = async (eventId: string): Promise<any> => {
-    const {meta} = await db.providers.findOne<IProvider<any, IFoxMeta>>({name: 'foxsports'});
+    const {meta} = await db.providers.findOneAsync<IProvider<any, IFoxMeta>>({name: 'foxsports'});
     const {uhd} = meta;
 
     const streamOrder = ['UHD/HDR', '720p'];
@@ -419,9 +421,10 @@ class FoxHandler {
 
     const events: IFoxEvent[] = [];
 
-    const now = moment().startOf('day');
+    const [now, inTwoDays] = normalTimeRange();
+    now.startOf('day');
 
-    const dateRange = `${now.toISOString()}..${moment(now).add(2, 'days').endOf('day').toISOString()}`;
+    const dateRange = `${now.toISOString()}..${inTwoDays.toISOString()}`;
 
     try {
       const {data} = await axios.get<IFoxEventsData>(
@@ -605,11 +608,11 @@ class FoxHandler {
   };
 
   private save = async () => {
-    await db.providers.update({name: 'foxsports'}, {$set: {tokens: _.omit(this, 'appConfig', 'entitlements')}});
+    await db.providers.updateAsync({name: 'foxsports'}, {$set: {tokens: _.omit(this, 'appConfig', 'entitlements')}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens} = await db.providers.findOne<IProvider<TFoxTokens>>({name: 'foxsports'});
+    const {tokens} = await db.providers.findOneAsync<IProvider<TFoxTokens>>({name: 'foxsports'});
     const {adobe_device_id, adobe_auth, adobe_prelim_auth_token} = tokens;
 
     this.adobe_device_id = adobe_device_id;

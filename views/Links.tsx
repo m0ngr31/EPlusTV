@@ -1,6 +1,6 @@
 import type {FC} from 'hono/jsx';
 
-import { usesLinear } from '@/services/misc-db-service';
+import {usesLinear} from '@/services/misc-db-service';
 
 export interface ILinksProps {
   baseUrl: string;
@@ -55,7 +55,10 @@ export const Links: FC<ILinksProps> = async ({baseUrl}) => {
                 <td>
                   Insert into XMLTV Guide Data section
                   <p class="help-text">
-                    <small data-tooltip="Gracenote data is automatically added to M3U so Channels is able to map EPG data automatically." data-placement="bottom">
+                    <small
+                      data-tooltip="Gracenote data is automatically added to M3U so Channels is able to map EPG data automatically."
+                      data-placement="bottom"
+                    >
                       Not needed for Channels DVR
                     </small>
                   </p>

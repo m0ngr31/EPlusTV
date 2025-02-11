@@ -1,7 +1,7 @@
 import {FC} from 'hono/jsx';
 
-import { TGothamTokens } from '@/services/gotham-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
+import {TGothamTokens} from '@/services/gotham-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
 
 interface IGothamBodyProps {
   enabled: boolean;
@@ -20,9 +20,7 @@ export const GothamBody: FC<IGothamBodyProps> = ({enabled, tokens, open, channel
   return (
     <div hx-swap="innerHTML" hx-target="this">
       <summary>
-        <span>
-          Linear Channels
-        </span>
+        <span>Linear Channels</span>
       </summary>
       <table class="striped">
         <thead>

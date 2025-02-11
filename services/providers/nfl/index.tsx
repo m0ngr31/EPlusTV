@@ -1,12 +1,12 @@
 import {Hono} from 'hono';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { removeEntriesProvider, scheduleEntries } from '@/services/build-schedule';
-import { nflHandler, TNFLTokens, TOtherAuth } from '@/services/nfl-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {removeEntriesProvider, scheduleEntries} from '@/services/build-schedule';
+import {nflHandler, TNFLTokens, TOtherAuth} from '@/services/nfl-handler';
 
-import { Login } from './views/Login';
-import { NFLBody } from './views/CardBody';
+import {Login} from './views/Login';
+import {NFLBody} from './views/CardBody';
 
 export const nfl = new Hono().basePath('/nfl');
 
@@ -24,7 +24,7 @@ nfl.put('/toggle', async c => {
   const enabled = body['nfl-enabled'] === 'on';
 
   if (!enabled) {
-    await db.providers.update<IProvider>({name: 'nfl'}, {$set: {enabled, tokens: {}}});
+    await db.providers.updateAsync<IProvider<TNFLTokens>, any>({name: 'nfl'}, {$set: {enabled, tokens: {}}});
     removeEvents();
 
     return c.html(<></>);
@@ -38,7 +38,7 @@ nfl.put('/auth/:provider', async c => {
   const body = await c.req.parseBody();
   const enabled = body[`nfl-${provider}-enabled`] === 'on';
 
-  const {tokens} = await db.providers.findOne<IProvider<TNFLTokens>>({name: 'nfl'});
+  const {tokens} = await db.providers.findOneAsync<IProvider<TNFLTokens>>({name: 'nfl'});
 
   const updatedTokens = {...tokens};
 
@@ -65,7 +65,12 @@ nfl.put('/auth/:provider', async c => {
   }
 
   if (!enabled) {
-    const {linear_channels, tokens} = await db.providers.update<IProvider<TNFLTokens>>({name: 'nfl'}, {$set: {tokens: updatedTokens}}, {returnUpdatedDocs: true});
+    const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNFLTokens>, any>(
+      {name: 'nfl'},
+      {$set: {tokens: updatedTokens}},
+      {returnUpdatedDocs: true},
+    );
+    const {linear_channels, tokens} = affectedDocuments as IProvider<TNFLTokens>;
 
     return c.html(<NFLBody channels={linear_channels} enabled={true} open={false} tokens={tokens} />);
   }
@@ -85,11 +90,12 @@ nfl.get('/login/:code/:other', async c => {
     return c.html(<Login code={code} otherAuth={provider} />);
   }
 
-  const {tokens, linear_channels} = await db.providers.update<IProvider<TNFLTokens>>(
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TNFLTokens>, any>(
     {name: 'nfl'},
     {$set: {enabled: true}},
     {returnUpdatedDocs: true},
   );
+  const {linear_channels, tokens} = affectedDocuments as IProvider<TNFLTokens>;
 
   // Kickoff event scheduler
   scheduleEvents();
@@ -118,7 +124,7 @@ nfl.put('/reauth', async c => {
 
 nfl.put('/channels/toggle/:id', async c => {
   const channelId = c.req.param('id');
-  const {linear_channels} = await db.providers.findOne<IProvider>({name: 'nfl'});
+  const {linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'nfl'});
 
   const body = await c.req.parseBody();
   const enabled = body['channel-enabled'] === 'on';
@@ -134,7 +140,7 @@ nfl.put('/channels/toggle/:id', async c => {
   });
 
   if (updatedChannel !== channelId) {
-    await db.providers.update<IProvider>({name: 'nfl'}, {$set: {linear_channels: updatedChannels}});
+    await db.providers.updateAsync<IProvider, any>({name: 'nfl'}, {$set: {linear_channels: updatedChannels}});
 
     // Kickoff event scheduler
     scheduleEvents();
@@ -154,7 +160,7 @@ nfl.put('/channels/toggle/:id', async c => {
       {
         ...(enabled && {
           'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ${updatedChannel}"}}`,
-        })
+        }),
       },
     );
   }

@@ -1,7 +1,7 @@
 import {FC} from 'hono/jsx';
 
-import { TMLBTokens } from '@/services/mlb-handler';
-import { IProviderChannel } from '@/services/shared-interfaces';
+import {TMLBTokens} from '@/services/mlb-handler';
+import {IProviderChannel} from '@/services/shared-interfaces';
 
 interface IMLBBodyProps {
   enabled: boolean;

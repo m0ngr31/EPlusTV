@@ -27,7 +27,7 @@ import {
   useEspnews,
 } from './networks';
 import {IAdobeAuth, willAdobeTokenExpire, createAdobeAuthHeader} from './adobe-helpers';
-import {getRandomHex} from './shared-helpers';
+import {getRandomHex, normalTimeRange} from './shared-helpers';
 import {
   ClassTypeWithoutMethods,
   IEntry,
@@ -39,6 +39,7 @@ import {
 import {db} from './database';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
+import {formatEntryName, usesMultiple} from './generate-xmltv';
 
 global.WebSocket = ws;
 
@@ -96,6 +97,7 @@ interface IAppConfig {
 interface IToken {
   access_token: string;
   refresh_token: string;
+  expires_in: number;
 }
 
 interface IGrant {
@@ -112,6 +114,10 @@ interface ITokens extends IToken {
 
 export interface IEspnPlusMeta {
   use_ppv?: boolean;
+  category_filter?: string;
+  title_filter?: string;
+  zip_code?: string;
+  in_market_teams?: string;
 }
 
 export interface IEspnMeta {
@@ -174,7 +180,9 @@ const urlBuilder = (endpoint: string, provider: string) =>
   `${DISNEY_ROOT_URL}${endpoint}`.replace('{id-provider}', provider);
 
 const isTokenValid = (token?: string): boolean => {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
 
   try {
     const decoded: IJWToken = jwt_decode(token);
@@ -185,7 +193,9 @@ const isTokenValid = (token?: string): boolean => {
 };
 
 const willTokenExpire = (token?: string): boolean => {
-  if (!token) return true;
+  if (!token) {
+    return true;
+  }
 
   try {
     const decoded: IJWToken = jwt_decode(token);
@@ -196,8 +206,13 @@ const willTokenExpire = (token?: string): boolean => {
   }
 };
 
-const isAccessTokenValid = (token?: IToken) => isTokenValid(token?.access_token);
-const isRefreshTokenValid = (token?: IToken) => isTokenValid(token?.refresh_token);
+const willTimestampExpire = (timestamp?: number): boolean => {
+  if (!timestamp) {
+    return true;
+  }
+
+  return moment(timestamp).isBefore(moment().add(2, 'hour'));
+};
 
 const getApiKey = async (provider: string) => {
   try {
@@ -345,17 +360,34 @@ const parseCategories = event => {
 const parseAirings = async events => {
   const useLinear = await usesLinear();
 
-  const now = moment();
-  const endSchedule = moment().add(2, 'days').endOf('day');
+  const [now, endSchedule] = normalTimeRange();
+
+  const {meta: plusMeta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+    name: 'espnplus',
+  });
+
+  const useMultiple = await usesMultiple();
+
+  const category_filter =
+    plusMeta?.category_filter && plusMeta?.category_filter.trim().length > 0
+      ? plusMeta?.category_filter.split(',').map(category => category.toLowerCase().trim())
+      : [];
+
+  const title_filter =
+    plusMeta?.title_filter && plusMeta?.title_filter.trim().length > 0 && new RegExp(plusMeta?.title_filter);
+
+  const in_market_team_filter =
+    plusMeta?.in_market_teams && plusMeta?.in_market_teams.length > 0 ? plusMeta?.in_market_teams.split(',') : [];
 
   for (const event of events) {
-    const entryExists = await db.entries.findOne<IEntry>({id: event.id});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
 
     if (!entryExists) {
       const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.some(n => n === event.network?.id);
 
       const start = moment(event.startDateTime);
       const end = moment(event.startDateTime).add(event.duration, 'seconds');
+      const originalEnd = moment(end);
 
       if (!isLinear) {
         end.add(1, 'hour');
@@ -365,10 +397,21 @@ const parseAirings = async events => {
         continue;
       }
 
-      console.log('Adding event: ', event.name);
+      if (event.network?.id === 'bam_dtc' && in_market_team_filter.some(tn => event.name.indexOf(tn) > -1)) {
+        continue;
+      }
 
-      await db.entries.insert<IEntry>({
-        categories: parseCategories(event),
+      const categories = parseCategories(event);
+
+      if (
+        category_filter.length > 0 &&
+        !category_filter.some(v => categories.map(category => category.toLowerCase()).includes(v))
+      ) {
+        continue;
+      }
+
+      const entryEvent = {
+        categories,
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         feed: event.feedName,
@@ -384,20 +427,29 @@ const parseAirings = async events => {
           channel: event.network?.id,
           linear: true,
         }),
-      });
+        originalEnd: originalEnd.valueOf(),
+      };
+
+      if (title_filter && !formatEntryName(entryEvent, useMultiple).match(title_filter)) {
+        continue;
+      }
+
+      console.log('Adding event: ', event.name);
+
+      await db.entries.insertAsync<IEntry>(entryEvent);
     }
   }
 };
 
 const isEnabled = async (which?: string): Promise<boolean> => {
-  const {enabled: espnPlusEnabled, meta: plusMeta} = await db.providers.findOne<
+  const {enabled: espnPlusEnabled, meta: plusMeta} = await db.providers.findOneAsync<
     IProvider<TESPNPlusTokens, IEspnPlusMeta>
   >({name: 'espnplus'});
   const {
     enabled: espnLinearEnabled,
     linear_channels,
     meta: linearMeta,
-  } = await db.providers.findOne<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
+  } = await db.providers.findOneAsync<IProvider<TESPNTokens, IEspnMeta>>({name: 'espn'});
 
   if (which === 'linear') {
     return espnLinearEnabled && _.some(linear_channels, c => c.enabled);
@@ -423,6 +475,9 @@ class EspnHandler {
   public device_refresh_token?: IToken;
   public device_grant?: IGrant;
   public id_token_grant?: IGrant;
+  public device_token_exchange_expires?: number;
+  public device_refresh_token_expires?: number;
+  public account_token_expires?: number;
 
   public adobe_device_id?: string;
   public adobe_auth?: IAdobeAuth;
@@ -431,7 +486,7 @@ class EspnHandler {
   private graphQlApiKey: string;
 
   public initialize = async () => {
-    const setupPlus = (await db.providers.count({name: 'espnplus'})) > 0 ? true : false;
+    const setupPlus = (await db.providers.countAsync({name: 'espnplus'})) > 0 ? true : false;
 
     if (!setupPlus) {
       const data: TESPNPlusTokens = {};
@@ -447,10 +502,14 @@ class EspnHandler {
         data.account_token = this.account_token;
       }
 
-      await db.providers.insert<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+      await db.providers.insertAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
         enabled: useEspnPlus,
         meta: {
+          category_filter: '',
+          in_market_teams: '',
+          title_filter: '',
           use_ppv: useEspnPpv,
+          zip_code: '',
         },
         name: 'espnplus',
         tokens: data,
@@ -461,7 +520,7 @@ class EspnHandler {
       }
     }
 
-    const setupLinear = (await db.providers.count({name: 'espn'})) > 0 ? true : false;
+    const setupLinear = (await db.providers.countAsync({name: 'espn'})) > 0 ? true : false;
 
     if (!setupLinear) {
       const data: TESPNTokens = {};
@@ -473,7 +532,7 @@ class EspnHandler {
         data.adobe_auth = this.adobe_auth;
       }
 
-      await db.providers.insert<IProvider<TESPNTokens, IEspnMeta>>({
+      await db.providers.insertAsync<IProvider<TESPNTokens, IEspnMeta>>({
         enabled: requiresEspnProvider,
         linear_channels: [
           {
@@ -564,6 +623,14 @@ class EspnHandler {
       return;
     }
 
+    const {meta: plusMeta} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
+      name: 'espnplus',
+    });
+
+    if (!plusMeta?.zip_code || !plusMeta?.in_market_teams) {
+      await this.refreshInMarketTeams();
+    }
+
     // Load tokens from local file and make sure they are valid
     await this.load();
 
@@ -595,7 +662,7 @@ class EspnHandler {
     const espn3Enabled = await isEnabled('espn3');
     const accnxEnabled = await isEnabled('accnx');
 
-    const {linear_channels} = await db.providers.findOne<IProvider>({name: 'espn'});
+    const {linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'espn'});
 
     const isChannelEnabled = (channelId: string): boolean =>
       espnLinearEnabled && linear_channels.some(c => c.id === channelId && c.enabled);
@@ -717,6 +784,7 @@ class EspnHandler {
       await parseAirings(entries);
     } catch (e) {
       console.log('Could not parse events');
+      console.log(e.message);
     }
   };
 
@@ -840,7 +908,7 @@ class EspnHandler {
       await this.save();
     } catch (e) {
       console.error(e);
-      console.log('Could not get auth refresh token');
+      console.log('Could not get auth refresh token (ESPN+)');
     }
   };
 
@@ -851,31 +919,19 @@ class EspnHandler {
         await this.refreshAuth();
       }
 
-      if (
-        !this.device_token_exchange ||
-        !isTokenValid(this.device_token_exchange.access_token) ||
-        willTokenExpire(this.device_token_exchange.access_token)
-      ) {
+      if (!this.device_token_exchange || willTimestampExpire(this.device_token_exchange_expires)) {
         console.log('Refreshing device token (ESPN+)');
-        await this.getDeviceTokenExchange(true);
+        await this.getDeviceTokenExchange();
       }
 
-      if (
-        !this.device_refresh_token ||
-        !isTokenValid(this.device_refresh_token.access_token) ||
-        willTokenExpire(this.device_refresh_token.access_token)
-      ) {
+      if (!this.device_refresh_token || willTimestampExpire(this.device_refresh_token_expires)) {
         console.log('Refreshing device refresh token (ESPN+)');
-        await this.getDeviceRefreshToken(true);
+        await this.getDeviceRefreshToken();
       }
 
-      if (
-        !this.account_token ||
-        !isTokenValid(this.account_token.access_token) ||
-        willTokenExpire(this.account_token.access_token)
-      ) {
+      if (!this.account_token || willTimestampExpire(this.account_token_expires)) {
         console.log('Refreshing BAM access token (ESPN+)');
-        await this.getBamAccessToken(true);
+        await this.getBamAccessToken();
       }
     },
     60 * 1000,
@@ -1090,6 +1146,71 @@ class EspnHandler {
     return false;
   };
 
+  public refreshInMarketTeams = async () => {
+    try {
+      const deviceUrl = ['https://', 'espn.api.edge.bamgrid.com', '/graph/v1/', 'device/graphql'].join('');
+
+      const {data: deviceData} = await axios.post(
+        deviceUrl,
+        {
+          operationName: 'registerDevice',
+          query:
+            '\n    mutation registerDevice($input: RegisterDeviceInput!) {\n        registerDevice(registerDevice: $input) {\n            grant {\n                grantType\n                assertion\n            }\n        }\n    }\n',
+          variables: {
+            input: {
+              applicationRuntime: 'chrome',
+              attributes: {
+                brand: 'web',
+                browserName: 'chrome',
+                browserVersion: '128.0.0',
+                manufacturer: 'apple',
+                model: null,
+                operatingSystem: 'macintosh',
+                operatingSystemVersion: '10.15.7',
+                osDeviceIds: [],
+              },
+              deviceFamily: 'browser',
+              deviceLanguage: 'en-US',
+              devicePlatformId: 'browser',
+              deviceProfile: 'macosx',
+            },
+          },
+        },
+        {
+          headers: {
+            Authorization: BAM_API_KEY,
+            'Content-Type': 'application/json',
+            'User-Agent': userAgent,
+          },
+        },
+      );
+
+      const zip_code = deviceData.extensions.sdk.session.location.zipCode;
+
+      await db.providers.updateAsync({name: 'espnplus'}, {$set: {'meta.zip_code': zip_code}});
+
+      const lookupUrl = ['https://', 'api-web.nhle.com', '/v1/postal-lookup/', zip_code].join('');
+
+      const {data: lookupData} = await axios.get(lookupUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': userAgent,
+        },
+      });
+
+      const teams = lookupData.map(team => team.teamName.default);
+      const in_market_teams = teams.join(',');
+      console.log(`Detected in-market teams ${in_market_teams} (${zip_code})`);
+
+      await db.providers.updateAsync({name: 'espnplus'}, {$set: {'meta.in_market_teams': in_market_teams}});
+
+      return {in_market_teams, zip_code};
+    } catch (e) {
+      console.error(e);
+      console.log('Could not refresh in-market teams data!');
+    }
+  };
+
   private getAppConfig = async () => {
     try {
       const {data} = await axios.get<IAppConfig>(BAM_APP_CONFIG);
@@ -1153,10 +1274,10 @@ class EspnHandler {
     }
   };
 
-  private getDeviceTokenExchange = async (force?: boolean) => {
+  private getDeviceTokenExchange = async () => {
     await this.createDeviceGrant();
 
-    if (!this.device_token_exchange || !isRefreshTokenValid(this.device_token_exchange) || force) {
+    if (!this.device_token_exchange || willTimestampExpire(this.device_token_exchange_expires)) {
       try {
         this.device_token_exchange = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -1167,6 +1288,7 @@ class EspnHandler {
           subject_token: this.device_grant.assertion,
           subject_token_type: 'urn:bamtech:params:oauth:token-type:device',
         });
+        this.device_token_exchange_expires = moment().add(this.device_token_exchange.expires_in, 'seconds').valueOf();
 
         await this.save();
       } catch (e) {
@@ -1176,10 +1298,10 @@ class EspnHandler {
     }
   };
 
-  private getDeviceRefreshToken = async (force?: boolean) => {
+  private getDeviceRefreshToken = async () => {
     await this.getDeviceTokenExchange();
 
-    if (!this.device_refresh_token || !isAccessTokenValid(this.device_refresh_token) || force) {
+    if (!this.device_refresh_token || willTimestampExpire(this.device_refresh_token_expires)) {
       try {
         this.device_refresh_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'refresh_token',
@@ -1189,6 +1311,7 @@ class EspnHandler {
           refresh_token: this.device_token_exchange.refresh_token,
           setCookie: false,
         });
+        this.device_refresh_token_expires = moment().add(this.device_refresh_token.expires_in, 'seconds').valueOf();
 
         await this.save();
       } catch (e) {
@@ -1198,10 +1321,10 @@ class EspnHandler {
     }
   };
 
-  private getBamAccessToken = async (force?: boolean) => {
+  private getBamAccessToken = async () => {
     await this.createAccountGrant();
 
-    if (!this.account_token || !isAccessTokenValid(this.account_token) || force) {
+    if (!this.account_token || willTimestampExpire(this.account_token_expires)) {
       try {
         this.account_token = await makeApiCall(this.appConfig.services.token.client.endpoints.exchange, {
           grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -1212,6 +1335,7 @@ class EspnHandler {
           subject_token: this.id_token_grant.assertion,
           subject_token_type: 'urn:bamtech:params:oauth:token-type:account',
         });
+        this.account_token_expires = moment().add(this.account_token.expires_in, 'seconds').valueOf();
 
         await this.save();
       } catch (e) {
@@ -1222,18 +1346,27 @@ class EspnHandler {
   };
 
   private save = async (): Promise<void> => {
-    await db.providers.update(
+    await db.providers.updateAsync(
       {name: 'espnplus'},
       {$set: {tokens: _.omit(this, 'appConfig', 'graphQlApiKey', 'adobe_auth', 'adobe_device_id')}},
     );
 
-    await db.providers.update({name: 'espn'}, {$set: {tokens: _.pick(this, 'adobe_auth', 'adobe_device_id')}});
+    await db.providers.updateAsync({name: 'espn'}, {$set: {tokens: _.pick(this, 'adobe_auth', 'adobe_device_id')}});
   };
 
   private load = async (): Promise<void> => {
-    const {tokens: plusTokens} = await db.providers.findOne<IProvider<TESPNPlusTokens>>({name: 'espnplus'});
-    const {tokens, device_grant, device_token_exchange, device_refresh_token, id_token_grant, account_token} =
-      plusTokens;
+    const {tokens: plusTokens} = await db.providers.findOneAsync<IProvider<TESPNPlusTokens>>({name: 'espnplus'});
+    const {
+      tokens,
+      device_grant,
+      device_token_exchange,
+      device_refresh_token,
+      id_token_grant,
+      account_token,
+      device_token_exchange_expires,
+      device_refresh_token_expires,
+      account_token_expires,
+    } = plusTokens;
 
     this.tokens = tokens;
     this.device_grant = device_grant;
@@ -1241,8 +1374,11 @@ class EspnHandler {
     this.device_refresh_token = device_refresh_token;
     this.id_token_grant = id_token_grant;
     this.account_token = account_token;
+    this.device_token_exchange_expires = device_token_exchange_expires;
+    this.device_refresh_token_expires = device_refresh_token_expires;
+    this.account_token_expires = account_token_expires;
 
-    const {tokens: linearTokens} = await db.providers.findOne<IProvider<TESPNTokens>>({name: 'espn'});
+    const {tokens: linearTokens} = await db.providers.findOneAsync<IProvider<TESPNTokens>>({name: 'espn'});
     const {adobe_device_id, adobe_auth} = linearTokens;
 
     this.adobe_device_id = adobe_device_id;

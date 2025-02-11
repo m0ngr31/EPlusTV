@@ -1,13 +1,13 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TParamountTokens } from '@/services/paramount-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TParamountTokens} from '@/services/paramount-handler';
 
-import { ParamountBody } from './CardBody';
+import {ParamountBody} from './CardBody';
 
 export const Paramount: FC = async () => {
-  const paramount = await db.providers.findOne<IProvider<TParamountTokens>>({name: 'paramount'});
+  const paramount = await db.providers.findOneAsync<IProvider<TParamountTokens>>({name: 'paramount'});
   const enabled = paramount?.enabled;
   const tokens = paramount?.tokens;
   const channels = paramount?.linear_channels || [];

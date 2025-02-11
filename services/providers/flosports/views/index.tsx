@@ -1,13 +1,13 @@
 import {FC} from 'hono/jsx';
 
-import { db } from '@/services/database';
-import { IProvider } from '@/services/shared-interfaces';
-import { TFloSportsTokens } from '@/services/flo-handler';
+import {db} from '@/services/database';
+import {IProvider} from '@/services/shared-interfaces';
+import {TFloSportsTokens} from '@/services/flo-handler';
 
-import { FloSportsBody } from './CardBody';
+import {FloSportsBody} from './CardBody';
 
 export const FloSports: FC = async () => {
-  const parmount = await db.providers.findOne<IProvider<TFloSportsTokens>>({name: 'flosports'});
+  const parmount = await db.providers.findOneAsync<IProvider<TFloSportsTokens>>({name: 'flosports'});
   const enabled = parmount?.enabled;
   const tokens = parmount?.tokens;
 
