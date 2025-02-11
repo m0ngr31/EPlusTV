@@ -368,14 +368,14 @@ const parseAirings = async events => {
     const entryExists = await db.entries.findOne<IEntry>({id: event.id});
 
     if (!entryExists) {
-      const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.find(n => n === event.network?.id);
+      const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.some(n => n === event.network?.id);
 
       const start = moment(event.startDateTime);
-      const end = moment(event.startDateTime).add(event.duration, 'seconds').add(1, 'hour');
+      const end = moment(event.startDateTime).add(event.duration, 'seconds');
       const xmltvEnd = moment(event.startDateTime).add(event.duration, 'seconds');
 
       if (!isLinear) {
-        end.add(1, 'hour');
+        end.add(2, 'hour');
       }
 
       if (end.isBefore(now) || start.isAfter(endSchedule)) {
