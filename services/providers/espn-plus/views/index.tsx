@@ -118,19 +118,19 @@ export const ESPNPlus: FC = async () => {
         <script
           dangerouslySetInnerHTML={{
             __html: `
-            var rebuildEpgForm = document.getElementById('espnplus-event-filters');
+            var espnPlusEventFilters = document.getElementById('espnplus-event-filters');
 
-            if (rebuildEpgForm) {
-              rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
+            if (espnPlusEventFilters) {
+              espnPlusEventFilters.addEventListener('htmx:beforeRequest', function() {
                 this.querySelector('#espnplus-save-filters-button').setAttribute('aria-busy', 'true');
                 this.querySelector('#espnplus-save-filters-button').setAttribute('aria-label', 'Loading…');
               });
             }
 
-            var rebuildEpgForm = document.getElementById('espnplus-refresh-in-market-teams');
+            var espnPlusInMarketTeams = document.getElementById('espnplus-refresh-in-market-teams');
 
-            if (rebuildEpgForm) {
-              rebuildEpgForm.addEventListener('htmx:beforeRequest', function() {
+            if (espnPlusInMarketTeams) {
+              espnPlusInMarketTeams.addEventListener('htmx:beforeRequest', function() {
                 this.querySelector('#espnplus-refresh-in-market-teams-button').setAttribute('aria-busy', 'true');
                 this.querySelector('#espnplus-refresh-in-market-teams-button').setAttribute('aria-label', 'Loading…');
               });
