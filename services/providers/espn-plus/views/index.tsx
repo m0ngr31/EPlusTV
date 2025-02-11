@@ -75,7 +75,7 @@ export const ESPNPlus: FC = async () => {
                 </div>
               </form>
             </fieldset>
-            <form id="espnplus-event-filters" hx-put="/providers/espnplus/save-filters" hx-trigger="submit">
+            <form id="espnplus-event-filters" hx-put="/providers/espnplus/save-filters" hx-trigger="submit" hx-swap="outerHTML" hx-target="#espnplus-save-filters-button">
               <div>
                 <span>
                   Category Filter

@@ -64,35 +64,9 @@ espnplus.put('/save-filters', async c => {
   await scheduleEvents();
 
   return c.html(
-    <div>
-      <span>
-        Category Filter
-      </span>
-      <fieldset role="group">
-        <input
-          type="text"
-          placeholder="comma-separated list of categories to include, leave blank for all"
-          value={category_filter}
-          data-value={category_filter}
-          name="espnplus-category-filter"
-        />
-      </fieldset>
-      <span>
-        Title Filter
-      </span>
-      <fieldset role="group">
-        <input
-          type="text"
-          placeholder="if specified, only include events with matching titles; supports regular expressions"
-          value={title_filter}
-          data-value={title_filter}
-          name="espnplus-title-filter"
-        />
-      </fieldset>
-      <button type="submit" id="espnplus-save-filters-button">
-        Save and Apply Filters
-      </button>
-    </div>, 200, {
+    <button type="submit" id="espnplus-save-filters-button">
+      Save and Apply Filters
+    </button>, 200, {
     'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved and applied filters"}}`,
   });
 });
