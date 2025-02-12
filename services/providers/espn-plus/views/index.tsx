@@ -77,39 +77,6 @@ export const ESPNPlus: FC = async () => {
                 </div>
               </form>
             </fieldset>
-            <form
-              id="espnplus-event-filters"
-              hx-put="/providers/espnplus/save-filters"
-              hx-trigger="submit"
-              hx-swap="outerHTML"
-              hx-target="#espnplus-save-filters-button"
-            >
-              <div>
-                <span>Category Filter</span>
-                <fieldset role="group">
-                  <input
-                    type="text"
-                    placeholder="comma-separated list of categories to include, leave blank for all"
-                    value={meta.category_filter}
-                    data-value={meta.category_filter}
-                    name="espnplus-category-filter"
-                  />
-                </fieldset>
-                <span>Title Filter</span>
-                <fieldset role="group">
-                  <input
-                    type="text"
-                    placeholder="if specified, only include events with matching titles; supports regular expressions"
-                    value={meta.title_filter}
-                    data-value={meta.title_filter}
-                    name="espnplus-title-filter"
-                  />
-                </fieldset>
-                <button type="submit" id="espnplus-save-filters-button">
-                  Save and Apply Filters
-                </button>
-              </div>
-            </form>
           </details>
         </div>
         <div id="espnplus-body" hx-swap="innerHTML">
@@ -118,15 +85,6 @@ export const ESPNPlus: FC = async () => {
         <script
           dangerouslySetInnerHTML={{
             __html: `
-            var espnPlusEventFilters = document.getElementById('espnplus-event-filters');
-
-            if (espnPlusEventFilters) {
-              espnPlusEventFilters.addEventListener('htmx:beforeRequest', function() {
-                this.querySelector('#espnplus-save-filters-button').setAttribute('aria-busy', 'true');
-                this.querySelector('#espnplus-save-filters-button').setAttribute('aria-label', 'Loading…');
-              });
-            }
-
             var espnPlusInMarketTeams = document.getElementById('espnplus-refresh-in-market-teams');
 
             if (espnPlusInMarketTeams) {
