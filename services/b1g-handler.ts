@@ -269,7 +269,9 @@ class B1GHandler {
     const id = eventId.replace('b1g-', '');
 
     try {
-      await this.extendToken();
+      if (this.access_token) {
+        await this.extendToken();
+      }
 
       const accessToken = await this.checkAccess(id);
       const {user_id}: {user_id: string} = jwt_decode(accessToken);
@@ -313,11 +315,13 @@ class B1GHandler {
     try {
       const url = `https://www.bigtenplus.com/api/v3/contents/${eventId}/check-access`;
       const headers = {
-        Authorization: `Bearer ${this.access_token}`,
         'User-Agent': b1gUserAgent,
         accept: 'application/json',
         'content-type': 'application/json',
       };
+      if (this.access_token) {
+        headers['Authorization'] = `Bearer ${this.access_token}`;
+      }
 
       const params = {
         type: 'cleeng',
@@ -331,6 +335,42 @@ class B1GHandler {
     } catch (e) {
       console.error(e);
       console.log('Could not get playback access token');
+    }
+  };
+
+  public ispAccess = async (): Promise<boolean> => {
+    try {
+      const url = [
+        'https://',
+        'www.bigtenplus.com',
+        '/api/v2',
+        '/events',
+        '?sort_direction=asc',
+        '&device_category_id=2',
+        '&language=en',
+        `&metadata_id=${encodeURIComponent('159283,167702')}`,
+        `&date_time_from=${encodeURIComponent(moment().format())}`,
+        '&limit=1',
+      ].join('');
+
+      const {data} = await axios.get(url, {
+        headers: {
+          'user-agent': okHttpUserAgent,
+        },
+      });
+
+      const id = data.data[0].content[0].id;
+
+      const accessToken = await this.checkAccess(id);
+
+      if (accessToken) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      console.error(e);
+      console.log('Could not check ISP access');
     }
   };
 
@@ -377,6 +417,7 @@ class B1GHandler {
       };
 
       const {meta} = await db.providers.findOneAsync<IProvider<any, IB1GMeta>>({name: 'b1g'});
+      if ( (username == '') || !meta.username || (meta.username == '') ) return true;
 
       const params = {
         email: username || meta.username,
