@@ -2,6 +2,7 @@ import {Hono} from 'hono';
 
 import {cbs} from './cbs-sports';
 import {mw} from './mw';
+import {nsic} from './nsic';
 import {paramount} from './paramount';
 import {flosports} from './flosports';
 import {mlbtv} from './mlb';
@@ -17,6 +18,7 @@ export const providers = new Hono().basePath('/providers');
 
 providers.route('/', cbs);
 providers.route('/', mw);
+providers.route('/', nsic);
 providers.route('/', paramount);
 providers.route('/', flosports);
 providers.route('/', mlbtv);
