@@ -124,6 +124,7 @@ export interface IEspnMeta {
   sec_plus?: boolean;
   accnx?: boolean;
   espn3?: boolean;
+  espn3isp?: boolean;
 }
 
 const ADOBE_KEY = ['g', 'B', '8', 'H', 'Y', 'd', 'E', 'P', 'y', 'e', 'z', 'e', 'Y', 'b', 'R', '1'].join('');
@@ -459,6 +460,8 @@ const isEnabled = async (which?: string): Promise<boolean> => {
     return (plusMeta?.use_ppv ? true : false) && espnPlusEnabled;
   } else if (which === 'espn3') {
     return (linearMeta?.espn3 ? true : false) && espnLinearEnabled;
+  } else if (which === 'espn3isp') {
+    return (linearMeta?.espn3isp ? true : false) && espnLinearEnabled;
   } else if (which === 'sec_plus') {
     return (linearMeta?.sec_plus ? true : false) && espnLinearEnabled;
   } else if (which === 'accnx') {
@@ -575,6 +578,7 @@ class EspnHandler {
         meta: {
           accnx: useAccNx,
           espn3: useEspn3,
+          espn3isp: false,
           sec_plus: useSecPlus,
         },
         name: 'espn',
@@ -835,7 +839,12 @@ class EspnHandler {
         let tokenType = 'DEVICE';
         let token = this.adobe_device_id;
 
-        if (_.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')) {
+        let isEspn3isp = false;
+        if ((scenarios?.data?.airing?.network?.id === 'espn3') && await isEnabled('espn3isp')) {
+          isEspn3isp = true;
+        }
+
+        if (!isEspn3isp && _.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')) {
           // Try to get the media token, but if it fails, let's just try device authentication
           try {
             await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
@@ -1208,6 +1217,53 @@ class EspnHandler {
     } catch (e) {
       console.error(e);
       console.log('Could not refresh in-market teams data!');
+    }
+  };
+
+  public ispAccess = async (): Promise<boolean> => {
+    try {
+      await this.getGraphQlApiKey();
+
+      const [networks, packages] = getNetworkInfo('espn3');
+
+      const query =
+        'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
+      const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"UPCOMING","networks":${networks},"packages":${packages},"limit":10}`;
+
+      const {data: entryData} = await instance.get(
+        encodeURI(
+          `https://watch.graph.api.espn.com/api?apiKey=${this.graphQlApiKey}&query=${query}&variables=${variables}`,
+        ),
+      );
+
+      const apiKey = ['u','i','q','l','b','g','z','d','w','u','r','u','1','4','v','6','2','7','v','d','u','s','s','w','b'].join('');
+      const eventUrl = [
+        'https://',
+        'watch.auth.api.espn.com',
+        '/video/auth/',
+        'media/',
+        entryData.data.airings[0].id,
+        '/asset',
+        '?apikey=',
+        apiKey,
+      ].join('');
+
+      const {data} = await axios.post(eventUrl,
+        {
+          headers: {
+            'User-Agent': userAgent,
+          },
+        },
+      );
+
+      if (data.stream) {
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      console.error(e);
+      console.log('Could not check ISP access');
     }
   };
 
