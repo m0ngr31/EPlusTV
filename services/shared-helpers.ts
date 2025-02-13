@@ -74,4 +74,4 @@ export const clearChannels = (): void => {
   appStatus.channels = {};
 };
 
-export const normalTimeRange = (): [Moment, Moment] => [moment(), moment().add(2, 'days').endOf('day')];
+export const normalTimeRange = (): [Moment, Moment] => [moment().subtract(3, 'hours'), moment().add(2, 'days').endOf('day')];
