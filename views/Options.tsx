@@ -6,6 +6,8 @@ import {
   proxySegments,
   usesLinear,
   xmltvPadding,
+  getCategoryFilter,
+  getTitleFilter,
 } from '@/services/misc-db-service';
 
 export const Options: FC = async () => {
@@ -14,6 +16,8 @@ export const Options: FC = async () => {
   const linearChannels = await usesLinear();
   const proxiedSegments = await proxySegments();
   const xmltvPadded = await xmltvPadding();
+  const categoryFilter = await getCategoryFilter();
+  const titleFilter = await getTitleFilter();
 
   return (
     <section hx-swap="outerHTML" hx-target="this">
@@ -138,6 +142,57 @@ export const Options: FC = async () => {
           </label>
         </fieldset>
       </div>
+      <div class="grid">
+        <form
+          id="event-filters"
+          hx-put="/event-filters"
+          hx-trigger="submit"
+          hx-swap="outerHTML"
+          hx-target="#event-filters-button"
+        >
+          <div>
+            <span>Category Filter{' '}
+              <span
+                class="warning-red"
+                data-tooltip="Making changes will break/invalidate existing scheduled recordings"
+                data-placement="right"
+              >
+                **
+              </span>
+            </span>
+            <fieldset role="group">
+              <input
+                type="text"
+                placeholder="comma-separated list of categories to include, leave blank for all"
+                value={categoryFilter}
+                data-value={categoryFilter}
+                name="category-filter"
+              />
+            </fieldset>
+            <span>Title Filter{' '}
+              <span
+                class="warning-red"
+                data-tooltip="Making changes will break/invalidate existing scheduled recordings"
+                data-placement="right"
+              >
+                **
+              </span>
+            </span>
+            <fieldset role="group">
+              <input
+                type="text"
+                placeholder="if specified, only include events with matching titles; supports regular expressions"
+                value={titleFilter}
+                data-value={titleFilter}
+                name="title-filter"
+              />
+            </fieldset>
+            <button type="submit" id="event-filters-button">
+              Save and Apply Event Filters
+            </button>
+          </div>
+        </form>
+      </div>
       <hr />
       <script
         dangerouslySetInnerHTML={{
@@ -157,6 +212,15 @@ export const Options: FC = async () => {
             resetChannelsForm.addEventListener('htmx:beforeRequest', function() {
               this.querySelector('#num-of-channels-button').setAttribute('aria-busy', 'true');
               this.querySelector('#num-of-channels-button').setAttribute('aria-label', 'Loading…');
+            });
+          }
+
+          var eventFiltersForm = document.getElementById('event-filters');
+
+          if (eventFiltersForm) {
+            eventFiltersForm.addEventListener('htmx:beforeRequest', function() {
+              this.querySelector('#event-filters-button').setAttribute('aria-busy', 'true');
+              this.querySelector('#event-filters-button').setAttribute('aria-label', 'Loading…');
             });
           }
         `,

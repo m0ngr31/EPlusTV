@@ -1,6 +1,7 @@
 import {db, IDocument} from './database';
-import {getNumberOfChannels, getStartChannel, usesLinear} from './misc-db-service';
+import {getNumberOfChannels, getStartChannel, usesLinear, getCategoryFilter, getTitleFilter} from './misc-db-service';
 import {IChannel, IEntry} from './shared-interfaces';
+import {formatEntryName, usesMultiple} from './generate-xmltv';
 
 export const removeEntriesProvider = async (providerName: string): Promise<void> => {
   await db.entries.removeAsync({from: providerName}, {multi: true});
@@ -84,9 +85,39 @@ export const scheduleEntries = async (): Promise<void> => {
     .findAsync<IEntry & IDocument>({channel: {$exists: false}})
     .sort({start: 1});
 
-  unscheduledEntries.length > 0 && console.log(`Scheduling ${unscheduledEntries.length} entries...`);
+  const useMultiple = await usesMultiple();
 
+  const categoryFilter = await getCategoryFilter();
+
+  const normalized_category_filters =
+    categoryFilter && categoryFilter.trim().length > 0
+      ? categoryFilter.split(',').map(category => category.toLowerCase().trim())
+      : [];
+
+  const titleFilter = await getTitleFilter();
+
+  const normalized_title_filter =
+    titleFilter && titleFilter.trim().length > 0 && new RegExp(titleFilter);
+
+  let scheduledEntryCount = 0;
   for (const entry of unscheduledEntries) {
+    const formattedEntryName = formatEntryName(entry, useMultiple);
+
+    if (
+      normalized_category_filters.length > 0 &&
+      !normalized_category_filters.some(v => entry.categories.map(category => category.toLowerCase()).includes(v))
+    ) {
+      continue;
+    }
+
+    if (normalized_title_filter && !formattedEntryName.match(normalized_title_filter)) {
+      continue;
+    }
+
+    console.log('Scheduling event: ', formattedEntryName);
     await scheduleEntry(entry, startChannel, numOfChannels);
+    scheduledEntryCount++;
   }
+
+  scheduledEntryCount > 0 && console.log(`Scheduled ${scheduledEntryCount} entries...`);
 };
