@@ -70,6 +70,19 @@ espnplus.put('/refresh-in-market-teams', async c => {
   );
 });
 
+espnplus.put('/toggle-studio', async c => {
+  const body = await c.req.parseBody();
+  const hide_studio = body['espnplus-hide-studio'] === 'on';
+
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>, any>(
+    {name: 'espnplus'},
+    {$set: {'meta.hide_studio': hide_studio}},
+    {returnUpdatedDocs: true},
+  );
+
+  return c.html(<></>);
+});
+
 espnplus.get('/login/check/:code', async c => {
   const code = c.req.param('code');
 

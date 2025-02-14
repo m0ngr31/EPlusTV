@@ -113,6 +113,7 @@ interface ITokens extends IToken {
 
 export interface IEspnPlusMeta {
   use_ppv?: boolean;
+  hide_studio?: boolean;
   zip_code?: string;
   in_market_teams?: string;
 }
@@ -372,6 +373,10 @@ const parseAirings = async events => {
     if (!entryExists) {
       const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.some(n => n === event.network?.id);
 
+      if (!isLinear && plusMeta?.hide_studio && event.program?.isStudio) {
+        continue;
+      }
+
       const start = moment(event.startDateTime);
       const end = moment(event.startDateTime).add(event.duration, 'seconds');
       const originalEnd = moment(end);
@@ -477,6 +482,7 @@ class EspnHandler {
       await db.providers.insertAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
         enabled: useEspnPlus,
         meta: {
+          hide_studio: false,
           in_market_teams: '',
           use_ppv: useEspnPpv,
           zip_code: '',

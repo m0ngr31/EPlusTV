@@ -56,7 +56,7 @@ export const ESPNPlus: FC = async () => {
               ESPN+ Options{' '}
               <span
                 class="warning-red"
-                data-tooltip="Making changes will break/invalidate existing ESPN+ scheduled recordings"
+                data-tooltip="Rebuild EPG to reflect changes immediately"
                 data-placement="right"
               >
                 **
@@ -76,6 +76,22 @@ export const ESPNPlus: FC = async () => {
                   <button id="espnplus-refresh-in-market-teams-button">Refresh In-Market Teams</button>
                 </div>
               </form>
+            </fieldset>
+            <fieldset>
+              <label>
+                Hide studio shows?&nbsp;&nbsp;
+                <input
+                  hx-put={`/providers/espnplus/toggle-studio`}
+                  hx-trigger="change"
+                  name="espnplus-hide-studio"
+                  hx-target="this"
+                  hx-swap="afterend"
+                  type="checkbox"
+                  role="switch"
+                  checked={meta.hide_studio ? true : false}
+                  data-enabled={meta.hide_studio ? 'true' : 'false'}
+                />
+              </label>
             </fieldset>
           </details>
         </div>
