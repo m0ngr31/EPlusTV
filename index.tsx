@@ -21,6 +21,7 @@ import {paramountHandler} from './services/paramount-handler';
 import {nflHandler} from './services/nfl-handler';
 import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
+import {nsicHandler} from './services/nsic-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
 import {
@@ -48,6 +49,7 @@ import {Options} from './views/Options';
 
 import {CBSSports} from './services/providers/cbs-sports/views';
 import {MntWest} from './services/providers/mw/views';
+import {NorthernSun} from './services/providers/nsic/views';
 import {Paramount} from './services/providers/paramount/views';
 import {FloSports} from './services/providers/flosports/views';
 import {MlbTv} from './services/providers/mlb/views';
@@ -100,6 +102,7 @@ const schedule = async () => {
   await b1gHandler.getSchedule();
   await floSportsHandler.getSchedule();
   await mwHandler.getSchedule();
+  await nsicHandler.getSchedule();
   await nflHandler.getSchedule();
   await paramountHandler.getSchedule();
   await gothamHandler.getSchedule();
@@ -144,6 +147,7 @@ app.get('/', async c => {
               <B1G />
               <FloSports />
               <MntWest />
+              <NorthernSun />
             </Providers>
           </Main>
           <Style />
@@ -537,6 +541,8 @@ process.on('SIGINT', shutDown);
   await cbsHandler.refreshTokens();
 
   await mwHandler.initialize();
+
+  await nsicHandler.initialize();
 
   serve(
     {
