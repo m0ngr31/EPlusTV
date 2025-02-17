@@ -2,10 +2,10 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.3.0**
+Current version: **4.4.0**
 
 # About
-This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, Northern Sun, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
@@ -158,13 +158,17 @@ Will create dedicated linear channels if using dedicated linear channels, otherw
 
 #### B1G+
 
-Available to login with B1G+ credentials
+Available to login with B1G+ credentials (or for free with certain ISP providers)
 
 #### FloSports
 
 Available to login with FloSports credentials
 
 #### Mountain West
+
+Available for free
+
+#### Northern Sun
 
 Available for free
 
