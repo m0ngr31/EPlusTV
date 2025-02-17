@@ -39,7 +39,6 @@ import {
 import {db} from './database';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
-import {formatEntryName, usesMultiple} from './generate-xmltv';
 
 global.WebSocket = ws;
 
@@ -114,8 +113,7 @@ interface ITokens extends IToken {
 
 export interface IEspnPlusMeta {
   use_ppv?: boolean;
-  category_filter?: string;
-  title_filter?: string;
+  hide_studio?: boolean;
   zip_code?: string;
   in_market_teams?: string;
 }
@@ -366,16 +364,6 @@ const parseAirings = async events => {
     name: 'espnplus',
   });
 
-  const useMultiple = await usesMultiple();
-
-  const category_filter =
-    plusMeta?.category_filter && plusMeta?.category_filter.trim().length > 0
-      ? plusMeta?.category_filter.split(',').map(category => category.toLowerCase().trim())
-      : [];
-
-  const title_filter =
-    plusMeta?.title_filter && plusMeta?.title_filter.trim().length > 0 && new RegExp(plusMeta?.title_filter);
-
   const in_market_team_filter =
     plusMeta?.in_market_teams && plusMeta?.in_market_teams.length > 0 ? plusMeta?.in_market_teams.split(',') : [];
 
@@ -384,6 +372,10 @@ const parseAirings = async events => {
 
     if (!entryExists) {
       const isLinear = useLinear && event.network?.id && LINEAR_NETWORKS.some(n => n === event.network?.id);
+
+      if (!isLinear && plusMeta?.hide_studio && event.program?.isStudio) {
+        continue;
+      }
 
       const start = moment(event.startDateTime);
       const end = moment(event.startDateTime).add(event.duration, 'seconds');
@@ -401,17 +393,10 @@ const parseAirings = async events => {
         continue;
       }
 
-      const categories = parseCategories(event);
+      console.log('Adding event: ', event.name);
 
-      if (
-        category_filter.length > 0 &&
-        !category_filter.some(v => categories.map(category => category.toLowerCase()).includes(v))
-      ) {
-        continue;
-      }
-
-      const entryEvent = {
-        categories,
+      await db.entries.insertAsync<IEntry>({
+        categories: parseCategories(event),
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         feed: event.feedName,
@@ -428,15 +413,7 @@ const parseAirings = async events => {
           linear: true,
         }),
         originalEnd: originalEnd.valueOf(),
-      };
-
-      if (title_filter && !formatEntryName(entryEvent, useMultiple).match(title_filter)) {
-        continue;
-      }
-
-      console.log('Adding event: ', event.name);
-
-      await db.entries.insertAsync<IEntry>(entryEvent);
+      });
     }
   }
 };
@@ -505,9 +482,8 @@ class EspnHandler {
       await db.providers.insertAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>>({
         enabled: useEspnPlus,
         meta: {
-          category_filter: '',
+          hide_studio: false,
           in_market_teams: '',
-          title_filter: '',
           use_ppv: useEspnPpv,
           zip_code: '',
         },

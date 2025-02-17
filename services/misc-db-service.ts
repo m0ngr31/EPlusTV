@@ -94,6 +94,19 @@ export const initMiscDb = async (): Promise<void> => {
     });
   }
 
+  const setupEventFilters = (await db.misc.countAsync({name: 'category_filter'}) + await db.misc.countAsync({name: 'title_filter'})) == 2 ? true : false;
+
+  if (!setupEventFilters) {
+    await db.misc.insertAsync<IMiscDbEntry<string>>({
+      name: 'category_filter',
+      value: '',
+    });
+    await db.misc.insertAsync<IMiscDbEntry<string>>({
+      name: 'title_filter',
+      value: '',
+    });
+  }
+
   if (linearChannelsEnv) {
     console.log('Using LINEAR_CHANNELS variable is no longer needed. Please use the UI going forward');
   }
@@ -174,3 +187,19 @@ export const xmltvPadding = async (): Promise<boolean> => {
 
 export const setXmltvPadding = async (value: boolean): Promise<number> =>
   (await db.misc.updateAsync({name: 'xmltv_padding'}, {$set: {value}})).numAffected;
+
+export const getCategoryFilter = async () => {
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<string>>({name: 'category_filter'});
+
+  return value;
+};
+
+export const getTitleFilter = async () => {
+  const {value} = await db.misc.findOneAsync<IMiscDbEntry<string>>({name: 'title_filter'});
+
+  return value;
+};
+
+export const setEventFilters = async (categoryFilter: string, titleFilter: string): Promise<number> =>
+  (await db.misc.updateAsync({name: 'category_filter'}, {$set: {value: categoryFilter}})).numAffected +
+  (await db.misc.updateAsync({name: 'title_filter'}, {$set: {value: titleFilter}})).numAffected;

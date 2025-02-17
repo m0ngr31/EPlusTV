@@ -69,6 +69,7 @@ import {
   setStartChannel,
   usesLinear,
   setXmltvPadding,
+  setEventFilters,
 } from './services/misc-db-service';
 
 // Set timeout of requests to 1 minute
@@ -298,6 +299,26 @@ app.post('/xmltv-padding', async c => {
       'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully ${
         enabled ? 'enabled' : 'disabled'
       } XMLTV padding"}}`,
+    },
+  );
+});
+
+app.put('/event-filters', async c => {
+  const body = await c.req.parseBody();
+  const category_filter = body['category-filter'].toString();
+  const title_filter = body['title-filter'].toString();
+
+  await setEventFilters(category_filter, title_filter);
+  await resetSchedule();
+  await scheduleEntries();
+
+  return c.html(
+    <button type="submit" id="event-filters-button">
+      Save and Apply Event Filters
+    </button>,
+    200,
+    {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved and applied event filters"}}`,
     },
   );
 });

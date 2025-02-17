@@ -51,30 +51,6 @@ espnplus.put('/toggle-ppv', async c => {
   return c.html(<ESPNPlusBody enabled={enabled} tokens={tokens} />);
 });
 
-espnplus.put('/save-filters', async c => {
-  const body = await c.req.parseBody();
-  const category_filter = body['espnplus-category-filter'].toString();
-  const title_filter = body['espnplus-title-filter'].toString();
-
-  await db.providers.updateAsync(
-    {name: 'espnplus'},
-    {$set: {'meta.category_filter': category_filter, 'meta.title_filter': title_filter}},
-  );
-
-  await removeEvents();
-  await scheduleEvents();
-
-  return c.html(
-    <button type="submit" id="espnplus-save-filters-button">
-      Save and Apply Filters
-    </button>,
-    200,
-    {
-      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully saved and applied filters"}}`,
-    },
-  );
-});
-
 espnplus.put('/refresh-in-market-teams', async c => {
   const {zip_code, in_market_teams} = await espnHandler.refreshInMarketTeams();
 
@@ -92,6 +68,19 @@ espnplus.put('/refresh-in-market-teams', async c => {
       'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully refreshed in-market teams"}}`,
     },
   );
+});
+
+espnplus.put('/toggle-studio', async c => {
+  const body = await c.req.parseBody();
+  const hide_studio = body['espnplus-hide-studio'] === 'on';
+
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TESPNPlusTokens, IEspnPlusMeta>, any>(
+    {name: 'espnplus'},
+    {$set: {'meta.hide_studio': hide_studio}},
+    {returnUpdatedDocs: true},
+  );
+
+  return c.html(<></>);
 });
 
 espnplus.get('/login/check/:code', async c => {
