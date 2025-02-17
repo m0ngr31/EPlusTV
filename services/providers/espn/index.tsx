@@ -30,6 +30,32 @@ espn.put('/toggle', async c => {
     return c.html(<></>);
   }
 
+  if ( await espnHandler.ispAccess() ) {
+    const {meta} = await db.providers.findOneAsync<IProvider<any, IEspnMeta>>({name: 'espn'});
+
+    await db.providers.updateAsync<IProvider, any>(
+      {name: 'espn'},
+      {
+        $set: {
+          enabled: true,
+          tokens: {},
+          meta: {
+            ...meta,
+            espn3: enabled,
+            espn3isp: true,
+          },
+        },
+      },
+    );
+
+    // Kickoff event scheduler
+    scheduleEvents();
+
+    return c.html(<Login />, 200, {
+      'HX-Trigger': `{"HXToast":{"type":"success","body":"Successfully enabled ESPN3"}}`,
+    });
+  }
+
   return c.html(<Login />);
 });
 
@@ -129,6 +155,34 @@ espn.put('/features/toggle/:id', async c => {
       },
     },
   );
+
+  if (featureId === 'espn3') {
+    if (enabled) {
+      await db.providers.updateAsync<IProvider, any>(
+        {name: 'espn'},
+        {
+          $set: {
+            meta: {
+              ...meta,
+              espn3isp: await espnHandler.ispAccess(),
+            },
+          },
+        },
+      );
+    } else {
+      await db.providers.updateAsync<IProvider, any>(
+        {name: 'espn'},
+        {
+          $set: {
+            meta: {
+              ...meta,
+              espn3isp: false,
+            },
+          },
+        },
+      );
+    }
+  }
 
   // Kickoff event scheduler
   scheduleEvents();
