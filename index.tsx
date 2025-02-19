@@ -6,6 +6,9 @@ import {html} from 'hono/html';
 import moment from 'moment';
 import _ from 'lodash';
 import axios from 'axios';
+import fs from 'fs';
+import https from 'https';
+import { toNodeListener } from '@hono/node-server';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
@@ -565,16 +568,30 @@ process.on('SIGINT', shutDown);
 
   await nsicHandler.initialize();
 
-  serve(
-    {
-      fetch: app.fetch,
-      port: SERVER_PORT,
-    },
-    () => {
-      console.log(`Server started on port ${SERVER_PORT}`);
+  const sslCertificatePath = process.env.SSL_CERTIFICATE_PATH;
+  const sslPrivateKeyPath = process.env.SSL_PRIVATEKEY_PATH;
+  
+  if (sslCertificatePath && sslPrivateKeyPath) {
+    const cert = fs.readFileSync(sslCertificatePath);
+    const key = fs.readFileSync(sslPrivateKeyPath);
+    
+    https.createServer({ key, cert }, toNodeListener(app.fetch)).listen(SERVER_PORT, () => {
+      console.log(`HTTPS server started on port ${SERVER_PORT}`);
       schedule();
-    },
-  );
+    });
+  } else {
+    // Fall back to HTTP if the SSL environment variables are not provided
+    serve(
+      {
+        fetch: app.fetch,
+        port: SERVER_PORT,
+      },
+      () => {
+        console.log(`HTTP server started on port ${SERVER_PORT}`);
+        schedule();
+      },
+    );
+  }
 })();
 
 // Check for events every 4 hours and set the schedule
