@@ -568,19 +568,28 @@ process.on('SIGINT', shutDown);
 
   await nsicHandler.initialize();
 
+  // Check for SSL environment variables
   const sslCertificatePath = process.env.SSL_CERTIFICATE_PATH;
   const sslPrivateKeyPath = process.env.SSL_PRIVATEKEY_PATH;
-  
+
   if (sslCertificatePath && sslPrivateKeyPath) {
-    const cert = fs.readFileSync(sslCertificatePath);
-    const key = fs.readFileSync(sslPrivateKeyPath);
-    
-    https.createServer({ key, cert }, toNodeListener(app.fetch)).listen(SERVER_PORT, () => {
-      console.log(`HTTPS server started on port ${SERVER_PORT}`);
-      schedule();
-    });
+    serve(
+      {
+        fetch: app.fetch,
+        createServer: createServer,
+        serverOptions: {
+          key: fs.readFileSync(sslPrivateKeyPath),
+          cert: fs.readFileSync(sslCertificatePath),
+        },
+        port: SERVER_PORT,
+      },
+      () => {
+        console.log(`HTTPS server started on port ${SERVER_PORT}`);
+        schedule();
+      },
+    );
   } else {
-    // Fall back to HTTP if the SSL environment variables are not provided
+    // Fall back to HTTP if SSL env variables are not provided
     serve(
       {
         fetch: app.fetch,
