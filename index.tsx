@@ -1,5 +1,5 @@
 import {Context, Hono} from 'hono';
-import { serve, toNodeListener } from '@hono/node-server';
+import { serve } from '@hono/node-server';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {BlankEnv, BlankInput} from 'hono/types';
 import {html} from 'hono/html';
@@ -8,7 +8,7 @@ import _ from 'lodash';
 import axios from 'axios';
 
 import fs from 'fs';
-import https from 'https';
+import { createServer } from 'node:https';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
