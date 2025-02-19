@@ -1,5 +1,5 @@
 import {Context, Hono} from 'hono';
-import { serve } from '@hono/node-server';
+import {serve} from '@hono/node-server';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {BlankEnv, BlankInput} from 'hono/types';
 import {html} from 'hono/html';
