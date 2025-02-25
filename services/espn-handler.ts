@@ -782,7 +782,7 @@ class EspnHandler {
       });
 
       if (!scenarios?.data?.airing?.source?.url.length || scenarios?.data?.airing?.status !== 'LIVE') {
-        console.log('Event status: ', scenarios?.data?.airing?.status);
+        // console.log('Event status: ', scenarios?.data?.airing?.status);
         throw new Error('No streaming data available');
       }
 
@@ -816,11 +816,14 @@ class EspnHandler {
         let token = this.adobe_device_id;
 
         let isEspn3isp = false;
-        if ((scenarios?.data?.airing?.network?.id === 'espn3') && await isEnabled('espn3isp')) {
+        if (scenarios?.data?.airing?.network?.id === 'espn3' && (await isEnabled('espn3isp'))) {
           isEspn3isp = true;
         }
 
-        if (!isEspn3isp && _.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')) {
+        if (
+          !isEspn3isp &&
+          _.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')
+        ) {
           // Try to get the media token, but if it fails, let's just try device authentication
           try {
             await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
@@ -1212,7 +1215,33 @@ class EspnHandler {
         ),
       );
 
-      const apiKey = ['u','i','q','l','b','g','z','d','w','u','r','u','1','4','v','6','2','7','v','d','u','s','s','w','b'].join('');
+      const apiKey = [
+        'u',
+        'i',
+        'q',
+        'l',
+        'b',
+        'g',
+        'z',
+        'd',
+        'w',
+        'u',
+        'r',
+        'u',
+        '1',
+        '4',
+        'v',
+        '6',
+        '2',
+        '7',
+        'v',
+        'd',
+        'u',
+        's',
+        's',
+        'w',
+        'b',
+      ].join('');
       const eventUrl = [
         'https://',
         'watch.auth.api.espn.com',
@@ -1224,13 +1253,11 @@ class EspnHandler {
         apiKey,
       ].join('');
 
-      const {data} = await axios.post(eventUrl,
-        {
-          headers: {
-            'User-Agent': userAgent,
-          },
+      const {data} = await axios.post(eventUrl, {
+        headers: {
+          'User-Agent': userAgent,
         },
-      );
+      });
 
       if (data.stream) {
         return true;

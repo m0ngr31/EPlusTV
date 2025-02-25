@@ -21,6 +21,7 @@ import {paramountHandler} from './services/paramount-handler';
 import {nflHandler} from './services/nfl-handler';
 import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
+import {wsnHandler} from './services/wsn-handler';
 import {nsicHandler} from './services/nsic-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
@@ -60,6 +61,8 @@ import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
 import {Gotham} from './services/providers/gotham/views';
+import {WSN} from './services/providers/wsn/views';
+
 import {
   initMiscDb,
   resetLinearStartChannel,
@@ -103,6 +106,7 @@ const schedule = async () => {
   await b1gHandler.getSchedule();
   await floSportsHandler.getSchedule();
   await mwHandler.getSchedule();
+  await wsnHandler.getSchedule();
   await nsicHandler.getSchedule();
   await nflHandler.getSchedule();
   await paramountHandler.getSchedule();
@@ -149,6 +153,7 @@ app.get('/', async c => {
               <FloSports />
               <MntWest />
               <NorthernSun />
+              <WSN />
             </Providers>
           </Main>
           <Style />
@@ -562,6 +567,8 @@ process.on('SIGINT', shutDown);
   await cbsHandler.refreshTokens();
 
   await mwHandler.initialize();
+
+  await wsnHandler.initialize();
 
   await nsicHandler.initialize();
 

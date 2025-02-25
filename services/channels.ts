@@ -217,6 +217,15 @@ export const CHANNELS = {
         stationId: '30017',
         tvgName: 'YES',
       },
+      70: {
+        checkChannelEnabled: async (): Promise<boolean> =>
+          (await db.providers.findOneAsync<IProvider>({name: 'wsn'}))?.enabled,
+        id: 'WSN',
+        logo: 'https://tmsimg.fancybits.co/assets/s124636_ll_h15_aa.png?w=360&h=270',
+        name: "Women's Sports Network",
+        stationId: '124636',
+        tvgName: 'WSN',
+      },
     };
   },
 };
