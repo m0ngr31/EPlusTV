@@ -56,7 +56,7 @@ const parseAirings = async (events: IWSNEvent[]) => {
       }
 
       await db.entries.insertAsync<IEntry>({
-        categories: [...new Set(['WSN', "Women's Sports Network", "Women's"])],
+        categories: [...new Set(['WSN', "Women's Sports Network", "Women's Sports"])],
         channel: 'WSN',
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),

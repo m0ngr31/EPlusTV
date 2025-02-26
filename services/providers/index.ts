@@ -14,12 +14,16 @@ import {nfl} from './nfl';
 import {espn} from './espn';
 import {espnplus} from './espn-plus';
 import {gotham} from './gotham';
+import {pwhl} from './pwhl';
+import {lovb} from './lovb';
 
 export const providers = new Hono().basePath('/providers');
 
 providers.route('/', cbs);
 providers.route('/', mw);
 providers.route('/', wsn);
+providers.route('/', pwhl);
+providers.route('/', lovb);
 providers.route('/', nsic);
 providers.route('/', paramount);
 providers.route('/', flosports);

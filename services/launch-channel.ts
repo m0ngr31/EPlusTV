@@ -17,6 +17,7 @@ import {removeChannelStatus} from './shared-helpers';
 import {calculateChannelNumber} from './channels';
 import {gothamHandler} from './gotham-handler';
 import {wsnHandler} from './wsn-handler';
+import {pwhlHandler} from './pwhl-handler';
 
 const checkingStream = {};
 
@@ -63,6 +64,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'wsn':
           [url, headers] = await wsnHandler.getEventData();
+          break;
+        case 'pwhl':
+          [url, headers] = await pwhlHandler.getEventData(appStatus.channels[channelId].current);
           break;
         case 'northern-sun':
           [url, headers] = await nsicHandler.getEventData(appStatus.channels[channelId].current);
