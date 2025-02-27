@@ -77,7 +77,7 @@ export const clearChannels = (): void => {
 };
 
 export const normalTimeRange = (): [Moment, Moment] => [
-  moment().subtract(3, 'hours'),
+  moment().subtract(2, 'hours'),
   moment().add(2, 'days').endOf('day'),
 ];
 

@@ -27,6 +27,7 @@ import {wsnHandler} from './services/wsn-handler';
 import {nsicHandler} from './services/nsic-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
+import {nhlHandler} from './services/nhltv-handler';
 import {
   cleanEntries,
   clearChannels,
@@ -66,6 +67,7 @@ import {Gotham} from './services/providers/gotham/views';
 import {WSN} from './services/providers/wsn/views';
 import {PWHL} from './services/providers/pwhl/views';
 import {LOVB} from './services/providers/lovb/views';
+import {NHL} from './services/providers/nhl-tv/views';
 
 import {
   initMiscDb,
@@ -120,6 +122,7 @@ const schedule = async () => {
     gothamHandler.getSchedule(),
     nesnHandler.getSchedule(),
     cbsHandler.getSchedule(),
+    nhlHandler.getSchedule(),
   ]);
 
   console.log('=== Done getting events ===');
@@ -159,6 +162,7 @@ app.get('/', async c => {
               <Gotham />
               <B1G />
               <FloSports />
+              <NHL />
               <MntWest />
               <NorthernSun />
               <PWHL />
@@ -557,6 +561,7 @@ process.on('SIGINT', shutDown);
     gothamHandler.initialize(),
     nesnHandler.initialize(),
     cbsHandler.initialize(),
+    nhlHandler.initialize(),
     mwHandler.initialize(),
     wsnHandler.initialize(),
     pwhlHandler.initialize(),
@@ -575,6 +580,7 @@ process.on('SIGINT', shutDown);
     gothamHandler.refreshTokens(),
     nesnHandler.refreshTokens(),
     cbsHandler.refreshTokens(),
+    nhlHandler.refreshTokens(),
   ]);
 
   serve(
@@ -608,6 +614,7 @@ setInterval(
       gothamHandler.refreshTokens(),
       nesnHandler.refreshTokens(),
       cbsHandler.refreshTokens(),
+      nhlHandler.refreshTokens(),
     ]),
   1000 * 60 * 30,
 );

@@ -21,6 +21,9 @@ export const oktaUserAgent = 'okta-auth-js/7.0.2 okta-signin-widget-7.14.0';
 
 export const b1gUserAgent = 'Ktor client';
 
+export const nhlTvUserAgent =
+  'Mozilla/5.0 (Linux; Android 11; AOSP TV on x86 Build/RTU1.221129.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.91 Mobile Safari/537.36';
+
 export const androidMlbUserAgent =
   'com.bamnetworks.mobile.android.gameday.atbat/7.36.0.23 (Android 9;en_US;sdk_google_atv_x86;Build/PSR1.180720.121)';
 

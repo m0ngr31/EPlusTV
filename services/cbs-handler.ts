@@ -574,7 +574,7 @@ class CBSHandler {
       await this.save();
     } catch (e) {
       console.error(e);
-      console.log('Could not lauthenticate with Adobe');
+      console.log('Could not lauthenticate with Adobe (CBS Sports)');
     }
   };
 

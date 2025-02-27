@@ -16,10 +16,12 @@ import {espnplus} from './espn-plus';
 import {gotham} from './gotham';
 import {pwhl} from './pwhl';
 import {lovb} from './lovb';
+import {nhl} from './nhl-tv';
 
 export const providers = new Hono().basePath('/providers');
 
 providers.route('/', cbs);
+providers.route('/', nhl);
 providers.route('/', mw);
 providers.route('/', wsn);
 providers.route('/', pwhl);
