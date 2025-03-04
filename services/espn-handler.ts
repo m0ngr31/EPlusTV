@@ -1262,13 +1262,13 @@ class EspnHandler {
         });
 
         if (data.stream) {
+          console.log('Detected ISP access');
           return true;
         }
       } catch (e) {
         console.log('Did not detect ISP access');
       }
     } catch (e) {
-      console.error(e);
       console.log('Could not check ISP access');
     }
     return false;
