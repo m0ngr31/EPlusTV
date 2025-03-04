@@ -144,45 +144,26 @@ espn.put('/features/toggle/:id', async c => {
     sec_plus: 'SEC Network+',
   };
 
+  let updatedMeta = {
+    ...meta,
+    [featureId]: enabled,
+  }
+  if (featureId === 'espn3') {
+    if (enabled) {
+      updatedMeta['espn3isp'] = await espnHandler.ispAccess();
+    } else {
+      updatedMeta['espn3isp'] = false;
+    }
+  }
+
   await db.providers.updateAsync<IProvider, any>(
     {name: 'espn'},
     {
       $set: {
-        meta: {
-          ...meta,
-          [featureId]: enabled,
-        },
+        meta: updatedMeta,
       },
     },
   );
-
-  if (featureId === 'espn3') {
-    if (enabled) {
-      await db.providers.updateAsync<IProvider, any>(
-        {name: 'espn'},
-        {
-          $set: {
-            meta: {
-              ...meta,
-              espn3isp: await espnHandler.ispAccess(),
-            },
-          },
-        },
-      );
-    } else {
-      await db.providers.updateAsync<IProvider, any>(
-        {name: 'espn'},
-        {
-          $set: {
-            meta: {
-              ...meta,
-              espn3isp: false,
-            },
-          },
-        },
-      );
-    }
-  }
 
   // Kickoff event scheduler
   scheduleEvents();
