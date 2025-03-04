@@ -1254,21 +1254,24 @@ class EspnHandler {
         apiKey,
       ].join('');
 
-      const {data} = await axios.post(eventUrl, {
-        headers: {
-          'User-Agent': userAgent,
-        },
-      });
+      try {
+        const {data} = await axios.post(eventUrl, {
+          headers: {
+            'User-Agent': userAgent,
+          },
+        });
 
-      if (data.stream) {
-        return true;
+        if (data.stream) {
+          console.log('Detected ISP access');
+          return true;
+        }
+      } catch (e) {
+        console.log('Did not detect ISP access');
       }
-
-      return false;
     } catch (e) {
-      console.error(e);
       console.log('Could not check ISP access');
     }
+    return false;
   };
 
   private getAppConfig = async () => {

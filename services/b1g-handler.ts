@@ -311,7 +311,7 @@ class B1GHandler {
     }
   };
 
-  private checkAccess = async (eventId: string): Promise<string> => {
+  private checkAccess = async (eventId: string, hideError?: boolean): Promise<string> => {
     try {
       const url = `https://www.bigtenplus.com/api/v3/contents/${eventId}/check-access`;
       const headers = {
@@ -333,8 +333,10 @@ class B1GHandler {
 
       return data.data;
     } catch (e) {
-      console.error(e);
-      console.log('Could not get playback access token');
+      if (!hideError) {
+        console.error(e);
+        console.log('Could not get playback access token');
+      }
     }
   };
 
@@ -361,17 +363,17 @@ class B1GHandler {
 
       const id = data.data[0].content[0].id;
 
-      const accessToken = await this.checkAccess(id);
+      const accessToken = await this.checkAccess(id, true);
 
       if (accessToken) {
+        console.log('Detected ISP access');
         return true;
-      } else {
-        return false;
       }
+      console.log('Did not detect ISP access');
     } catch (e) {
-      console.error(e);
       console.log('Could not check ISP access');
     }
+    return false;
   };
 
   private getStream = async (eventId: string, userId: string, accessToken: string): Promise<string> => {
