@@ -23,7 +23,7 @@ const parseAirings = async (events: INSICEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const entryExists = await db.entries.findOneAsync<IEntry>({id: `nsic-${event.id}`});
@@ -31,7 +31,7 @@ const parseAirings = async (events: INSICEvent[]) => {
     if (!entryExists) {
       const start = moment(event.date);
       if (!event.expected_duration) {
-        event.expected_duration = 3*60*60;
+        event.expected_duration = 3 * 60 * 60;
       }
       const end = moment(event.date).add(event.expected_duration, 'seconds').add(1, 'hours');
       const originalEnd = moment(event.date).add(event.expected_duration, 'seconds');
@@ -120,7 +120,7 @@ class NorthernSunHandler {
         encodeURIComponent(moment().format('ddd, DD MMM YYYY') + ' 06:00:00 GMT'),
         '&before=',
         encodeURIComponent(moment().add(4, 'days').format('ddd, DD MMM YYYY') + ' 06:00:00 GMT'),
-        '&sort_by=date&sort_dir=asc'
+        '&sort_by=date&sort_dir=asc',
       ].join('');
 
       const {data} = await axios.get(url, {
@@ -153,14 +153,7 @@ class NorthernSunHandler {
 
   private getStream = async (eventId: string): Promise<string> => {
     try {
-      const url = [
-        'https://',
-        'vcloud.hudl.com',
-        '/file/broadcast/',
-        `/${eventId}`,
-        '.m3u8',
-        '?hfr=1',
-      ].join('');
+      const url = ['https://', 'vcloud.hudl.com', '/file/broadcast/', `/${eventId}`, '.m3u8', '?hfr=1'].join('');
 
       return url;
     } catch (e) {

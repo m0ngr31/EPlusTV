@@ -22,7 +22,7 @@ const parseAirings = async (events: ITemplateEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const entryExists = await db.entries.findOneAsync<IEntry>({id: `${event.id}`});
@@ -120,12 +120,7 @@ class TemplateHandler {
       debug.saveRequestData(data, 'template', 'epg');
 
       data.forEach(e => {
-        if (
-          moment(e.start).isBefore(endSchedule) &&
-          // Some events have a crazy old start date
-          moment(e.start).isAfter(now) &&
-          moment(e.end).isAfter(now)
-        ) {
+        if (moment(e.start).isBefore(endSchedule) && moment(e.end).isAfter(now)) {
           entries.push(e);
         }
       });

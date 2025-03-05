@@ -110,7 +110,7 @@ const parseAirings = async (events: IB1GEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const gameData = getEventData(event);
@@ -419,7 +419,7 @@ class B1GHandler {
       };
 
       const {meta} = await db.providers.findOneAsync<IProvider<any, IB1GMeta>>({name: 'b1g'});
-      if ( (username == '') || !meta.username || (meta.username == '') ) return true;
+      if (username == '' || !meta.username || meta.username == '') return true;
 
       const params = {
         email: username || meta.username,

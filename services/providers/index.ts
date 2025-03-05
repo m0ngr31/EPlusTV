@@ -17,6 +17,7 @@ import {gotham} from './gotham';
 import {pwhl} from './pwhl';
 import {lovb} from './lovb';
 import {nhl} from './nhl-tv';
+import {victory} from './victory';
 
 export const providers = new Hono().basePath('/providers');
 
@@ -30,6 +31,7 @@ providers.route('/', nsic);
 providers.route('/', paramount);
 providers.route('/', flosports);
 providers.route('/', mlbtv);
+providers.route('/', victory);
 providers.route('/', fox);
 providers.route('/', nesn);
 providers.route('/', b1g);

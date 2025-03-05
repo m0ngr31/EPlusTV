@@ -34,7 +34,7 @@ const parseAirings = async (events: IWSNEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const entryExists = await db.entries.findOneAsync<IEntry>({id: `wsn-${event.id}`});

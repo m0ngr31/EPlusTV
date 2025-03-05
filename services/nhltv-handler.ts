@@ -82,7 +82,7 @@ const parseAirings = async (events: INHLEventSimple[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const entryExists = await db.entries.findOneAsync<IEntry>({id: `nhl-${event.id}`});

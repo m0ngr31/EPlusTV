@@ -7,7 +7,7 @@ const userAgents = [
   'Mozilla/5.0 (X11; Linux i686; rv:133.0) Gecko/20100101 Firefox/133.0',
 ];
 
-export const cbsSportsUserAgent = 'CBSSports/6.4.0-1723047637 (firetv)';
+export const cbsSportsUserAgent = 'CBSSports/7.4.0-1739899507 (androidtv)';
 
 export const androidFoxUserAgent =
   'foxsports-androidtv/3.42.1 (Linux;Android 9.0.0;SHIELD Android TV) ExoPlayerLib/2.12.1';

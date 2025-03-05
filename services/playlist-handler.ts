@@ -37,6 +37,7 @@ const reAudioTrack = /#EXT-X-MEDIA:TYPE=AUDIO.*URI="([^"]+)"/gm;
 const reAudioTrackNesn = /#EXT-X-MEDIA.*TYPE=AUDIO.*URI="([^"]+)"/gm;
 const reMap = /#EXT-X-MAP:URI="([^"]+)"/gm;
 const reSubMap = /#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="([^"]+)"/gm;
+const reSubMapVictory = /#EXT-X-MEDIA:.*TYPE=SUBTITLES.*URI="([^"]+)"/gm;
 const reVersion = /#EXT-X-VERSION:(\d+)/;
 
 const updateVersion = (playlist: string): string =>
@@ -147,6 +148,16 @@ export class PlaylistHandler {
       if (this.network === 'nesn') {
         const audioTracks = [...manifest.matchAll(reAudioTrackNesn)];
         audioTracks.forEach(track => {
+          if (track && track[1]) {
+            const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
+
+            const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
+            updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
+          }
+        });
+      } else if (this.network === 'victory') {
+        const subTracks = [...manifest.matchAll(reSubMapVictory)];
+        subTracks.forEach(track => {
           if (track && track[1]) {
             const fullChunklistUrl = parseReplacementUrl(track[1], realManifestUrl);
 

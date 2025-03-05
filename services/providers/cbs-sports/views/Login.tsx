@@ -21,8 +21,8 @@ export const Login: FC<ILogin> = async ({code}) => {
           <span>
             Open this link and follow instructions:
             <br />
-            <a href={`https://www.cbssports.com/firetv/${shownCode}`} target="_blank">
-              {`https://www.cbssports.com/firetv/${shownCode}`}
+            <a href={`https://www.cbssports.com/androidtv/${shownCode}`} target="_blank">
+              {`https://www.cbssports.com/androidtv/${shownCode}`}
             </a>
           </span>
         </div>

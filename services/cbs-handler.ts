@@ -253,7 +253,7 @@ const parseAirings = async (events: ICBSEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const gameData = getEventData(event);
@@ -296,6 +296,7 @@ class CBSHandler {
   public device_id?: string;
   public user_id?: string;
   public mvpd_id?: string;
+  public expires_at?: string;
 
   public initialize = async () => {
     const setup = (await db.providers.countAsync({name: 'cbs'})) > 0 ? true : false;
@@ -504,7 +505,7 @@ class CBSHandler {
         '/v1',
         '?deviceId=',
         this.device_id,
-        '&deviceType=firetv',
+        '&deviceType=androidtv',
         '&authTypes=adobe',
         '&currentSubscriptions=',
       ].join('');
@@ -557,7 +558,7 @@ class CBSHandler {
         '?requestor=CBS_SPORTS',
         '&deviceId=',
         this.device_id,
-        '&deviceType=firetv',
+        '&deviceType=androidtv',
       ].join('');
 
       const {data} = await axios.get(url, {
@@ -570,6 +571,7 @@ class CBSHandler {
 
       this.user_id = data.userId;
       this.mvpd_id = data.mvpd;
+      this.expires_at = data.expires;
 
       await this.save();
     } catch (e) {
@@ -594,11 +596,12 @@ class CBSHandler {
 
   private load = async (): Promise<void> => {
     const {tokens} = await db.providers.findOneAsync<IProvider<TCBSTokens>>({name: 'cbs'});
-    const {device_id, user_id, mvpd_id} = tokens || {};
+    const {device_id, user_id, mvpd_id, expires_at} = tokens || {};
 
     this.device_id = device_id;
     this.user_id = user_id;
     this.mvpd_id = mvpd_id;
+    this.expires_at = expires_at;
   };
 }
 

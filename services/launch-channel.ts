@@ -19,6 +19,7 @@ import {gothamHandler} from './gotham-handler';
 import {wsnHandler} from './wsn-handler';
 import {pwhlHandler} from './pwhl-handler';
 import {nhlHandler} from './nhltv-handler';
+import {victoryHandler} from './victory-handler';
 
 const checkingStream = {};
 
@@ -68,6 +69,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'nhl':
           [url, headers] = await nhlHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'victory':
+          [url, headers] = await victoryHandler.getEventData(appStatus.channels[channelId].current);
           break;
         case 'pwhl':
           [url, headers] = await pwhlHandler.getEventData(appStatus.channels[channelId].current);

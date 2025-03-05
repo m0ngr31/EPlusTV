@@ -53,7 +53,7 @@ const parseAirings = async (events: ILovbEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});

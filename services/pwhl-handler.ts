@@ -23,7 +23,7 @@ const parseAirings = async (events: IPWHLEvent[]) => {
 
   for (const event of events) {
     if (!event || !event.id) {
-      return;
+      continue;
     }
 
     const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
