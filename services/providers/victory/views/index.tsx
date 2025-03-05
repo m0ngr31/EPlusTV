@@ -17,7 +17,7 @@ export const Victory: FC = async () => {
     <div>
       <section class="overflow-auto provider-section">
         <div class="grid-container">
-          <h4>Victory</h4>
+          <h4>Victory+</h4>
           <fieldset>
             <label>
               Enabled&nbsp;&nbsp;
