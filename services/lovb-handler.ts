@@ -23,16 +23,9 @@ const convertUTCToLocal = (utcTimeString: string, localDate: Moment): Moment => 
   const [time, period] = utcTimeString.split(' ');
   const [hours, minutes] = time.split(':');
 
-  const localMoment = moment(localDate);
+  const localMoment = moment.tz(localDate.format('YYYY-MM-DD') + ' 00:00', 'America/New_York').local();
 
-  const utcMoment = moment
-    .utc()
-    .year(localMoment.year())
-    .month(localMoment.month())
-    .date(localMoment.date())
-    .hour(parseInt(hours) + (period.toLowerCase() === 'PM' ? 12 : 0))
-    .minute(parseInt(minutes))
-    .second(0);
+  const utcMoment = moment.utc(utcTimeString, 'h:mm A');
 
   if (utcMoment.isBefore(localMoment)) {
     utcMoment.add(1, 'day');
@@ -61,7 +54,7 @@ const parseAirings = async (events: ILovbEvent[]) => {
     if (!entryExists) {
       const start = moment(event.start);
       const end = moment(event.start).add(3.5, 'hours');
-      const originalEnd = moment(end);
+      const originalEnd = moment(event.start).add(2, 'hours');
 
       if (end.isBefore(now) || start.isAfter(endSchedule)) {
         continue;
