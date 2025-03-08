@@ -19,28 +19,6 @@ const TEAM_COLORS = {
   'bg-teams-salt-lake-secondary': '#fff84d',
 };
 
-const convertUTCToLocal = (utcTimeString: string, localDate: Moment): Moment => {
-  const [time, period] = utcTimeString.split(' ');
-  const [hours, minutes] = time.split(':');
-
-  const localMoment = moment(localDate);
-
-  const utcMoment = moment
-    .utc()
-    .year(localMoment.year())
-    .month(localMoment.month())
-    .date(localMoment.date())
-    .hour(parseInt(hours) + (period.toLowerCase() === 'PM' ? 12 : 0))
-    .minute(parseInt(minutes))
-    .second(0);
-
-  if (utcMoment.isBefore(localMoment)) {
-    utcMoment.add(1, 'day');
-  }
-
-  return utcMoment.local();
-};
-
 interface ILovbEvent {
   image: string;
   title: string;
@@ -61,7 +39,7 @@ const parseAirings = async (events: ILovbEvent[]) => {
     if (!entryExists) {
       const start = moment(event.start);
       const end = moment(event.start).add(3.5, 'hours');
-      const originalEnd = moment(end);
+      const originalEnd = moment(event.start).add(2, 'hours');
 
       if (end.isBefore(now) || start.isAfter(endSchedule)) {
         continue;
@@ -135,7 +113,7 @@ class LOVBHandler {
           const teams = $el.find('a[href^="/teams/"]');
 
           const startTime = $el.find('.flex-row .text-pretty.text-sm').eq(2).text().trim();
-          const start = moment(convertUTCToLocal(startTime, date)).startOf('minute');
+          const start = moment.utc((date.format('YYYY-MM-DD') + ' ' + startTime), 'YYYY-MM-DD h:mm A').local();
 
           const teamArr: any[] = [];
 
