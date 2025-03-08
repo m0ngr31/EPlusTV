@@ -19,6 +19,21 @@ const TEAM_COLORS = {
   'bg-teams-salt-lake-secondary': '#fff84d',
 };
 
+const convertUTCToLocal = (utcTimeString: string, localDate: Moment): Moment => {
+  const [time, period] = utcTimeString.split(' ');
+  const [hours, minutes] = time.split(':');
+
+  const localMoment = moment.tz(localDate.format('YYYY-MM-DD') + ' 00:00', 'America/New_York').local();
+
+  const utcMoment = moment.utc(utcTimeString, 'h:mm A');
+
+  if (utcMoment.isBefore(localMoment)) {
+    utcMoment.add(1, 'day');
+  }
+
+  return utcMoment.local();
+};
+
 interface ILovbEvent {
   image: string;
   title: string;
@@ -113,7 +128,7 @@ class LOVBHandler {
           const teams = $el.find('a[href^="/teams/"]');
 
           const startTime = $el.find('.flex-row .text-pretty.text-sm').eq(2).text().trim();
-          const start = moment.utc((date.format('YYYY-MM-DD') + ' ' + startTime), 'YYYY-MM-DD h:mm A').local();
+          const start = moment(convertUTCToLocal(startTime, date)).startOf('minute');
 
           const teamArr: any[] = [];
 
