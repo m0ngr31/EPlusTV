@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.7.1**
+Current version: **4.7.2**
 
 # About
 This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, Northern Sun, Victory+, NHL.tv, FloSports, LOVB Live, PWHL, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -150,11 +150,11 @@ Will create dedicated linear channels if using dedicated linear channels, otherw
 
 | Network Name | Description |
 |---|---|
-| MSG | MSG |
-| MSGSN | MSG Sportsnet HD |
-| MSG2 | MSG2 HD |
-| MSGSN2 | MSG Sportsnet 2 HD |
-| YES | Yes Network |
+| MSG | MSG (If in your supported zone) |
+| MSGSN | MSG Sportsnet HD (If in your supported zone) |
+| MSG2 | MSG2 HD (If in your supported zone) |
+| MSGSN2 | MSG Sportsnet 2 HD (If in your supported zone) |
+| YES | Yes Network (If in your supported zone) |
 
 #### Victory+
 
