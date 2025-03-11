@@ -1,6 +1,7 @@
 import moment, {Moment} from 'moment-timezone';
 import * as cheerio from 'cheerio';
 
+import {userAgent} from './user-agent';
 import {IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
@@ -25,7 +26,7 @@ const convertUTCToLocal = (utcTimeString: string, localDate: Moment): Moment => 
 
   const localMoment = moment.tz(localDate.format('YYYY-MM-DD') + ' 00:00', 'America/New_York').local();
 
-  const utcMoment = moment.utc(utcTimeString, 'h:mm A');
+  const utcMoment = moment.utc(localDate.format('YYYY-MM-DD') + ' ' + utcTimeString, 'YYYY-MM-DD h:mm A');
 
   if (utcMoment.isBefore(localMoment)) {
     utcMoment.add(1, 'day');
@@ -112,7 +113,11 @@ class LOVBHandler {
     const today = new Date();
 
     try {
-      const {data} = await axios.get('https://lovb.com/schedule');
+      const {data} = await axios.get('https://lovb.com/schedule', {
+        headers: {
+          'user-agent': userAgent,
+        },
+      });
       const $ = cheerio.load(data);
 
       for (const [i] of [0, 1, 2].entries()) {
