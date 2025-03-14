@@ -20,6 +20,7 @@ import {wsnHandler} from './wsn-handler';
 import {pwhlHandler} from './pwhl-handler';
 import {nhlHandler} from './nhltv-handler';
 import {victoryHandler} from './victory-handler';
+import {kboHandler} from './kbo-handler';
 
 const checkingStream = {};
 
@@ -84,6 +85,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'cbssports':
           [url, headers] = await cbsHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'kbo':
+          [url, headers] = await kboHandler.getEventData(appStatus.channels[channelId].current);
           break;
         default:
           [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);
