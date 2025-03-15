@@ -34,8 +34,8 @@ const parseAirings = async (events: IKBOEvent[]) => {
 
     if (!entryExists) {
       const start = moment(event.start);
-      const end = moment(event.start).add(6, 'hours');
-      const originalEnd = moment(event.start).add(3.5, 'hours');
+      const end = moment(event.start).add(5.5, 'hours');
+      const originalEnd = moment(event.start).add(3, 'hours');
 
       if (end.isBefore(now) || start.isAfter(endSchedule)) {
         continue;
@@ -251,9 +251,10 @@ class KBOHandler {
             return [streamUrl, {'user-agent': userAgent, 'origin': origin, 'referer': referer}];
           }
         }
+        throw new Error('Could not find matching live stream');
       }
 
-      throw new Error('Could not get stream data');
+      throw new Error('Could not find live streams');
     } catch (e) {
       if (!retry && e.message != 'Could not get client id') {
         console.log('Could not get event data, attempting to refresh');
