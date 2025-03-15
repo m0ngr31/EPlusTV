@@ -18,6 +18,7 @@ import {pwhl} from './pwhl';
 import {lovb} from './lovb';
 import {nhl} from './nhl-tv';
 import {victory} from './victory';
+import {kbo} from './kbo';
 
 export const providers = new Hono().basePath('/providers');
 
@@ -39,3 +40,4 @@ providers.route('/', nfl);
 providers.route('/', espn);
 providers.route('/', espnplus);
 providers.route('/', gotham);
+providers.route('/', kbo);

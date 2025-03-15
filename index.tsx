@@ -29,6 +29,7 @@ import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
 import {nhlHandler} from './services/nhltv-handler';
 import {victoryHandler} from './services/victory-handler';
+import {kboHandler} from './services/kbo-handler';
 import {
   cleanEntries,
   clearChannels,
@@ -70,6 +71,7 @@ import {PWHL} from './services/providers/pwhl/views';
 import {LOVB} from './services/providers/lovb/views';
 import {NHL} from './services/providers/nhl-tv/views';
 import {Victory} from './services/providers/victory/views';
+import {KBO} from './services/providers/kbo/views';
 
 import {
   initMiscDb,
@@ -126,6 +128,7 @@ const schedule = async () => {
     cbsHandler.getSchedule(),
     nhlHandler.getSchedule(),
     victoryHandler.getSchedule(),
+    kboHandler.getSchedule(),
   ]);
 
   console.log('=== Done getting events ===');
@@ -172,6 +175,7 @@ app.get('/', async c => {
               <PWHL />
               <LOVB />
               <WSN />
+              <KBO />
             </Providers>
           </Main>
           <Style />
@@ -572,6 +576,7 @@ process.on('SIGINT', shutDown);
     pwhlHandler.initialize(),
     lovbHandler.initialize(),
     nsicHandler.initialize(),
+    kboHandler.initialize(),
   ]);
 
   await Promise.all([
