@@ -305,6 +305,8 @@ class MLBHandler {
   public session_id?: string;
   public entitlements?: IEntitlement[];
 
+  private playback_token?: string;
+
   public initialize = async () => {
     const setup = (await db.providers.countAsync({name: 'mlbtv'})) > 0 ? true : false;
 
@@ -479,6 +481,8 @@ class MLBHandler {
 
       const playbackUrl = data.data.initPlaybackSession.playback.url.replace(/[/]([A-Za-z0-9_]+)[/]/g, '/');
       const token = data.data.initPlaybackSession.playback.token;
+
+      this.playback_token = token;
 
       return [
         playbackUrl,
@@ -684,11 +688,15 @@ class MLBHandler {
         `&endDate=${endDate.format('YYYY-MM-DD')}`,
       ].join('');
 
+      const oktaToken = await this.getOktaToken();
+
       const {data} = await axios.get<{results: IGameFeed[]}>(url, {
         headers: {
           accept: '*/*',
           'accept-language': 'en-US,en;q=0.9',
+          authorization: 'Bearer ' + this.access_token,
           'content-type': 'application/json',
+          'x-okta-id': oktaToken,
         },
       });
 
@@ -696,6 +704,15 @@ class MLBHandler {
     } catch (e) {
       throw new Error(e);
     }
+  };
+
+  private getOktaToken = async (): Promise<string> => {
+    if (!this.playback_token) {
+      await this.getEventData('b7f0fff7-266f-4171-aa2d-af7988dc9302');
+    }
+
+    const encoded_okta_id = this.playback_token.split('_')[1];
+    return Buffer.from(`${encoded_okta_id}==`, 'base64').toString('ascii');
   };
 
   private refreshToken = async (): Promise<void> => {
@@ -837,7 +854,10 @@ class MLBHandler {
   };
 
   private save = async () => {
-    await db.providers.updateAsync({name: 'mlbtv'}, {$set: {tokens: _.omit(this, 'entitlements', 'session_id')}});
+    await db.providers.updateAsync(
+      {name: 'mlbtv'},
+      {$set: {tokens: _.omit(this, 'entitlements', 'session_id', 'playback_token')}},
+    );
   };
 
   private load = async (): Promise<void> => {
