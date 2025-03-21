@@ -387,7 +387,7 @@ class CBSHandler {
 
       data.forEach(e => {
         if (
-          (e.video.authentication.includes('adobe') || _.isEqual(e.video.authentication, [])) &&
+          (e.video?.authentication.includes('adobe') || _.isEqual(e.video?.authentication, [])) &&
           moment(e.video.schedule.videoStartDate * 1000).isBefore(endSchedule) &&
           // Some events have a crazy old start date
           moment(e.video.schedule.videoStartDate * 1000).isAfter(now) &&
