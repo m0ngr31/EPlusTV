@@ -7,6 +7,9 @@ import moment from 'moment';
 import _ from 'lodash';
 import axios from 'axios';
 
+import fs from 'fs';
+import { createServer } from 'node:https';
+
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
 import {generateXml} from './services/generate-xmltv';
@@ -594,16 +597,39 @@ process.on('SIGINT', shutDown);
     nhlHandler.refreshTokens(),
   ]);
 
-  serve(
-    {
-      fetch: app.fetch,
-      port: SERVER_PORT,
-    },
-    () => {
-      console.log(`Server started on port ${SERVER_PORT}`);
-      schedule();
-    },
-  );
+  // Check for SSL environment variables
+  const sslCertificatePath = process.env.SSL_CERTIFICATE_PATH;
+  const sslPrivateKeyPath = process.env.SSL_PRIVATEKEY_PATH;
+
+  if (sslCertificatePath && sslPrivateKeyPath) {
+    serve(
+      {
+        fetch: app.fetch,
+        createServer: createServer,
+        serverOptions: {
+          key: fs.readFileSync(sslPrivateKeyPath),
+          cert: fs.readFileSync(sslCertificatePath),
+        },
+        port: SERVER_PORT,
+      },
+      () => {
+        console.log(`HTTPS server started on port ${SERVER_PORT}`);
+        schedule();
+      },
+    );
+  } else {
+    // Fall back to HTTP if SSL env variables are not provided
+    serve(
+      {
+        fetch: app.fetch,
+        port: SERVER_PORT,
+      },
+      () => {
+        console.log(`HTTP server started on port ${SERVER_PORT}`);
+        schedule();
+      },
+    );
+  }
 })();
 
 // Check for events every 4 hours and set the schedule
