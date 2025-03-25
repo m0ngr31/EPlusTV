@@ -3,6 +3,7 @@ import _ from 'lodash';
 import {db} from './database';
 import {IProvider} from './shared-interfaces';
 import {getLinearStartChannel, usesLinear} from './misc-db-service';
+import {gothamHandler} from './gotham-handler';
 
 export const checkChannelEnabled = async (provider: string, channelId: string): Promise<boolean> => {
   const {enabled, linear_channels} = await db.providers.findOneAsync<IProvider>({name: provider});
@@ -177,45 +178,15 @@ export const CHANNELS = {
         stationId: '63516',
         tvgName: 'NESNPLD',
       },
-      60: {
-        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSG'),
-        id: 'MSG',
-        logo: 'https://tmsimg.fancybits.co/assets/s10979_ll_h15_ab.png?w=360&h=270',
-        name: 'MSG',
-        stationId: '10979',
-        tvgName: 'MSG',
-      },
-      61: {
-        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSGSN'),
-        id: 'MSGSN',
-        logo: 'https://tmsimg.fancybits.co/assets/s11105_ll_h15_ac.png?w=360&h=270',
-        name: 'MSG Sportsnet HD',
-        stationId: '15273',
-        tvgName: 'MSGSNNP',
-      },
-      62: {
-        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSG2'),
-        id: 'MSG2',
-        logo: 'https://tmsimg.fancybits.co/assets/s70283_ll_h15_aa.png?w=360&h=270',
-        name: 'MSG2 HD',
-        stationId: '70283',
-        tvgName: 'MSG2HD',
-      },
-      63: {
-        checkChannelEnabled: () => checkChannelEnabled('gotham', 'MSGSN2'),
-        id: 'MSGSN2',
-        logo: 'https://tmsimg.fancybits.co/assets/s70285_ll_h15_ab.png?w=360&h=270',
-        name: 'MSG Sportsnet 2 HD',
-        stationId: '70285',
-        tvgName: 'MSG2SNH',
-      },
-      64: {
-        checkChannelEnabled: () => checkChannelEnabled('gotham', 'YES'),
-        id: 'YES',
-        logo: 'https://tmsimg.fancybits.co/assets/s30017_ll_h15_aa.png?w=360&h=270',
-        name: 'Yes Network',
-        stationId: '30017',
-        tvgName: 'YES',
+      ...gothamHandler.getLinearChannels(),
+      70: {
+        checkChannelEnabled: async (): Promise<boolean> =>
+          (await db.providers.findOneAsync<IProvider>({name: 'wsn'}))?.enabled,
+        id: 'WSN',
+        logo: 'https://tmsimg.fancybits.co/assets/s124636_ll_h15_aa.png?w=360&h=270',
+        name: "Women's Sports Network",
+        stationId: '124636',
+        tvgName: 'WSN',
       },
     };
   },

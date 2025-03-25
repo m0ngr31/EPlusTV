@@ -7,7 +7,7 @@ const userAgents = [
   'Mozilla/5.0 (X11; Linux i686; rv:133.0) Gecko/20100101 Firefox/133.0',
 ];
 
-export const cbsSportsUserAgent = 'CBSSports/6.4.0-1723047637 (firetv)';
+export const cbsSportsUserAgent = 'CBSSports/7.4.0-1739899507 (androidtv)';
 
 export const androidFoxUserAgent =
   'foxsports-androidtv/3.42.1 (Linux;Android 9.0.0;SHIELD Android TV) ExoPlayerLib/2.12.1';
@@ -20,6 +20,9 @@ export const floSportsUserAgent =
 export const oktaUserAgent = 'okta-auth-js/7.0.2 okta-signin-widget-7.14.0';
 
 export const b1gUserAgent = 'Ktor client';
+
+export const nhlTvUserAgent =
+  'Mozilla/5.0 (Linux; Android 11; AOSP TV on x86 Build/RTU1.221129.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.91 Mobile Safari/537.36';
 
 export const androidMlbUserAgent =
   'com.bamnetworks.mobile.android.gameday.atbat/7.36.0.23 (Android 9;en_US;sdk_google_atv_x86;Build/PSR1.180720.121)';

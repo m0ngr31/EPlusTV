@@ -2,7 +2,7 @@ import {FC} from 'hono/jsx';
 
 import {db} from '@/services/database';
 import {IProvider} from '@/services/shared-interfaces';
-import {TGothamTokens} from '@/services/gotham-handler';
+import {gothamHandler, TGothamTokens} from '@/services/gotham-handler';
 
 import {GothamBody} from './CardBody';
 
@@ -10,13 +10,23 @@ export const Gotham: FC = async () => {
   const gotham = await db.providers.findOneAsync<IProvider<TGothamTokens>>({name: 'gotham'});
   const enabled = gotham?.enabled;
   const tokens = gotham?.tokens;
-  const channels = gotham?.linear_channels || [];
+
+  const channels = await gothamHandler.getLinearChannels();
+
+  const linear_channels = [];
+
+  for (const channel of Object.values(channels)) {
+    linear_channels.push({
+      id: channel.id,
+      name: channel.name,
+    });
+  }
 
   return (
     <div>
       <section class="overflow-auto provider-section">
         <div class="grid-container">
-          <h4>Gotham</h4>
+          <h4>Gotham Sports</h4>
           <fieldset>
             <label>
               Enabled&nbsp;&nbsp;
@@ -34,7 +44,7 @@ export const Gotham: FC = async () => {
           </fieldset>
         </div>
         <div id="gotham-body" hx-swap="innerHTML">
-          <GothamBody enabled={enabled} tokens={tokens} channels={channels} />
+          <GothamBody enabled={enabled} tokens={tokens} channels={linear_channels} />
         </div>
       </section>
       <hr />

@@ -2,10 +2,10 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.4.0**
+Current version: **4.8.1**
 
 # About
-This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, Northern Sun, FloSports, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
+This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, Northern Sun, KBO, Victory+, NHL.tv, FloSports, LOVB Live, PWHL, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
 
 ## Notes
 * This was not made for pirating streams. This is made for using your own credentials and have a different presentation than the streaming apps currently provide.
@@ -64,7 +64,7 @@ Will create dedicated linear channels if using dedicated linear channels, otherw
 
 | Network Name | Description |
 |---|---|
-| ESPN3 | Set if your TV provider supports it |
+| ESPN3 | Set if your TV provider or ISP supports it |
 | SEC Network+ | Set if your TV provider supports it |
 | ACC Network Extra | Set if your TV provider supports it |
 
@@ -98,7 +98,7 @@ Dedicated linear channels - Will only schedule when dedicated linear channels is
 
 #### CBS Sports
 
-Available to login with TV Provider
+Available to login with TV Provider. Please note that there is no token refresh option here. It will require re-authenticating every 30 days.
 
 #### NFL
 
@@ -150,11 +150,15 @@ Will create dedicated linear channels if using dedicated linear channels, otherw
 
 | Network Name | Description |
 |---|---|
-| MSG | MSG |
-| MSGSN | MSG Sportsnet HD |
-| MSG2 | MSG2 HD |
-| MSGSN2 | MSG Sportsnet 2 HD |
-| YES | Yes Network |
+| MSG | MSG (If in your supported zone) |
+| MSGSN | MSG Sportsnet HD (If in your supported zone) |
+| MSG2 | MSG2 HD (If in your supported zone) |
+| MSGSN2 | MSG Sportsnet 2 HD (If in your supported zone) |
+| YES | Yes Network (If in your supported zone) |
+
+#### Victory+
+
+Available to login with Victory+ credentials.
 
 #### B1G+
 
@@ -164,11 +168,7 @@ Available to login with B1G+ credentials (or for free with certain ISP providers
 
 Available to login with FloSports credentials
 
-#### Mountain West
-
-Available for free
-
-#### Northern Sun
+#### KBO
 
 Available for free
 
@@ -187,6 +187,36 @@ Available to login with MLB.tv credentials
 |---|---|
 | Big Inning | Will create a dedicated linear channel if using dedicated linear channels, otherwise will schedule Big Inning normally |
 | MLB Network | Only available if you have MLB Network as part of your MLB.tv account or have linked TVE Provider that provides access |
+
+#### NHL.tv
+
+Available to login with NHL.tv account (Europe only)
+
+#### Mountain West
+
+Available for free
+
+#### Northern Sun
+
+Available for free
+
+#### PWHL
+
+Available for free
+
+#### LOVB Live
+
+Available for free
+
+#### Women's Sports Network
+
+Available for free - only linear channel
+
+##### Linear Channels
+
+| Network Name | Description |
+|---|---|
+| WSN | Women's Sports Network |
 
 ## Volumes
 | Volume Name | Description | Required? |

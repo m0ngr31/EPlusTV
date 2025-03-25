@@ -16,6 +16,11 @@ import {appStatus} from './app-status';
 import {removeChannelStatus} from './shared-helpers';
 import {calculateChannelNumber} from './channels';
 import {gothamHandler} from './gotham-handler';
+import {wsnHandler} from './wsn-handler';
+import {pwhlHandler} from './pwhl-handler';
+import {nhlHandler} from './nhltv-handler';
+import {victoryHandler} from './victory-handler';
+import {kboHandler} from './kbo-handler';
 
 const checkingStream = {};
 
@@ -60,6 +65,18 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
         case 'mountain-west':
           [url, headers] = await mwHandler.getEventData(appStatus.channels[channelId].current);
           break;
+        case 'wsn':
+          [url, headers] = await wsnHandler.getEventData();
+          break;
+        case 'nhl':
+          [url, headers] = await nhlHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'victory':
+          [url, headers] = await victoryHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'pwhl':
+          [url, headers] = await pwhlHandler.getEventData(appStatus.channels[channelId].current);
+          break;
         case 'northern-sun':
           [url, headers] = await nsicHandler.getEventData(appStatus.channels[channelId].current);
           break;
@@ -68,6 +85,9 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'cbssports':
           [url, headers] = await cbsHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'kbo':
+          [url, headers] = await kboHandler.getEventData(appStatus.channels[channelId].current);
           break;
         default:
           [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);

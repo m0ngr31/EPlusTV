@@ -24,9 +24,15 @@ import {paramountHandler} from './services/paramount-handler';
 import {nflHandler} from './services/nfl-handler';
 import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
+import {pwhlHandler} from './services/pwhl-handler';
+import {lovbHandler} from './services/lovb-handler';
+import {wsnHandler} from './services/wsn-handler';
 import {nsicHandler} from './services/nsic-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
+import {nhlHandler} from './services/nhltv-handler';
+import {victoryHandler} from './services/victory-handler';
+import {kboHandler} from './services/kbo-handler';
 import {
   cleanEntries,
   clearChannels,
@@ -63,6 +69,13 @@ import {NFL} from './services/providers/nfl/views';
 import {ESPN} from './services/providers/espn/views';
 import {ESPNPlus} from './services/providers/espn-plus/views';
 import {Gotham} from './services/providers/gotham/views';
+import {WSN} from './services/providers/wsn/views';
+import {PWHL} from './services/providers/pwhl/views';
+import {LOVB} from './services/providers/lovb/views';
+import {NHL} from './services/providers/nhl-tv/views';
+import {Victory} from './services/providers/victory/views';
+import {KBO} from './services/providers/kbo/views';
+
 import {
   initMiscDb,
   resetLinearStartChannel,
@@ -100,18 +113,26 @@ const getUri = (c: Context<BlankEnv, '', BlankInput>): string => {
 const schedule = async () => {
   console.log('=== Getting events ===');
 
-  await espnHandler.getSchedule();
-  await foxHandler.getSchedule();
-  await mlbHandler.getSchedule();
-  await b1gHandler.getSchedule();
-  await floSportsHandler.getSchedule();
-  await mwHandler.getSchedule();
-  await nsicHandler.getSchedule();
-  await nflHandler.getSchedule();
-  await paramountHandler.getSchedule();
-  await gothamHandler.getSchedule();
-  await nesnHandler.getSchedule();
-  await cbsHandler.getSchedule();
+  await Promise.all([
+    espnHandler.getSchedule(),
+    foxHandler.getSchedule(),
+    mlbHandler.getSchedule(),
+    b1gHandler.getSchedule(),
+    floSportsHandler.getSchedule(),
+    mwHandler.getSchedule(),
+    wsnHandler.getSchedule(),
+    pwhlHandler.getSchedule(),
+    lovbHandler.getSchedule(),
+    nsicHandler.getSchedule(),
+    nflHandler.getSchedule(),
+    paramountHandler.getSchedule(),
+    gothamHandler.getSchedule(),
+    nesnHandler.getSchedule(),
+    cbsHandler.getSchedule(),
+    nhlHandler.getSchedule(),
+    victoryHandler.getSchedule(),
+    kboHandler.getSchedule(),
+  ]);
 
   console.log('=== Done getting events ===');
   console.log('=== Building the schedule ===');
@@ -148,10 +169,16 @@ app.get('/', async c => {
               <Paramount />
               <Nesn />
               <Gotham />
+              <Victory />
               <B1G />
               <FloSports />
+              <NHL />
               <MntWest />
               <NorthernSun />
+              <PWHL />
+              <LOVB />
+              <WSN />
+              <KBO />
             </Providers>
           </Main>
           <Style />
@@ -534,39 +561,41 @@ process.on('SIGINT', shutDown);
 
   await initMiscDb();
 
-  await espnHandler.initialize();
-  await espnHandler.refreshTokens();
+  await Promise.all([
+    espnHandler.initialize(),
+    foxHandler.initialize(),
+    mlbHandler.initialize(),
+    b1gHandler.initialize(),
+    floSportsHandler.initialize(),
+    nflHandler.initialize(),
+    paramountHandler.initialize(),
+    gothamHandler.initialize(),
+    nesnHandler.initialize(),
+    cbsHandler.initialize(),
+    victoryHandler.initialize(),
+    nhlHandler.initialize(),
+    mwHandler.initialize(),
+    wsnHandler.initialize(),
+    pwhlHandler.initialize(),
+    lovbHandler.initialize(),
+    nsicHandler.initialize(),
+    kboHandler.initialize(),
+  ]);
 
-  await foxHandler.initialize();
-  await foxHandler.refreshTokens();
-
-  await mlbHandler.initialize();
-  await mlbHandler.refreshTokens();
-
-  await b1gHandler.initialize();
-  await b1gHandler.refreshTokens();
-
-  await floSportsHandler.initialize();
-  await floSportsHandler.refreshTokens();
-
-  await nflHandler.initialize();
-  await nflHandler.refreshTokens();
-
-  await paramountHandler.initialize();
-  await paramountHandler.refreshTokens();
-
-  await gothamHandler.initialize();
-  await gothamHandler.refreshTokens();
-
-  await nesnHandler.initialize();
-  await nesnHandler.refreshTokens();
-
-  await cbsHandler.initialize();
-  await cbsHandler.refreshTokens();
-
-  await mwHandler.initialize();
-
-  await nsicHandler.initialize();
+  await Promise.all([
+    espnHandler.refreshTokens(),
+    foxHandler.refreshTokens(),
+    mlbHandler.refreshTokens(),
+    b1gHandler.refreshTokens(),
+    floSportsHandler.refreshTokens(),
+    nflHandler.refreshTokens(),
+    paramountHandler.refreshTokens(),
+    gothamHandler.refreshTokens(),
+    nesnHandler.refreshTokens(),
+    cbsHandler.refreshTokens(),
+    victoryHandler.refreshTokens(),
+    nhlHandler.refreshTokens(),
+  ]);
 
   // Check for SSL environment variables
   const sslCertificatePath = process.env.SSL_CERTIFICATE_PATH;
@@ -609,18 +638,24 @@ setInterval(async () => {
 }, 1000 * 60 * 60 * 4);
 
 // Check for updated refresh tokens 30 minutes
-setInterval(async () => {
-  await espnHandler.refreshTokens();
-  await foxHandler.refreshTokens();
-  await mlbHandler.refreshTokens();
-  await b1gHandler.refreshTokens();
-  await floSportsHandler.refreshTokens();
-  await nflHandler.refreshTokens();
-  await paramountHandler.refreshTokens();
-  await gothamHandler.refreshTokens();
-  await nesnHandler.refreshTokens();
-  await cbsHandler.refreshTokens();
-}, 1000 * 60 * 30);
+setInterval(
+  () =>
+    Promise.all([
+      espnHandler.refreshTokens(),
+      foxHandler.refreshTokens(),
+      mlbHandler.refreshTokens(),
+      b1gHandler.refreshTokens(),
+      floSportsHandler.refreshTokens(),
+      nflHandler.refreshTokens(),
+      paramountHandler.refreshTokens(),
+      gothamHandler.refreshTokens(),
+      nesnHandler.refreshTokens(),
+      cbsHandler.refreshTokens(),
+      victoryHandler.refreshTokens(),
+      nhlHandler.refreshTokens(),
+    ]),
+  1000 * 60 * 30,
+);
 
 // Remove idle playlists
 setInterval(() => {

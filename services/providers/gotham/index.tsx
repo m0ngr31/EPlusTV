@@ -58,7 +58,18 @@ gotham.post('/login', async c => {
     },
     {returnUpdatedDocs: true},
   );
-  const {linear_channels, tokens} = affectedDocuments as IProvider<TGothamTokens>;
+  const {tokens} = affectedDocuments as IProvider<TGothamTokens>;
+
+  const channels = await gothamHandler.getLinearChannels();
+
+  const linear_channels = [];
+
+  for (const channel of Object.values(channels)) {
+    linear_channels.push({
+      id: channel.id,
+      name: channel.name,
+    });
+  }
 
   // Kickoff event scheduler
   scheduleEvents();
@@ -85,7 +96,18 @@ gotham.put('/auth/tve', async c => {
       {$set: {tokens: updatedTokens}},
       {returnUpdatedDocs: true},
     );
-    const {linear_channels, tokens} = affectedDocuments as IProvider<TGothamTokens>;
+    const {tokens} = affectedDocuments as IProvider<TGothamTokens>;
+
+    const channels = await gothamHandler.getLinearChannels();
+
+    const linear_channels = [];
+
+    for (const channel of Object.values(channels)) {
+      linear_channels.push({
+        id: channel.id,
+        name: channel.name,
+      });
+    }
 
     return c.html(<GothamBody channels={linear_channels} enabled={true} open={false} tokens={tokens} />);
   }
@@ -107,7 +129,18 @@ gotham.get('/tve-login/:link', async c => {
     {$set: {enabled: true}},
     {returnUpdatedDocs: true},
   );
-  const {linear_channels, tokens} = affectedDocuments as IProvider<TGothamTokens>;
+  const {tokens} = affectedDocuments as IProvider<TGothamTokens>;
+
+  const channels = await gothamHandler.getLinearChannels();
+
+  const linear_channels = [];
+
+  for (const channel of Object.values(channels)) {
+    linear_channels.push({
+      id: channel.id,
+      name: channel.name,
+    });
+  }
 
   // Kickoff event scheduler
   scheduleEvents();

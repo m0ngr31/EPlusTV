@@ -9,6 +9,7 @@ import {db} from './database';
 import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {okHttpUserAgent} from './user-agent';
 import {usesLinear} from './misc-db-service';
+import {IMSGChannel, IMSGChannelGroup, MSG_LINEAR, MSG_PERMISSIONS, YES_PERMISSIONS} from './gotham-channels';
 
 const API_KEY = [
   'G',
@@ -93,7 +94,10 @@ interface IAppConfig {
 interface IEntitlements {
   message: string;
   ovatToken: string;
+  dmaID: string;
   AccountServiceMessage: {
+    validityTill: number;
+    ovpSKU: string;
     [key: string]: string | number | boolean;
   }[];
 }
@@ -136,14 +140,6 @@ const JWTEncode = (header, payload, secretKey) => {
 
   return jwtSegments.join('.');
 };
-
-const CHANNEL_MAP = {
-  MSG: '057E6429-044F-49E6-9E97-64D617B4D3CD',
-  MSG2: 'F1DA3786-A8A2-4C3D-B18E-F400F9C6EE0B',
-  MSGSN: '6D250945-BB55-44D4-A5A9-3DF45DBE134E',
-  MSGSN2: '0135EBDF-184F-41FA-B36C-46CDA4FC9B33',
-  YES: 'BD50D13C-CC01-4518-AD42-B3EFACF1DBF5',
-} as const;
 
 const parseAirings = async (events: any[]) => {
   const useLinear = await usesLinear();
@@ -194,6 +190,8 @@ class GothamHandler {
   private access_token?: string;
   private entitlement_token?: string;
   private appConfig?: IAppConfig;
+  private dma_id?: string;
+  private entitlement_access: string[] = [];
 
   public device_id?: string;
   public auth_token?: string;
@@ -208,38 +206,6 @@ class GothamHandler {
     if (!setup) {
       await db.providers.insertAsync<IProvider<TGothamTokens>>({
         enabled: false,
-        linear_channels: [
-          {
-            enabled: true,
-            id: 'MSG',
-            name: 'MSG',
-            tmsId: '10979',
-          },
-          {
-            enabled: true,
-            id: 'MSGSN',
-            name: 'MSG Sportsnet HD',
-            tmsId: '15273',
-          },
-          {
-            enabled: true,
-            id: 'MSG2',
-            name: 'MSG2 HD',
-            tmsId: '70283',
-          },
-          {
-            enabled: true,
-            id: 'MSGSN2',
-            name: 'MSG Sportsnet 2 HD',
-            tmsId: '70285',
-          },
-          {
-            enabled: true,
-            id: 'YES',
-            name: 'Yes Network',
-            tmsId: '30017',
-          },
-        ],
         name: 'gotham',
         tokens: {},
       });
@@ -278,7 +244,9 @@ class GothamHandler {
       return;
     }
 
-    await this.authenticateRegCode();
+    if (this.adobe_token) {
+      await this.authenticateRegCode();
+    }
 
     // Refresh access token and entitlements
     await this.getAccessToken();
@@ -289,7 +257,7 @@ class GothamHandler {
       await this.getNewTokens();
     }
 
-    if (moment().isAfter(this.adobe_token_expires)) {
+    if (this.adobe_token_expires && moment().isAfter(this.adobe_token_expires)) {
       console.log('Refreshing Gotham Adobe token');
       const didUpdate = await this.authenticateRegCode();
 
@@ -320,63 +288,75 @@ class GothamHandler {
 
     try {
       if (useLinear) {
-        for (const channel of Object.keys(CHANNEL_MAP)) {
-          const url = [
-            BASE_API_URL,
-            '/content/epg',
-            '?reg=zone-1',
-            '&dt=androidtv',
-            '&channel=',
-            CHANNEL_MAP[channel],
-            '&client=game-gotham-androidtv',
-            '&start=',
-            now.format('YYYY-MM-DDTHH:mm:ss[Z]'),
-            '&end=',
-            end.format('YYYY-MM-DDTHH:mm:ss[Z]'),
-          ].join('');
+        if (this.dma_id) {
+          for (const channel of Object.values(MSG_LINEAR[this.dma_id])) {
+            if (
+              !channel ||
+              _.intersection(this.entitlement_access, channel.id === 'YES' ? YES_PERMISSIONS : MSG_PERMISSIONS)
+                .length === 0
+            ) {
+              continue;
+            }
 
-          const {data} = await axios.get(url, {
-            headers: {
-              'gg-rsn-id': this.appConfig.RSNid,
-              'user-agent': okHttpUserAgent,
-            },
-          });
+            const url = [
+              BASE_API_URL,
+              '/content/epg',
+              '?reg=',
+              this.dma_id,
+              '&dt=androidtv',
+              '&channel=',
+              channel.channelId,
+              '&client=game-gotham-androidtv',
+              '&start=',
+              now.format('YYYY-MM-DDTHH:mm:ss[Z]'),
+              '&end=',
+              end.format('YYYY-MM-DDTHH:mm:ss[Z]'),
+            ].join('');
 
-          data.data.forEach(d => {
-            d.airing.forEach(airing => {
-              const eventName = airing.pgm.lon[0].n.replace(/\n/g, '');
-
-              if (eventName !== 'NO PROGRAMMING - OFF AIR') {
-                entries.push({
-                  artwork: `https://image-resizer-cloud-cdn.api.gamecms.quickplay.com/image/${airing.cid}/3-16x9.png?width=400`,
-                  categories: [
-                    'Gotham',
-                    'HD',
-                    'Sports',
-                    airing.net || 'MSG',
-                    airing.aw_tm,
-                    airing.hm_tm,
-                    airing.pgm.spt_lg,
-                    airing.pgm.spt_ty,
-                  ],
-                  channel,
-                  contentId: `${airing.id}----${airing.cid}`,
-                  end: airing.sc_ed_dt,
-                  linear: true,
-                  network: airing.net,
-                  sport: airing.pgm.spt_lg,
-                  start: airing.sc_st_dt,
-                  title: eventName,
-                });
-              }
+            const {data} = await axios.get(url, {
+              headers: {
+                'gg-rsn-id': this.appConfig.RSNid,
+                'user-agent': okHttpUserAgent,
+              },
             });
-          });
+
+            data.data.forEach(d => {
+              d.airing.forEach(airing => {
+                const eventName = airing.pgm.lon[0].n.replace(/\n/g, '');
+
+                if (eventName !== 'NO PROGRAMMING - OFF AIR') {
+                  entries.push({
+                    artwork: `https://image-resizer-cloud-cdn.api.gamecms.quickplay.com/image/${airing.cid}/0-16x9.png?width=400`,
+                    categories: [
+                      'Gotham',
+                      'HD',
+                      'Sports',
+                      airing.net || 'MSG',
+                      airing.aw_tm,
+                      airing.hm_tm,
+                      airing.pgm.spt_lg,
+                      airing.pgm.spt_ty,
+                    ],
+                    channel: channel.id,
+                    contentId: `${airing.id}----${airing.cid}`,
+                    end: airing.sc_ed_dt,
+                    linear: true,
+                    network: airing.net,
+                    sport: airing.pgm.spt_lg,
+                    start: airing.sc_st_dt,
+                    title: eventName,
+                  });
+                }
+              });
+            });
+          }
         }
       } else {
         const url = [
           BASE_API_URL,
           '/content/liveevent/filter',
-          '?reg=zone-1',
+          '?reg=',
+          this.dma_id,
           '&dt=androidtv',
           '&client=game-gotham-androidtv',
           '&pageNumber=1',
@@ -396,10 +376,14 @@ class GothamHandler {
         });
 
         data.data.forEach(airing => {
+          if (!_.some(airing.ent, a => _.intersection(this.entitlement_access, a.sp).length > 0)) {
+            return;
+          }
+
           const eventName = airing.loen[0].n.replace(/\n/g, '');
 
           entries.push({
-            artwork: `https://image-resizer-cloud-cdn.api.gamecms.quickplay.com/image/${airing.cid}/3-16x9.png?width=400`,
+            artwork: `https://image-resizer-cloud-cdn.api.gamecms.quickplay.com/image/${airing.cid}/0-16x9.png?width=400`,
             categories: ['Gotham', 'HD', 'Sports', airing.net || 'MSG', airing.aw_tm, airing.hm_tm, airing.spt_lg],
             contentId: `${airing.id}----${airing.cid}`,
             end: airing.ev_ed_dt,
@@ -426,11 +410,15 @@ class GothamHandler {
 
       const network = event.network === 'YES' ? 'YESN' : 'MSGGO';
 
-      await this.pingAdobeAuth(network);
-
-      const mediaToken = await this.getAdobeMediaToken(network);
       const authToken = await this.getPlaybackToken();
       const deviceIdToken = await this.getDeviceIdToken(authToken);
+
+      let adobeMediaToken: string;
+
+      if (this.adobe_token) {
+        await this.pingAdobeAuth(network);
+        adobeMediaToken = await this.getAdobeMediaToken(network);
+      }
 
       const authUrl = [BASE_API_URL, '/media/content/authorize'].join('');
 
@@ -454,7 +442,9 @@ class GothamHandler {
             'content-type': 'application/json',
             'gg-rsn-id': this.appConfig.RSNid,
             'user-agent': okHttpUserAgent,
-            'x-adobe-authorization': mediaToken,
+            ...(adobeMediaToken && {
+              'x-adobe-authorization': adobeMediaToken,
+            }),
             'x-authorization': this.entitlement_token,
             'x-client-id': 'game-gotham-androidtv',
             'x-device-id': deviceIdToken,
@@ -587,13 +577,13 @@ class GothamHandler {
       return data.serializedToken;
     } catch (e) {
       console.error(e);
-      console.log('Could not ping Adobe');
+      console.log('Could not get Adobe Media token');
     }
   };
 
   private getAppConfig = async (): Promise<void> => {
     try {
-      const url = ['https://', 'config.gothamsports.com', '/Configurations/v1/build.json'].join('');
+      const url = ['https://', 'config.gothamsports.com', '/Configurations/v2/build.json'].join('');
 
       const {data} = await axios.get<IAppConfig>(url, {
         headers: {
@@ -719,6 +709,11 @@ class GothamHandler {
       }
 
       this.entitlement_token = data.GetEntitlementsResponseMessage.ovatToken;
+      this.dma_id = data.GetEntitlementsResponseMessage.dmaID;
+
+      this.entitlement_access = data.GetEntitlementsResponseMessage.AccountServiceMessage.filter(a =>
+        moment(a.validityTill).isAfter(moment()),
+      ).map(a => a.ovpSKU);
 
       return data.GetEntitlementsResponseMessage;
     } catch (e) {
@@ -880,12 +875,41 @@ class GothamHandler {
 
       await this.preAuthDevice();
       await this.addTVESubscription(adobeId, adobeUserMeta);
+      await this.getEntitlements();
 
       return true;
     } catch (e) {
       return false;
     }
   };
+
+  public getLinearChannels = _.throttle((): IMSGChannelGroup => {
+    const channelObj = _.cloneDeep(MSG_LINEAR[this.dma_id]);
+
+    if (!channelObj) {
+      return {};
+    }
+
+    for (const channelNum of Object.keys(channelObj)) {
+      const channel: IMSGChannel = channelObj[channelNum];
+
+      if (
+        !channel ||
+        _.intersection(this.entitlement_access, channel.id === 'YES' ? YES_PERMISSIONS : MSG_PERMISSIONS).length === 0
+      ) {
+        delete channelObj[channelNum];
+        continue;
+      }
+
+      channel.checkChannelEnabled = async () => {
+        const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'gotham'});
+
+        return enabled;
+      };
+    }
+
+    return channelObj;
+  }, 15 * 1000);
 
   private getAdobeId = async (): Promise<string> => {
     try {
@@ -988,7 +1012,7 @@ class GothamHandler {
   private save = async () => {
     await db.providers.updateAsync(
       {name: 'gotham'},
-      {$set: {tokens: _.omit(this, 'appConfig', 'access_token', 'entitlement_token')}},
+      {$set: {tokens: _.omit(this, 'appConfig', 'access_token', 'entitlement_token', 'dma_id', 'entitlement_access')}},
     );
   };
 

@@ -782,7 +782,7 @@ class EspnHandler {
       });
 
       if (!scenarios?.data?.airing?.source?.url.length || scenarios?.data?.airing?.status !== 'LIVE') {
-        console.log('Event status: ', scenarios?.data?.airing?.status);
+        // console.log('Event status: ', scenarios?.data?.airing?.status);
         throw new Error('No streaming data available');
       }
 
@@ -816,11 +816,14 @@ class EspnHandler {
         let token = this.adobe_device_id;
 
         let isEspn3isp = false;
-        if ((scenarios?.data?.airing?.network?.id === 'espn3') && await isEnabled('espn3isp')) {
+        if (scenarios?.data?.airing?.network?.id === 'espn3' && (await isEnabled('espn3isp'))) {
           isEspn3isp = true;
         }
 
-        if (!isEspn3isp && _.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')) {
+        if (
+          !isEspn3isp &&
+          _.some(scenarios?.data?.airing?.authTypes, (authType: string) => authType.toLowerCase() === 'mvpd')
+        ) {
           // Try to get the media token, but if it fails, let's just try device authentication
           try {
             await this.authorizeEvent(eventId, scenarios?.data?.airing?.mrss);
@@ -1204,7 +1207,7 @@ class EspnHandler {
 
       const query =
         'query Airings ( $countryCode: String!, $deviceType: DeviceType!, $tz: String!, $type: AiringType, $categories: [String], $networks: [String], $packages: [String], $eventId: String, $packageId: String, $start: String, $end: String, $day: String, $limit: Int ) { airings( countryCode: $countryCode, deviceType: $deviceType, tz: $tz, type: $type, categories: $categories, networks: $networks, packages: $packages, eventId: $eventId, packageId: $packageId, start: $start, end: $end, day: $day, limit: $limit ) { id airingId simulcastAiringId name type startDateTime shortDate: startDate(style: SHORT) authTypes adobeRSS duration feedName purchaseImage { url } image { url } network { id type abbreviation name shortName adobeResource isIpAuth } source { url authorizationType hasPassThroughAds hasNielsenWatermarks hasEspnId3Heartbeats commercialReplacement } packages { name } category { id name } subcategory { id name } sport { id name abbreviation code } league { id name abbreviation code } franchise { id name } program { id code categoryCode isStudio } tracking { nielsenCrossId1 nielsenCrossId2 comscoreC6 trackingId } } }';
-      const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"UPCOMING","networks":${networks},"packages":${packages},"limit":10}`;
+      const variables = `{"deviceType":"DESKTOP","countryCode":"US","tz":"UTC+0000","type":"REPLAY","networks":${networks},"packages":${packages},"limit":10}`;
 
       const {data: entryData} = await instance.get(
         encodeURI(
@@ -1212,35 +1215,63 @@ class EspnHandler {
         ),
       );
 
-      const apiKey = ['u','i','q','l','b','g','z','d','w','u','r','u','1','4','v','6','2','7','v','d','u','s','s','w','b'].join('');
+      const apiKey = [
+        'u',
+        'i',
+        'q',
+        'l',
+        'b',
+        'g',
+        'z',
+        'd',
+        'w',
+        'u',
+        'r',
+        'u',
+        '1',
+        '4',
+        'v',
+        '6',
+        '2',
+        '7',
+        'v',
+        'd',
+        'u',
+        's',
+        's',
+        'w',
+        'b',
+      ].join('');
+      const randomInt: number = Math.floor(Math.random() * entryData.data.airings.length);
       const eventUrl = [
         'https://',
         'watch.auth.api.espn.com',
         '/video/auth/',
         'media/',
-        entryData.data.airings[0].id,
+        entryData.data.airings[randomInt].id,
         '/asset',
         '?apikey=',
         apiKey,
       ].join('');
 
-      const {data} = await axios.post(eventUrl,
-        {
+      try {
+        const {data} = await axios.post(eventUrl, {
           headers: {
             'User-Agent': userAgent,
           },
-        },
-      );
+        });
 
-      if (data.stream) {
-        return true;
+        if (data.stream) {
+          console.log('Detected ISP access');
+          return true;
+        }
+      } catch (e) {
+        console.log('Did not detect ISP access');
       }
-
-      return false;
     } catch (e) {
-      console.error(e);
       console.log('Could not check ISP access');
     }
+    return false;
   };
 
   private getAppConfig = async () => {
