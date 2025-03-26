@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.8.3**
+Current version: **4.8.4**
 
 # About
 This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, Northern Sun, KBO, Victory+, NHL.tv, FloSports, LOVB Live, PWHL, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -187,6 +187,8 @@ Available to login with MLB.tv credentials
 |---|---|
 | Big Inning | Will create a dedicated linear channel if using dedicated linear channels, otherwise will schedule Big Inning normally |
 | MLB Network | Only available if you have MLB Network as part of your MLB.tv account or have linked TVE Provider that provides access |
+| SNY | Only available if you have SNY as part of your MLB.tv account or have linked TVE Provider that provides access |
+| SNLA | Only available if you have SNLA+ as part of your MLB.tv account or have linked TVE Provider that provides access |
 
 #### NHL.tv
 

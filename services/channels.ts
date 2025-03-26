@@ -143,11 +143,7 @@ export const CHANNELS = {
         tvgName: 'NFLDC1',
       },
       40: {
-        checkChannelEnabled: async (): Promise<boolean> => {
-          const {linear_channels, meta} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
-
-          return linear_channels[0].enabled && !meta.onlyFree;
-        },
+        checkChannelEnabled: () => checkChannelEnabled('mlbtv', 'MLBTVBI'),
         id: 'MLBTVBI',
         logo: 'https://tmsimg.fancybits.co/assets/s119153_ll_h15_aa.png?w=360&h=270',
         name: 'MLB Big Inning',
@@ -161,6 +157,22 @@ export const CHANNELS = {
         name: 'MLB Network',
         stationId: '62079',
         tvgName: 'MLBN',
+      },
+      42: {
+        checkChannelEnabled: () => checkChannelEnabled('mlbtv', 'SNY'),
+        id: 'SNY',
+        logo: 'https://tmsimg.fancybits.co/assets/s49603_ll_h9_aa.png?w=360&h=270',
+        name: 'SportsNet New York',
+        stationId: '49603',
+        tvgName: 'SNY',
+      },
+      43: {
+        checkChannelEnabled: () => checkChannelEnabled('mlbtv', 'SNLA'),
+        id: 'SNLA',
+        logo: 'https://tmsimg.fancybits.co/assets/s87024_ll_h15_aa.png?w=360&h=270',
+        name: 'Spectrum SportsNet LA HD',
+        stationId: '87024',
+        tvgName: 'SNLA',
       },
       50: {
         checkChannelEnabled: () => checkChannelEnabled('nesn', 'NESN'),

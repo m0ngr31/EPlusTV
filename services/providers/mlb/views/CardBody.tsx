@@ -17,6 +17,31 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels}) =>
     return <></>;
   }
 
+  const allEnabled = channels.filter(a => a.enabled).length === channels.length;
+
+  const linkMap = [
+    {},
+    {
+      btnText: 'Check TVE Access',
+      hintText: 'Enable with TVE Provider',
+      link: 'https://www.mlb.com/login?campaignCode=mlbn2&redirectUri=/app/atbat/network/live&affiliateId=mlbapp-android_webview',
+      network: 'mlbn',
+      toolTipText: 'Only if your TVE Provider has MLB Network',
+    },
+    {
+      btnText: 'Check SNY Access',
+      hintText: 'Enable with MLB.tv',
+      link: 'https://www.mlb.com/commerce/mvpd/sny/link',
+      network: 'sny',
+    },
+    {
+      btnText: 'Check SNLA Access',
+      hintText: 'Enable with MLB.tv',
+      link: 'https://www.mlb.com/commerce/mvpd/getdodgers',
+      network: 'snla',
+    },
+  ];
+
   return (
     <div hx-swap="outerHTML" hx-target="this">
       <summary>
@@ -27,7 +52,7 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels}) =>
           <tr>
             <th></th>
             <th scope="col">Name</th>
-            {!channels[0].enabled && (
+            {!allEnabled && (
               <>
                 <th scope="col">Notes</th>
                 <th scope="col">Action</th>
@@ -36,7 +61,7 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels}) =>
           </tr>
         </thead>
         <tbody>
-          {channels.map(c => (
+          {channels.map((c, i) => (
             <tr key={c.id}>
               <td>
                 <input
@@ -47,38 +72,55 @@ export const MlbBody: FC<IMLBBodyProps> = ({enabled, tokens, open, channels}) =>
                 />
               </td>
               <td>{c.name}</td>
-              {!c.enabled && (
+              {!c.enabled ? (
                 <>
-                  <td>
-                    <a
-                      href="https://www.mlb.com/login?campaignCode=mlbn2&redirectUri=/app/atbat/network/live&affiliateId=mlbapp-android_webview"
-                      target="_blank"
-                    >
-                      Enable with TVE Provider
-                    </a>
-                    <span class="warning-red" data-tooltip="Only if your TVE Provider has MLB Network">
-                      **
-                    </span>
-                  </td>
-                  <td>
-                    <form hx-trigger="submit" hx-put="/providers/mlbtv/mlbn-access" id="mlbtv-mlbn">
-                      <button id="mlbtv-check-mlbn">Check TVE Access</button>
-                    </form>
-                    <script
-                      dangerouslySetInnerHTML={{
-                        __html: `
-                          var recheckMlbNetworkAccess = document.getElementById('mlbtv-mlbn');
+                  {linkMap[i].link ? (
+                    <>
+                      <td>
+                        <a href={linkMap[i].link} target="_blank">
+                          {linkMap[i].hintText}
+                        </a>
+                        {linkMap[i].toolTipText && (
+                          <span class="warning-red" data-tooltip={linkMap[i].toolTipText}>
+                            **
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <form
+                          hx-trigger="submit"
+                          hx-put={`/providers/mlbtv/${linkMap[i].network}-access`}
+                          id={`mlbtv-${linkMap[i].network}`}
+                        >
+                          <button id={`mlbtv-check-${linkMap[i].network}`}>{linkMap[i].btnText}</button>
+                        </form>
+                        <script
+                          dangerouslySetInnerHTML={{
+                            __html: `
+                              var recheck${linkMap[i].network}Access = document.getElementById('mlbtv-${linkMap[i].network}');
 
-                          if (recheckMlbNetworkAccess) {
-                            recheckMlbNetworkAccess.addEventListener('htmx:beforeRequest', function() {
-                              this.querySelector('#mlbtv-check-mlbn').setAttribute('aria-busy', 'true');
-                              this.querySelector('#mlbtv-check-mlbn').setAttribute('aria-label', 'Loading…');
-                            });
-                          }
-                        `,
-                      }}
-                    />
-                  </td>
+                              if (recheck${linkMap[i].network}Access) {
+                                recheck${linkMap[i].network}Access.addEventListener('htmx:beforeRequest', function() {
+                                  this.querySelector('#mlbtv-check-${linkMap[i].network}').setAttribute('aria-busy', 'true');
+                                  this.querySelector('#mlbtv-check-${linkMap[i].network}').setAttribute('aria-label', 'Loading…');
+                                });
+                              }
+                            `,
+                          }}
+                        />
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>Unlock with a full subscription on MLB.tv</td>
+                      <td></td>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <td></td>
+                  <td></td>
                 </>
               )}
             </tr>

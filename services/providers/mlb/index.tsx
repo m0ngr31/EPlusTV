@@ -81,7 +81,35 @@ mlbtv.put('/mlbn-access', async c => {
   const {linear_channels: originalChannels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
   const updatedValue = await mlbHandler.recheckMlbNetworkAccess();
 
-  if (updatedValue && !originalChannels[0].enabled) {
+  if (updatedValue && !originalChannels[1].enabled) {
+    await mlbHandler.getSchedule();
+    await scheduleEntries();
+  }
+
+  const {enabled, tokens, linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
+
+  return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
+});
+
+mlbtv.put('/sny-access', async c => {
+  const {linear_channels: originalChannels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
+  const updatedValue = await mlbHandler.recheckSnyAccess();
+
+  if (updatedValue && !originalChannels[2].enabled) {
+    await mlbHandler.getSchedule();
+    await scheduleEntries();
+  }
+
+  const {enabled, tokens, linear_channels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
+
+  return c.html(<MlbBody enabled={enabled} tokens={tokens} channels={linear_channels} />);
+});
+
+mlbtv.put('/snla-access', async c => {
+  const {linear_channels: originalChannels} = await db.providers.findOneAsync<IProvider>({name: 'mlbtv'});
+  const updatedValue = await mlbHandler.recheckSnyAccess();
+
+  if (updatedValue && !originalChannels[3].enabled) {
     await mlbHandler.getSchedule();
     await scheduleEntries();
   }

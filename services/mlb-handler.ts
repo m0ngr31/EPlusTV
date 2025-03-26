@@ -53,6 +53,38 @@ interface IMLBNetworkEvent {
   endtime: string;
 }
 
+type TSNYEvent = [string, string, string, string, string];
+
+interface ISNYSchedule {
+  [key: string]: {
+    title: string;
+    data: {
+      rows: TSNYEvent[];
+    };
+  };
+}
+
+interface ISNLAProgram {
+  thumbnail: string;
+  title: string;
+}
+
+interface ISNLAEvent {
+  startTime: number;
+  endTime: number;
+  programId: string;
+  id: string;
+}
+
+interface ISNLAEventCombined extends ISNLAEvent, ISNLAProgram {}
+
+interface ISNLAScheduleRes {
+  programs: {
+    [key: string]: ISNLAProgram;
+  };
+  events: ISNLAEvent[];
+}
+
 interface ITeam {
   team: {
     name: string;
@@ -127,6 +159,35 @@ const CLIENT_ID = [
   '5',
   '6',
 ].join('');
+
+const GRAPHQL_URL = ['https://', 'media-gateway.mlb.com', '/graphql'].join('');
+
+const LINEAR_CHANNELS = [
+  {
+    enabled: false,
+    id: 'MLBTVBI',
+    name: 'MLB Big Inning',
+    tmsId: '119153',
+  },
+  {
+    enabled: false,
+    id: 'MLBN',
+    name: 'MLB Network',
+    tmsId: '62079',
+  },
+  {
+    enabled: false,
+    id: 'SNY',
+    name: 'SportsNet New York',
+    stationId: '49603',
+  },
+  {
+    enabled: false,
+    id: 'SNLA',
+    name: 'Spectrum SportsNet LA HD',
+    stationId: '87024',
+  },
+];
 
 const parseDateAndTime = (dateString: string, timeString: string): Moment => {
   // Combine date and time strings
@@ -280,6 +341,85 @@ const parseMlbNetwork = async (events: IMLBNetworkEvent[]): Promise<void> => {
   }
 };
 
+const parseSny = async (events: TSNYEvent[]): Promise<void> => {
+  const [now, endDate] = normalTimeRange();
+
+  for (const event of events) {
+    const [, date, startTime, endTime, name] = event;
+
+    const eventStart = moment.tz(`${date} ${startTime}`, 'MM/DD/YYYY hh:mm A', 'America/New_York').startOf('minute');
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `SNY - ${eventStart.valueOf()}`});
+
+    if (!entryExists) {
+      const start = moment(eventStart);
+      const end = moment.tz(`${date} ${endTime}`, 'MM/DD/YYYY hh:mm A', 'America/New_York').startOf('minute');
+
+      if (startTime.includes('PM') && endTime.includes('AM')) {
+        end.add(1, 'day');
+      }
+
+      const duration = moment.duration(end.diff(start)).asSeconds();
+
+      if (end.isBefore(now) || start.isAfter(endDate)) {
+        continue;
+      }
+
+      console.log('Adding event: ', name);
+
+      await db.entries.insertAsync<IEntry>({
+        categories: ['SNY'],
+        channel: 'SNY',
+        duration,
+        end: end.valueOf(),
+        from: 'mlbtv',
+        id: `SNY - ${eventStart.valueOf()}`,
+        image: 'https://tmsimg.fancybits.co/assets/s49603_ll_h9_aa.png?w=360&h=270',
+        linear: true,
+        name,
+        network: 'SNY',
+        sport: 'MLB',
+        start: start.valueOf(),
+      });
+    }
+  }
+};
+
+const parseSnla = async (events: ISNLAEventCombined[]): Promise<void> => {
+  const [now, endDate] = normalTimeRange();
+
+  for (const event of events) {
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `SNLA - ${event.startTime}`});
+
+    if (!entryExists) {
+      const start = moment(event.startTime);
+      const end = moment(event.endTime);
+
+      const duration = moment.duration(end.diff(start)).asSeconds();
+
+      if (end.isBefore(now) || start.isAfter(endDate)) {
+        continue;
+      }
+
+      console.log('Adding event: ', event.title);
+
+      await db.entries.insertAsync<IEntry>({
+        categories: ['SNLA'],
+        channel: 'SNLA',
+        duration,
+        end: end.valueOf(),
+        from: 'mlbtv',
+        id: `SNLA - ${event.startTime}`,
+        image: event.thumbnail,
+        linear: true,
+        name: event.title,
+        network: 'SNLA',
+        sport: 'MLB',
+        start: start.valueOf(),
+      });
+    }
+  }
+};
+
 const COMMON_HEADERS = {
   'cache-control': 'no-cache',
   origin: 'https://www.mlb.com',
@@ -325,14 +465,7 @@ class MLBHandler {
 
       await db.providers.insertAsync<IProvider<TMLBTokens, IProviderMeta>>({
         enabled: useMLBtv,
-        linear_channels: [
-          {
-            enabled: useMLBtv && !useMLBtvOnlyFree,
-            id: 'MLBTVBI',
-            name: 'MLB Big Inning',
-            tmsId: '119153',
-          },
-        ],
+        linear_channels: LINEAR_CHANNELS,
         meta: {
           onlyFree: useMLBtvOnlyFree,
         },
@@ -359,6 +492,18 @@ class MLBHandler {
     }
 
     await this.load();
+
+    // Fix for me being a silly goose!
+    const {linear_channels} = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
+
+    if (linear_channels.length < 4) {
+      await db.providers.updateAsync({name: 'mlbtv'}, {$set: {linear_channels: LINEAR_CHANNELS}});
+
+      await this.checkMlbBigInningAccess();
+      await this.checkMlbNetworkAccess();
+      await this.checkSnyAccess();
+      await this.checkSnlaAccess();
+    }
   };
 
   public refreshTokens = async () => {
@@ -374,7 +519,7 @@ class MLBHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {meta, enabled} = await db.providers.findOneAsync<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+    const {enabled} = await db.providers.findOneAsync<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
 
     if (!enabled) {
       return;
@@ -415,16 +560,32 @@ class MLBHandler {
 
       await parseAirings(combinedEntries);
 
-      if (!meta.onlyFree) {
+      const bigInningsEnabled = await this.checkMlbBigInningAccess();
+
+      if (bigInningsEnabled) {
         const bigInnings = await this.getBigInnings();
         await parseBigInnings(bigInnings);
+      }
 
-        const mlbNetworkEnabled = await this.checkMlbNetworkAccess();
+      const mlbNetworkEnabled = await this.checkMlbNetworkAccess();
 
-        if (mlbNetworkEnabled) {
-          const mlbNetworkSchedule = await this.getMlbNetworkSchedule();
-          await parseMlbNetwork(mlbNetworkSchedule);
-        }
+      if (mlbNetworkEnabled) {
+        const mlbNetworkSchedule = await this.getMlbNetworkSchedule();
+        await parseMlbNetwork(mlbNetworkSchedule);
+      }
+
+      const snyEnabled = await this.checkSnyAccess();
+
+      if (snyEnabled) {
+        const snyEvents = await this.getSnySchedule();
+        await parseSny(snyEvents);
+      }
+
+      const snlaEnabled = await this.checkSnlaAccess();
+
+      if (snlaEnabled) {
+        const snlaEvents = await this.getSnlaSchedule();
+        await parseSnla(snlaEvents);
       }
     } catch (e) {
       console.error(e);
@@ -445,19 +606,11 @@ class MLBHandler {
         const streamUrl = await this.getMlbNetworkStream();
 
         return [streamUrl, {}];
+      } else if (mediaId.indexOf('SNY - ') > -1) {
+        return this.getStream('SNY_LIVE');
+      } else if (mediaId.indexOf('SNLA - ') > -1) {
+        return this.getStream('SNLA_LIVE');
       }
-
-      const url = 'https://media-gateway.mlb.com/graphql';
-      const headers = {
-        accept: 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate, br',
-        'accept-language': 'en-US,en;q=0.5',
-        authorization: 'Bearer ' + this.access_token,
-        connection: 'keep-alive',
-        'content-type': 'application/json',
-        'x-client-name': 'WEB',
-        'x-client-version': '7.8.1',
-      };
 
       const params = {
         operationName: 'initPlaybackSession',
@@ -472,10 +625,10 @@ class MLBHandler {
         },
       };
 
-      const {data} = await axios.post(url, params, {
+      const {data} = await axios.post(GRAPHQL_URL, params, {
         headers: {
           ...COMMON_HEADERS,
-          ...headers,
+          ...this.getGraphQlHeaders(),
         },
       });
 
@@ -503,6 +656,41 @@ class MLBHandler {
   public recheckMlbNetworkAccess = async (): Promise<boolean> => {
     await this.getSession();
     return await this.checkMlbNetworkAccess();
+  };
+
+  public recheckSnyAccess = async (): Promise<boolean> => {
+    await this.getSession();
+    return await this.checkSnyAccess();
+  };
+
+  public recheckSnlaAccess = async (): Promise<boolean> => {
+    await this.getSession();
+    return await this.checkSnlaAccess();
+  };
+
+  private updateChannelAccess = async (index: number, enabled: boolean): Promise<void> => {
+    const {linear_channels} = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
+
+    const updatedChannels = linear_channels.map((c, i) => {
+      if (i !== index) {
+        return c;
+      }
+
+      c.enabled = enabled;
+      return c;
+    });
+
+    await db.providers.updateAsync({name: 'mlbtv'}, {$set: {linear_channels: updatedChannels}});
+  };
+
+  private checkMlbBigInningAccess = async (): Promise<boolean> => {
+    const {meta} = await db.providers.findOneAsync<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+
+    const enabled = !meta.onlyFree;
+
+    await this.updateChannelAccess(0, enabled);
+
+    return enabled;
   };
 
   private getBigInningInfo = async (): Promise<string> => {
@@ -594,21 +782,7 @@ class MLBHandler {
       enabled = true;
     }
 
-    await db.providers.updateAsync(
-      {name: 'mlbtv'},
-      {
-        $set: {
-          linear_channels: [
-            {
-              enabled,
-              id: 'MLBN',
-              name: 'MLB Network',
-              tmsId: '62079',
-            },
-          ],
-        },
-      },
-    );
+    await this.updateChannelAccess(1, enabled);
 
     return enabled;
   };
@@ -647,6 +821,147 @@ class MLBHandler {
       console.error(e);
       console.log('Could not get MLB Network stream info');
     }
+  };
+
+  private checkSnyAccess = async (): Promise<boolean> => {
+    if (!this.entitlements) {
+      await this.getSession();
+    }
+
+    const useLinear = await usesLinear();
+
+    let enabled = false;
+
+    if (this.entitlements?.some(n => n.code === 'SNY_121') && useLinear) {
+      enabled = true;
+    }
+
+    await this.updateChannelAccess(2, enabled);
+
+    return enabled;
+  };
+
+  private getSnySchedule = async (): Promise<TSNYEvent[]> => {
+    let events: TSNYEvent[] = [];
+
+    try {
+      const url = ['https://', 'production-api.sny.tv', '/production/', 'api/cms', '/schedule'].join('');
+
+      const {data} = await axios.get<{schedule: ISNYSchedule}>(url, {
+        headers: {
+          'user-agent': userAgent,
+        },
+      });
+
+      const [now] = normalTimeRange();
+
+      for (const addDay of [0, 1, 2]) {
+        const momentDate = moment(now).add(addDay, 'day');
+        const formattedDate = momentDate.format('MM/DD/YYYY');
+
+        const scheduleDay = data.schedule[formattedDate];
+
+        if (scheduleDay) {
+          events = [...events, ...scheduleDay.data.rows];
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get SNY schedule');
+    }
+
+    return events;
+  };
+
+  private getStream = async (network: string): Promise<TChannelPlaybackInfo> => {
+    try {
+      const params = {
+        operationName: 'contentCollections',
+        query:
+          'query contentCollections(\n        $categories: [ContentGroupCategory!]\n        $includeRestricted: Boolean = false\n        $includeSpoilers: Boolean = false\n        $limit: Int = 10,\n        $skip: Int = 0\n    ) {\n        contentCollections(\n            categories: $categories\n            includeRestricted: $includeRestricted\n            includeSpoilers: $includeSpoilers\n            limit: $limit\n            skip: $skip\n        ) {\n            title\n            category\n            contents {\n                assetTrackingKey\n                contentDate\n                contentId\n                contentRestrictions\n                description\n                duration\n                language\n                mediaId\n                officialDate\n                title\n                mediaState {\n                    state\n                    mediaType\n                }\n                thumbnails {\n                    thumbnailType\n                    templateUrl\n                    thumbnailUrl\n                }\n            }\n        }\n    }',
+        variables: {
+          categories: [network],
+          limit: 25,
+        },
+      };
+      const {data} = await axios.post(GRAPHQL_URL, params, {
+        headers: {
+          ...COMMON_HEADERS,
+          ...this.getGraphQlHeaders(),
+        },
+      });
+
+      const availableStreams = data?.data?.contentCollections?.[0]?.contents;
+
+      if (availableStreams.length > 0) {
+        const liveStream = availableStreams.find(a => a.mediaState?.state === 'ON');
+
+        if (liveStream) {
+          return this.getEventData(liveStream.mediaId);
+        } else {
+          return this.getEventData(availableStreams[0].mediaId);
+        }
+      }
+
+      throw new Error('Could not find SNY stream!');
+    } catch (e) {
+      console.error(e);
+      console.log('Could not find SNY stream!');
+    }
+  };
+
+  private checkSnlaAccess = async (): Promise<boolean> => {
+    if (!this.entitlements) {
+      await this.getSession();
+    }
+
+    const useLinear = await usesLinear();
+
+    let enabled = false;
+
+    if (this.entitlements?.some(n => n.code === 'SNLA_119') && useLinear) {
+      enabled = true;
+    }
+
+    await this.updateChannelAccess(3, enabled);
+
+    return enabled;
+  };
+
+  private getSnlaSchedule = async (): Promise<ISNLAEventCombined[]> => {
+    const snlaEvents: ISNLAEventCombined[] = [];
+
+    try {
+      const url = [
+        'https://',
+        'spectrumsportsnet.com',
+        '/services/sports',
+        '/v1/schedule-data',
+        '.networkId_87024',
+      ].join('');
+
+      const {data} = await axios.get<{87024: ISNLAScheduleRes}>(url, {
+        headers: {
+          'user-agent': userAgent,
+        },
+      });
+
+      const {programs, events} = data[87024];
+
+      events.forEach(e => {
+        if (programs[e.programId]) {
+          snlaEvents.push({
+            ...e,
+            ...programs[e.programId],
+          });
+        }
+      });
+    } catch (e) {
+      console.error(e);
+      console.log('Could not get SNLA schedule');
+    }
+
+    return snlaEvents;
   };
 
   private getEvents = async (): Promise<any[]> => {
@@ -771,6 +1086,8 @@ class MLBHandler {
 
       await this.save();
       await this.recheckMlbNetworkAccess();
+      await this.checkSnyAccess();
+      await this.checkSnlaAccess();
 
       return true;
     } catch (e) {
@@ -807,18 +1124,6 @@ class MLBHandler {
 
   private getSession = async (): Promise<void> => {
     try {
-      const url = 'https://media-gateway.mlb.com/graphql';
-      const headers = {
-        accept: 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate, br',
-        'accept-language': 'en-US,en;q=0.5',
-        authorization: 'Bearer ' + this.access_token,
-        connection: 'keep-alive',
-        'content-type': 'application/json',
-        'x-client-name': 'WEB',
-        'x-client-version': '7.8.1',
-      };
-
       const params = {
         operationName: 'initSession',
         query:
@@ -838,10 +1143,10 @@ class MLBHandler {
         },
       };
 
-      const {data} = await axios.post(url, params, {
+      const {data} = await axios.post(GRAPHQL_URL, params, {
         headers: {
           ...COMMON_HEADERS,
-          ...headers,
+          ...this.getGraphQlHeaders(),
         },
       });
 
@@ -852,6 +1157,17 @@ class MLBHandler {
       console.log('Could not get session id');
     }
   };
+
+  private getGraphQlHeaders = () => ({
+    accept: 'application/json, text/plain, */*',
+    'accept-encoding': 'gzip, deflate, br',
+    'accept-language': 'en-US,en;q=0.5',
+    authorization: 'Bearer ' + this.access_token,
+    connection: 'keep-alive',
+    'content-type': 'application/json',
+    'x-client-name': 'WEB',
+    'x-client-version': '7.8.1',
+  });
 
   private save = async () => {
     await db.providers.updateAsync(
