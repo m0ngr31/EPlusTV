@@ -871,7 +871,7 @@ class NflHandler {
       return [code, otherAuth];
     } catch (e) {
       console.error(e);
-      console.log('Could not start the authentication process for Fox Sports!');
+      console.log('Could not start the authentication process for NFL!');
     }
   };
 
