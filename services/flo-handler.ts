@@ -292,7 +292,7 @@ class FloSportsHandler {
       return data.activation_code;
     } catch (e) {
       console.error(e);
-      console.log('Could not start the authentication process for Fox Sports!');
+      console.log('Could not start the authentication process for FloSports!');
     }
   };
 

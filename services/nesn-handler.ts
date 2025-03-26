@@ -152,7 +152,7 @@ const BASIC_AUTH_TOKEN = [
   '=',
 ].join('');
 
-const SHORT_AUTH = ['s', 'k', '_', 'N', 'p', '1', 'q', 'v', 'y', 'U', 'g', 'F', 'a', 'G', 'j', '5', 'Y', '4', 'c'].join(
+const SHORT_AUTH = ['s', 'k', '_', '8', 'h', 'c', '4', 'w', 'I', 'o', '5', 'X', 'c', 'y', 'G', 'h', 'a', 'Q', '1'].join(
   '',
 );
 
@@ -761,7 +761,7 @@ class NesnHandler {
         {
           domain: 'tv.nesn.com',
           expiredURL: 'https://support.nesn.com',
-          originalURL: `https://nesn.com/watch/authenticate/${adobeReggieCode}/${code}`,
+          originalURL: `https://nesn.com/watch/authenticate/${adobeReggieCode}/${code}/googletv`,
         },
         {
           headers: {
@@ -776,7 +776,7 @@ class NesnHandler {
       return [authUrl, code, adobeReggieCode];
     } catch (e) {
       console.error(e);
-      console.log('Could not start the authentication process for Fox Sports!');
+      console.log('Could not start the authentication process for NESN!');
     }
   };
 
