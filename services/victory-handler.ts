@@ -33,7 +33,7 @@ const DEVICE_INFO = {
   screenResW: 3840,
 };
 
-const ALLOWED_SERIES = ['66', '67', '99'];
+const ALLOWED_SERIES = ['66', '67', '99', '128', '139'];
 
 const fillEvent = (event: IVictoryEvent): [string, string[]] => {
   let sport = '';
@@ -62,7 +62,8 @@ const parseAirings = async (events: IVictoryEvent[]) => {
       !event.id ||
       !ALLOWED_SERIES.includes(event.seriesId) ||
       (event.seriesId === '66' && !meta.stars) ||
-      (event.seriesId === '67' && !meta.ducks)
+      (event.seriesId === '67' && !meta.ducks) ||
+      (event.seriesId === '128' && !meta.rangers)
     ) {
       continue;
     }
@@ -116,6 +117,7 @@ class VictoryHandler {
         enabled: false,
         meta: {
           ducks: false,
+          rangers: false,
           stars: false,
         },
         name: 'victory',

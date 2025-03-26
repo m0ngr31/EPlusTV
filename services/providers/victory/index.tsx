@@ -49,6 +49,21 @@ victory.put('/toggle-stars', async c => {
   return c.html(<VictoryBody enabled={enabled} tokens={tokens} />);
 });
 
+victory.put('/toggle-rangers', async c => {
+  const body = await c.req.parseBody();
+  const rangers = body['victory-rangers-enabled'] === 'on';
+
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TVictoryTokens>, any>(
+    {name: 'victory'},
+    {$set: {meta: {ducks: false, rangers}}},
+    {returnUpdatedDocs: true},
+  );
+  const {enabled, tokens} = affectedDocuments as IProvider<TVictoryTokens>;
+  scheduleEvents();
+
+  return c.html(<VictoryBody enabled={enabled} tokens={tokens} />);
+});
+
 victory.put('/toggle-ducks', async c => {
   const body = await c.req.parseBody();
   const ducks = body['victory-ducks-enabled'] === 'on';

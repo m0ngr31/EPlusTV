@@ -10,8 +10,7 @@ export const Victory: FC = async () => {
   const victory = await db.providers.findOneAsync<IProvider<TVictoryTokens>>({name: 'victory'});
   const enabled = victory?.enabled;
   const tokens = victory?.tokens;
-  const stars = victory.meta?.stars;
-  const ducks = victory.meta?.ducks;
+  const {stars, ducks, rangers} = victory.meta;
 
   return (
     <div>
@@ -35,21 +34,38 @@ export const Victory: FC = async () => {
           </fieldset>
         </div>
         <div class="grid-container">
-          <fieldset>
-            <label>
-              Dallas Stars?&nbsp;&nbsp;
-              <input
-                hx-put={`/providers/victory/toggle-stars`}
-                hx-trigger="change"
-                name="victory-stars-enabled"
-                hx-target="#victory-body"
-                type="checkbox"
-                role="switch"
-                checked={stars ? true : false}
-                data-enabled={stars ? 'true' : 'false'}
-              />
-            </label>
-          </fieldset>
+          <div>
+            <fieldset>
+              <label>
+                Dallas Stars?&nbsp;&nbsp;
+                <input
+                  hx-put={`/providers/victory/toggle-stars`}
+                  hx-trigger="change"
+                  name="victory-stars-enabled"
+                  hx-target="#victory-body"
+                  type="checkbox"
+                  role="switch"
+                  checked={stars ? true : false}
+                  data-enabled={stars ? 'true' : 'false'}
+                />
+              </label>
+            </fieldset>
+            <fieldset>
+              <label>
+                Texas Rangers?&nbsp;&nbsp;
+                <input
+                  hx-put={`/providers/victory/toggle-rangers`}
+                  hx-trigger="change"
+                  name="victory-rangers-enabled"
+                  hx-target="#victory-body"
+                  type="checkbox"
+                  role="switch"
+                  checked={rangers ? true : false}
+                  data-enabled={rangers ? 'true' : 'false'}
+                />
+              </label>
+            </fieldset>
+          </div>
           <fieldset>
             <label>
               Anaheim Ducks?&nbsp;&nbsp;
