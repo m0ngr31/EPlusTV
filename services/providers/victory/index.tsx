@@ -40,7 +40,7 @@ victory.put('/toggle-stars', async c => {
 
   const {affectedDocuments} = await db.providers.updateAsync<IProvider<TVictoryTokens>, any>(
     {name: 'victory'},
-    {$set: {meta: {ducks: false, stars}}},
+    {$set: {'meta.stars': stars}},
     {returnUpdatedDocs: true},
   );
   const {enabled, tokens} = affectedDocuments as IProvider<TVictoryTokens>;
@@ -55,7 +55,7 @@ victory.put('/toggle-rangers', async c => {
 
   const {affectedDocuments} = await db.providers.updateAsync<IProvider<TVictoryTokens>, any>(
     {name: 'victory'},
-    {$set: {meta: {ducks: false, rangers}}},
+    {$set: {'meta.rangers': rangers}},
     {returnUpdatedDocs: true},
   );
   const {enabled, tokens} = affectedDocuments as IProvider<TVictoryTokens>;
@@ -70,7 +70,22 @@ victory.put('/toggle-ducks', async c => {
 
   const {affectedDocuments} = await db.providers.updateAsync<IProvider<TVictoryTokens>, any>(
     {name: 'victory'},
-    {$set: {meta: {ducks, stars: false}}},
+    {$set: {'meta.ducks': ducks}},
+    {returnUpdatedDocs: true},
+  );
+  const {enabled, tokens} = affectedDocuments as IProvider<TVictoryTokens>;
+  scheduleEvents();
+
+  return c.html(<VictoryBody enabled={enabled} tokens={tokens} />);
+});
+
+victory.put('/toggle-blues', async c => {
+  const body = await c.req.parseBody();
+  const blues = body['victory-blues-enabled'] === 'on';
+
+  const {affectedDocuments} = await db.providers.updateAsync<IProvider<TVictoryTokens>, any>(
+    {name: 'victory'},
+    {$set: {'meta.blues': blues}},
     {returnUpdatedDocs: true},
   );
   const {enabled, tokens} = affectedDocuments as IProvider<TVictoryTokens>;
