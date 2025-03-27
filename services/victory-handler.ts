@@ -33,17 +33,26 @@ const DEVICE_INFO = {
   screenResW: 3840,
 };
 
-const ALLOWED_SERIES = ['66', '67', '99', '128', '139'];
+const ALLOWED_SERIES = ['66', '67', '68', '97', '99', '128', '139', '140', '141', '142'];
 
 const fillEvent = (event: IVictoryEvent): [string, string[]] => {
   let sport = '';
   const categories = ['Victory+'];
+  const seriesId = event.seriesId;
 
-  if (event.seriesId === '66' || event.seriesId === '67') {
-    // Stars or Ducks game
+  if (seriesId === '66' || seriesId === '67' || seriesId === '68') {
+    // Stars or Ducks or Blues game
     sport = 'Hockey';
     categories.push('Hockey', 'NHL');
-  } else if (event.seriesId === '99') {
+  } else if (seriesId === '140' || seriesId === '141' || seriesId === '142') {
+    // WHL
+    sport = 'Hockey';
+    categories.push('Hockey', 'WHL')
+  } else if (seriesId === '97') {
+    // Premier Lacrosse League
+    sport = 'Lacrosse';
+    categories.push('PLL');
+  } else if (seriesId === '99') {
     // Major Arena Soccer League
     sport = 'Soccer';
     categories.push('Soccer', 'MASL');
@@ -63,6 +72,7 @@ const parseAirings = async (events: IVictoryEvent[]) => {
       !ALLOWED_SERIES.includes(event.seriesId) ||
       (event.seriesId === '66' && !meta.stars) ||
       (event.seriesId === '67' && !meta.ducks) ||
+      (event.seriesId === '68' && !meta.blues) ||
       (event.seriesId === '128' && !meta.rangers)
     ) {
       continue;
@@ -119,6 +129,7 @@ class VictoryHandler {
           ducks: false,
           rangers: false,
           stars: false,
+          blues: false,
         },
         name: 'victory',
         tokens: data,

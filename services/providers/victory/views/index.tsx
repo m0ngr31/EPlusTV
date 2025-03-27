@@ -10,7 +10,7 @@ export const Victory: FC = async () => {
   const victory = await db.providers.findOneAsync<IProvider<TVictoryTokens>>({name: 'victory'});
   const enabled = victory?.enabled;
   const tokens = victory?.tokens;
-  const {stars, ducks, rangers} = victory.meta;
+  const {stars, ducks, rangers, blues} = victory.meta;
 
   return (
     <div>
@@ -66,21 +66,40 @@ export const Victory: FC = async () => {
               </label>
             </fieldset>
           </div>
-          <fieldset>
-            <label>
-              Anaheim Ducks?&nbsp;&nbsp;
-              <input
-                hx-put={`/providers/victory/toggle-ducks`}
-                hx-trigger="change"
-                name="victory-ducks-enabled"
-                hx-target="#victory-body"
-                type="checkbox"
-                role="switch"
-                checked={ducks ? true : false}
-                data-enabled={ducks ? 'true' : 'false'}
-              />
-            </label>
-          </fieldset>
+          <div>
+            <fieldset>
+              <label>
+                Anaheim Ducks?&nbsp;&nbsp;
+                <input
+                  hx-put={`/providers/victory/toggle-ducks`}
+                  hx-trigger="change"
+                  name="victory-ducks-enabled"
+                  hx-target="#victory-body"
+                  type="checkbox"
+                  role="switch"
+                  checked={ducks ? true : false}
+                  data-enabled={ducks ? 'true' : 'false'}
+                />
+              </label>
+            </fieldset>
+          </div>
+          <div>
+            <fieldset>
+              <label>
+                St. Louis Blues?&nbsp;&nbsp;
+                <input
+                  hx-put={`/providers/victory/toggle-blues`}
+                  hx-trigger="change"
+                  name="victory-blues-enabled"
+                  hx-target="#victory-body"
+                  type="checkbox"
+                  role="switch"
+                  checked={blues ? true : false}
+                  data-enabled={blues ? 'true' : 'false'}
+                />
+              </label>
+            </fieldset>
+          </div>
         </div>
         <div id="victory-body" hx-swap="innerHTML">
           <VictoryBody enabled={enabled} tokens={tokens} />
