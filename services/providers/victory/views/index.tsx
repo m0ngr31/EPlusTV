@@ -65,8 +65,6 @@ export const Victory: FC = async () => {
                 />
               </label>
             </fieldset>
-          </div>
-          <div>
             <fieldset>
               <label>
                 Anaheim Ducks?&nbsp;&nbsp;
@@ -82,8 +80,6 @@ export const Victory: FC = async () => {
                 />
               </label>
             </fieldset>
-          </div>
-          <div>
             <fieldset>
               <label>
                 St. Louis Blues?&nbsp;&nbsp;
