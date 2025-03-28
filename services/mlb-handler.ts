@@ -901,9 +901,9 @@ class MLBHandler {
           continue;
         }
 
-        [url, headers] = await this.getEventData(stream.mediaId);
-
         try {
+          [url, headers] = await this.getEventData(stream.mediaId);
+
           await axios.get(url, {
             headers: {
               ...headers,
