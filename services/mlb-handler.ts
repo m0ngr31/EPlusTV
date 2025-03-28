@@ -13,7 +13,7 @@ import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from '
 import {db} from './database';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
-import {normalTimeRange} from './shared-helpers';
+import {isBase64, normalTimeRange} from './shared-helpers';
 
 interface IGameContent {
   media: {
@@ -1003,7 +1003,7 @@ class MLBHandler {
         `&endDate=${endDate.format('YYYY-MM-DD')}`,
       ].join('');
 
-      let oktaToken: string;
+      let oktaToken: string | undefined;
 
       try {
         oktaToken = await this.getOktaToken();
@@ -1013,11 +1013,12 @@ class MLBHandler {
         headers: {
           accept: '*/*',
           'accept-language': 'en-US,en;q=0.9',
-          authorization: 'Bearer ' + this.access_token,
           'content-type': 'application/json',
-          ...(oktaToken && {
-            'x-okta-id': oktaToken,
-          }),
+          ...(this.access_token &&
+            oktaToken && {
+              authorization: 'Bearer ' + this.access_token,
+              'x-okta-id': oktaToken,
+            }),
         },
       });
 
@@ -1027,13 +1028,20 @@ class MLBHandler {
     }
   };
 
-  private getOktaToken = async (): Promise<string> => {
+  private getOktaToken = async (): Promise<string | undefined> => {
     if (!this.playback_token) {
       await this.getEventData('b7f0fff7-266f-4171-aa2d-af7988dc9302');
     }
 
     const encoded_okta_id = this.playback_token.split('_')[1];
-    return Buffer.from(`${encoded_okta_id}==`, 'base64').toString('ascii');
+
+    if (encoded_okta_id && encoded_okta_id.length > 0) {
+      const base64Okta = `${encoded_okta_id}==`;
+
+      if (isBase64(base64Okta)) {
+        return Buffer.from(base64Okta, 'base64').toString('ascii');
+      }
+    }
   };
 
   private refreshToken = async (): Promise<void> => {

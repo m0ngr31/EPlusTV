@@ -133,3 +133,15 @@ export const combineImages = async (url1: string, url2: string): Promise<string>
 
   return `data:image/png;base64,${combinedBuffer.toString('base64')}`;
 };
+
+export const isBase64 = (str?: string): boolean => {
+  if (!str || str.length === 0) {
+    return false;
+  }
+
+  try {
+    return Buffer.from(str, 'base64').toString('base64') === str;
+  } catch (e) {
+    return false;
+  }
+};
