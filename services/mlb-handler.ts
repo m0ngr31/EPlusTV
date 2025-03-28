@@ -446,6 +446,7 @@ class MLBHandler {
   public entitlements?: IEntitlement[];
 
   private playback_token?: string;
+  private playback_token_exp?: Moment;
 
   public initialize = async () => {
     const setup = (await db.providers.countAsync({name: 'mlbtv'})) > 0 ? true : false;
@@ -593,7 +594,7 @@ class MLBHandler {
     }
   };
 
-  public getEventData = async (mediaId: string): Promise<TChannelPlaybackInfo> => {
+  public getEventData = async (mediaId: string, adCapabilities = 'NONE'): Promise<TChannelPlaybackInfo> => {
     try {
       await this.getSession();
 
@@ -617,7 +618,7 @@ class MLBHandler {
         query:
           'mutation initPlaybackSession(\n        $adCapabilities: [AdExperienceType]\n        $mediaId: String!\n        $deviceId: String!\n        $sessionId: String!\n        $quality: PlaybackQuality\n    ) {\n        initPlaybackSession(\n            adCapabilities: $adCapabilities\n            mediaId: $mediaId\n            deviceId: $deviceId\n            sessionId: $sessionId\n            quality: $quality\n        ) {\n            playbackSessionId\n            playback {\n                url\n                token\n                expiration\n                cdn\n            }\n            adScenarios {\n                adParamsObj\n                adScenarioType\n                adExperienceType\n            }\n            adExperience {\n                adExperienceTypes\n                adEngineIdentifiers {\n                    name\n                    value\n                }\n                adsEnabled\n            }\n            heartbeatInfo {\n                url\n                interval\n            }\n            trackingObj\n        }\n    }',
         variables: {
-          adCapabilities: ['NONE'],
+          adCapabilities: [adCapabilities],
           deviceId: this.device_id,
           mediaId,
           quality: 'PLACEHOLDER',
@@ -632,19 +633,21 @@ class MLBHandler {
         },
       });
 
-      const playbackUrl = data.data.initPlaybackSession.playback.url.replace(/[/]([A-Za-z0-9_]+)[/]/g, '/');
+      const playbackUrl = data.data.initPlaybackSession.playback.url;
       const token = data.data.initPlaybackSession.playback.token;
 
-      this.playback_token = token;
+      if (token) {
+        this.playback_token = token;
+        this.playback_token_exp = moment(data.data.initPlaybackSession.playback.expiration);
+      }
 
       return [
         playbackUrl,
         {
-          accept: '*/*',
-          'accept-encoding': 'gzip, deflate, br',
+          accept: 'application/json, text/plain, */*',
+          'accept-encoding': 'identity',
           'accept-language': 'en-US,en;q=0.5',
           connection: 'keep-alive',
-          'x-cdn-token': token,
         },
       ];
     } catch (e) {
@@ -1043,7 +1046,7 @@ class MLBHandler {
   };
 
   private getOktaToken = async (): Promise<string | undefined> => {
-    if (!this.playback_token) {
+    if (!this.playback_token || !this.playback_token_exp || moment().isAfter(this.playback_token_exp)) {
       await this.getEventData('b7f0fff7-266f-4171-aa2d-af7988dc9302');
     }
 
@@ -1202,7 +1205,7 @@ class MLBHandler {
   private save = async () => {
     await db.providers.updateAsync(
       {name: 'mlbtv'},
-      {$set: {tokens: _.omit(this, 'entitlements', 'session_id', 'playback_token')}},
+      {$set: {tokens: _.omit(this, 'entitlements', 'session_id', 'playback_token', 'playback_token_exp')}},
     );
   };
 

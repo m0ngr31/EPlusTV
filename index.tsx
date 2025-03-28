@@ -8,7 +8,7 @@ import _ from 'lodash';
 import axios from 'axios';
 
 import fs from 'fs';
-import { createServer } from 'node:https';
+import {createServer} from 'node:https';
 
 import {generateM3u} from './services/generate-m3u';
 import {initDirectories} from './services/init-directories';
@@ -87,6 +87,10 @@ import {
   setXmltvPadding,
   setEventFilters,
 } from './services/misc-db-service';
+
+// Check for SSL environment variables
+const sslCertificatePath = process.env.SSL_CERTIFICATE_PATH;
+const sslPrivateKeyPath = process.env.SSL_PRIVATEKEY_PATH;
 
 // Set timeout of requests to 1 minute
 axios.defaults.timeout = 1000 * 60;
@@ -597,20 +601,16 @@ process.on('SIGINT', shutDown);
     nhlHandler.refreshTokens(),
   ]);
 
-  // Check for SSL environment variables
-  const sslCertificatePath = process.env.SSL_CERTIFICATE_PATH;
-  const sslPrivateKeyPath = process.env.SSL_PRIVATEKEY_PATH;
-
   if (sslCertificatePath && sslPrivateKeyPath) {
     serve(
       {
+        createServer,
         fetch: app.fetch,
-        createServer: createServer,
-        serverOptions: {
-          key: fs.readFileSync(sslPrivateKeyPath),
-          cert: fs.readFileSync(sslCertificatePath),
-        },
         port: SERVER_PORT,
+        serverOptions: {
+          cert: fs.readFileSync(sslCertificatePath),
+          key: fs.readFileSync(sslPrivateKeyPath),
+        },
       },
       () => {
         console.log(`HTTPS server started on port ${SERVER_PORT}`);
