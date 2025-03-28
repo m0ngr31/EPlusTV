@@ -1003,7 +1003,11 @@ class MLBHandler {
         `&endDate=${endDate.format('YYYY-MM-DD')}`,
       ].join('');
 
-      const oktaToken = await this.getOktaToken();
+      let oktaToken: string;
+
+      try {
+        oktaToken = await this.getOktaToken();
+      } catch (e) {}
 
       const {data} = await axios.get<{results: IGameFeed[]}>(url, {
         headers: {
@@ -1011,7 +1015,9 @@ class MLBHandler {
           'accept-language': 'en-US,en;q=0.9',
           authorization: 'Bearer ' + this.access_token,
           'content-type': 'application/json',
-          'x-okta-id': oktaToken,
+          ...(oktaToken && {
+            'x-okta-id': oktaToken,
+          }),
         },
       });
 
@@ -1085,9 +1091,11 @@ class MLBHandler {
       this.refresh_token = data.refresh_token;
 
       await this.save();
+
       await this.recheckMlbNetworkAccess();
       await this.checkSnyAccess();
       await this.checkSnlaAccess();
+      await this.getOktaToken();
 
       return true;
     } catch (e) {
