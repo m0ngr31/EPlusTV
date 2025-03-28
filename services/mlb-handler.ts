@@ -893,20 +893,34 @@ class MLBHandler {
 
       const availableStreams = data?.data?.contentCollections?.[0]?.contents;
 
-      if (availableStreams.length > 0) {
-        const liveStream = availableStreams.find(a => a.mediaState?.state === 'ON');
+      let [url, headers]: Partial<TChannelPlaybackInfo> = [, {}];
+      let hasValidStream = false;
 
-        if (liveStream) {
-          return this.getEventData(liveStream.mediaId);
-        } else {
-          return this.getEventData(availableStreams[0].mediaId);
+      for (const stream of availableStreams) {
+        if (hasValidStream) {
+          continue;
         }
+
+        [url, headers] = await this.getEventData(stream.mediaId);
+
+        try {
+          await axios.get(url, {
+            headers: {
+              ...headers,
+            },
+          });
+
+          hasValidStream = true;
+        } catch (e) {}
       }
 
-      throw new Error('Could not find SNY stream!');
+      if (hasValidStream && url) {
+        return [url, headers];
+      }
+
+      throw new Error(`Could not find stream for ${network}!`);
     } catch (e) {
-      console.error(e);
-      console.log('Could not find SNY stream!');
+      console.log(`Could not find stream for ${network}!`);
     }
   };
 
