@@ -21,9 +21,6 @@ const TEAM_COLORS = {
 };
 
 const convertUTCToLocal = (utcTimeString: string, localDate: Moment): Moment => {
-  const [time, period] = utcTimeString.split(' ');
-  const [hours, minutes] = time.split(':');
-
   const localMoment = moment.tz(localDate.format('YYYY-MM-DD') + ' 00:00', 'America/New_York').local();
 
   const utcMoment = moment.utc(localDate.format('YYYY-MM-DD') + ' ' + utcTimeString, 'YYYY-MM-DD h:mm A');

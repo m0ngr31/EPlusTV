@@ -26,7 +26,9 @@ import {gothamHandler} from './services/gotham-handler';
 import {mwHandler} from './services/mw-handler';
 import {pwhlHandler} from './services/pwhl-handler';
 import {lovbHandler} from './services/lovb-handler';
+import {ballyHandler} from './services/bally-handler';
 import {wsnHandler} from './services/wsn-handler';
+import {nwslHandler} from './services/nwsl-handler';
 import {nsicHandler} from './services/nsic-handler';
 import {nesnHandler} from './services/nesn-handler';
 import {cbsHandler} from './services/cbs-handler';
@@ -72,6 +74,8 @@ import {Gotham} from './services/providers/gotham/views';
 import {WSN} from './services/providers/wsn/views';
 import {PWHL} from './services/providers/pwhl/views';
 import {LOVB} from './services/providers/lovb/views';
+import {Bally} from './services/providers/bally/views';
+import {Nwsl} from './services/providers/nwsl/views';
 import {NHL} from './services/providers/nhl-tv/views';
 import {Victory} from './services/providers/victory/views';
 import {KBO} from './services/providers/kbo/views';
@@ -127,8 +131,10 @@ const schedule = async () => {
     wsnHandler.getSchedule(),
     pwhlHandler.getSchedule(),
     lovbHandler.getSchedule(),
+    ballyHandler.getSchedule(),
     nsicHandler.getSchedule(),
     nflHandler.getSchedule(),
+    nwslHandler.getSchedule(),
     paramountHandler.getSchedule(),
     gothamHandler.getSchedule(),
     nesnHandler.getSchedule(),
@@ -179,7 +185,9 @@ app.get('/', async c => {
               <NHL />
               <MntWest />
               <NorthernSun />
+              <Bally />
               <PWHL />
+              <Nwsl />
               <LOVB />
               <WSN />
               <KBO />
@@ -376,7 +384,7 @@ app.get('/linear-channels.m3u', async c => {
     return notFound(c);
   }
 
-  const m3uFile = await generateM3u(getUri(c), true);
+  const m3uFile = await generateM3u(getUri(c), true, c.req.query('gracenote') === 'exclude');
 
   if (!m3uFile) {
     return notFound(c);
@@ -572,6 +580,7 @@ process.on('SIGINT', shutDown);
     b1gHandler.initialize(),
     floSportsHandler.initialize(),
     nflHandler.initialize(),
+    nwslHandler.initialize(),
     paramountHandler.initialize(),
     gothamHandler.initialize(),
     nesnHandler.initialize(),
@@ -582,6 +591,7 @@ process.on('SIGINT', shutDown);
     wsnHandler.initialize(),
     pwhlHandler.initialize(),
     lovbHandler.initialize(),
+    ballyHandler.initialize(),
     nsicHandler.initialize(),
     kboHandler.initialize(),
   ]);
@@ -593,6 +603,7 @@ process.on('SIGINT', shutDown);
     b1gHandler.refreshTokens(),
     floSportsHandler.refreshTokens(),
     nflHandler.refreshTokens(),
+    nwslHandler.refreshTokens(),
     paramountHandler.refreshTokens(),
     gothamHandler.refreshTokens(),
     nesnHandler.refreshTokens(),
@@ -647,6 +658,7 @@ setInterval(
       b1gHandler.refreshTokens(),
       floSportsHandler.refreshTokens(),
       nflHandler.refreshTokens(),
+      nwslHandler.refreshTokens(),
       paramountHandler.refreshTokens(),
       gothamHandler.refreshTokens(),
       nesnHandler.refreshTokens(),

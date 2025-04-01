@@ -2,7 +2,6 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 import moment, {Moment} from 'moment-timezone';
 import _ from 'lodash';
 
@@ -13,7 +12,7 @@ import {ClassTypeWithoutMethods, IEntry, IProvider, TChannelPlaybackInfo} from '
 import {db} from './database';
 import {debug} from './debug';
 import {usesLinear} from './misc-db-service';
-import {isBase64, normalTimeRange} from './shared-helpers';
+import {normalTimeRange} from './shared-helpers';
 
 interface IGameContent {
   media: {
@@ -188,21 +187,6 @@ const LINEAR_CHANNELS = [
     stationId: '87024',
   },
 ];
-
-const parseDateAndTime = (dateString: string, timeString: string): Moment => {
-  // Combine date and time strings
-  const dateTimeString = `${dateString} ${timeString}`;
-
-  // Parse the combined string and set the time zone to Eastern
-  const dateTime = moment.tz(dateTimeString, 'M/DD/YYYY h:mm A', 'America/New_York');
-
-  // Check if the parsed date is valid
-  if (!dateTime.isValid()) {
-    throw new Error('Invalid date or time format');
-  }
-
-  return dateTime;
-};
 
 const generateThumb = (home: ITeam, away: ITeam): string =>
   `https://img.mlbstatic.com/mlb-photos/image/upload/ar_167:215,c_crop/fl_relative,l_team:${home.team.id}:fill:spot.png,w_1.0,h_1,x_0.5,y_0,fl_no_overflow,e_distort:100p:0:200p:0:200p:100p:0:100p/fl_relative,l_team:${away.team.id}:logo:spot:current,w_0.38,x_-0.25,y_-0.16/fl_relative,l_team:${home.team.id}:logo:spot:current,w_0.38,x_0.25,y_0.16/w_750/team/${away.team.id}/fill/spot.png`;
@@ -740,28 +724,17 @@ class MLBHandler {
 
     try {
       const {data} = await axios.get(
-        'https://www.mlb.com/live-stream-games/help-center/subscription-access-big-inning',
+        'https://api.fubo.tv/gg/series/123881219/live-programs?limit=4&page=2&languages=en&countrySlugs=USA',
       );
 
-      const $ = cheerio.load(data);
-      const table = $('table');
+      data.data.forEach(e => {
+        const airingData = e.airings[0];
 
-      table.find('tr').each((_, row) => {
-        const rowData = [];
+        if (airingData) {
+          const start = moment(airingData.accessRights.live.startTime);
+          const end = moment(airingData.accessRights.live.endTime);
 
-        $(row)
-          .find('td')
-          .each((_, cell) => {
-            rowData.push($(cell).text().trim());
-          });
-
-        if (rowData.length > 0) {
-          const [dateString, startTimeString, endTimeString] = rowData;
-
-          const startDateTime = parseDateAndTime(dateString, startTimeString);
-          const endDateTime = parseDateAndTime(dateString, endTimeString);
-
-          bigInnings.push([startDateTime, endDateTime]);
+          bigInnings.push([start, end]);
         }
       });
 
@@ -1053,11 +1026,7 @@ class MLBHandler {
     const encoded_okta_id = this.playback_token.split('_')[1];
 
     if (encoded_okta_id && encoded_okta_id.length > 0) {
-      const base64Okta = `${encoded_okta_id}==`;
-
-      if (isBase64(base64Okta)) {
-        return Buffer.from(base64Okta, 'base64').toString('ascii');
-      }
+      return Buffer.from(`${encoded_okta_id}==`, 'base64').toString('ascii');
     }
   };
 

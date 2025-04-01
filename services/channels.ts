@@ -200,6 +200,46 @@ export const CHANNELS = {
         stationId: '124636',
         tvgName: 'WSN',
       },
+      80: {
+        checkChannelEnabled: () => checkChannelEnabled('nwsl', 'NWSL+'),
+        id: 'NWSL+',
+        logo: 'https://img.dge-prod.dicelaboratory.com/original/2024/11/22101220-tgwkrv9kdmvdqo2o.png',
+        name: 'NWSL+ 24/7',
+      },
+      90: {
+        checkChannelEnabled: () => checkChannelEnabled('bally', 'STADIUM'),
+        id: 'STADIUM',
+        logo: 'https://tmsimg.fancybits.co/assets/s104950_ll_h15_aa.png?w=360&h=270',
+        name: 'Stadium HD',
+        stationId: '104950',
+        tvgName: 'STADIUM',
+      },
+      91: {
+        checkChannelEnabled: () => checkChannelEnabled('bally', 'MiLB'),
+        id: 'MiLB',
+        logo: 'https://assets-stratosphere.cdn.ballys.tv/images/MiLB_New_Logo_23.png',
+        name: 'MiLB',
+      },
+      92: {
+        checkChannelEnabled: () => checkChannelEnabled('bally', 'bananaball'),
+        id: 'bananaball',
+        logo: 'https://assets-stratosphere.cdn.ballys.tv/images/BananaBall_SB_01.png',
+        name: 'Banana Ball',
+      },
+      93: {
+        checkChannelEnabled: () => checkChannelEnabled('bally', 'ballypoker'),
+        id: 'ballypoker',
+        logo: 'https://assets-stratosphere.ballys.tv/images/BallyPoker_Channel_V3.png',
+        name: 'Bally Poker',
+      },
+      94: {
+        checkChannelEnabled: () => checkChannelEnabled('bally', 'GLORY'),
+        id: 'GLORY',
+        logo: 'https://tmsimg.fancybits.co/assets/s131359_ll_h9_aa.png?w=360&h=270',
+        name: 'GLORY Kickboxing',
+        stationId: '131359',
+        tvgName: 'GLORY',
+      },
     };
   },
 };

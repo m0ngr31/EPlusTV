@@ -155,7 +155,7 @@ export class PlaylistHandler {
             updatedManifest = updatedManifest.replace(track[1], `${this.baseProxyUrl}${chunklistName}.m3u8`);
           }
         });
-      } else if (this.network === 'victory') {
+      } else if (this.network === 'victory' || this.network === 'bally') {
         const subTracks = [...manifest.matchAll(reSubMapVictory)];
         subTracks.forEach(track => {
           if (track && track[1]) {

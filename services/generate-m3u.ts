@@ -3,7 +3,7 @@ import _ from 'lodash';
 import {CHANNELS} from './channels';
 import {getLinearStartChannel, getNumberOfChannels, getStartChannel} from './misc-db-service';
 
-export const generateM3u = async (uri: string, linear = false): Promise<string> => {
+export const generateM3u = async (uri: string, linear = false, excludeGracenote = false): Promise<string> => {
   const startChannel = await getStartChannel();
   const numOfChannels = await getNumberOfChannels();
   const linearStartChannel = await getLinearStartChannel();
@@ -22,8 +22,20 @@ export const generateM3u = async (uri: string, linear = false): Promise<string> 
         }
       }
 
+      if (excludeGracenote && (val.stationId || val.tvgName)) {
+        continue;
+      } else if (!excludeGracenote && (!val.stationId || !val.tvgName)) {
+        continue;
+      }
+
       const channelNum = parseInt(key, 10) + linearStartChannel;
-      m3uFile = `${m3uFile}\n#EXTINF:0 tvg-id="${channelNum}.eplustv" channel-id="${val.name}" channel-number="${channelNum}" tvg-chno="${channelNum}" tvg-name="${val.tvgName}" tvc-guide-stationid="${val.stationId}" group-title="EPlusTV", ${val.name}`;
+
+      if (excludeGracenote) {
+        m3uFile = `${m3uFile}\n#EXTINF:0 tvg-id="${channelNum}.eplustv" channel-number="${channelNum}" tvg-chno="${channelNum}" tvg-name="${val.id}" group-title="EPlusTV", ${val.name}`;
+      } else {
+        m3uFile = `${m3uFile}\n#EXTINF:0 tvg-id="${channelNum}.eplustv" channel-id="${val.name}" channel-number="${channelNum}" tvg-chno="${channelNum}" tvg-name="${val.tvgName}" tvc-guide-stationid="${val.stationId}" group-title="EPlusTV", ${val.name}`;
+      }
+
       m3uFile = `${m3uFile}\n${uri}/channels/${channelNum}.m3u8\n`;
     }
   } else {

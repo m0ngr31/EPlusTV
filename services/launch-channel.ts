@@ -18,9 +18,12 @@ import {calculateChannelNumber} from './channels';
 import {gothamHandler} from './gotham-handler';
 import {wsnHandler} from './wsn-handler';
 import {pwhlHandler} from './pwhl-handler';
+import {ballyHandler} from './bally-handler';
+import {lovbHandler} from './lovb-handler';
 import {nhlHandler} from './nhltv-handler';
 import {victoryHandler} from './victory-handler';
 import {kboHandler} from './kbo-handler';
+import {nwslHandler} from './nwsl-handler';
 
 const checkingStream = {};
 
@@ -76,6 +79,15 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
           break;
         case 'pwhl':
           [url, headers] = await pwhlHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'nwsl':
+          [url, headers] = await nwslHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'lovb':
+          [url, headers] = await lovbHandler.getEventData(appStatus.channels[channelId].current);
+          break;
+        case 'bally':
+          [url, headers] = await ballyHandler.getEventData(appStatus.channels[channelId].current);
           break;
         case 'northern-sun':
           [url, headers] = await nsicHandler.getEventData(appStatus.channels[channelId].current);
