@@ -724,7 +724,7 @@ class MLBHandler {
 
     try {
       const {data} = await axios.get(
-        'https://api.fubo.tv/gg/series/123881219/live-programs?limit=4&page=2&languages=en&countrySlugs=USA',
+        'https://api.fubo.tv/gg/series/123881219/live-programs?limit=4&page=1&languages=en&countrySlugs=USA',
       );
 
       data.data.forEach(e => {
