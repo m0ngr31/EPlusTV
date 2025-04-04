@@ -1,4 +1,5 @@
-import HLS from 'hls-parser';
+import {Manifest, Parser} from 'm3u8-parser';
+
 import axios from 'axios';
 import _ from 'lodash';
 
@@ -70,6 +71,93 @@ const parseReplacementUrl = (url: string, manifestUrl: string): string =>
       : cleanUrl(`${createBaseUrl(manifestUrl)}/${url}`)
     : url;
 
+function stringifyManifest(manifest: any, postProcess?: (manifest: string) => string): string {
+  const lines: string[] = [];
+  // Always start with the mandatory EXTM3U header
+  lines.push('#EXTM3U');
+
+  // If version exists, add the EXT-X-VERSION tag
+  if (manifest.version) {
+    lines.push(`#EXT-X-VERSION:${manifest.version}`);
+  }
+
+  // If independent segments are present, add the corresponding tag
+  if (manifest.independentSegments) {
+    lines.push('#EXT-X-INDEPENDENT-SEGMENTS');
+  }
+
+  // Check if the manifest is a master playlist or a media playlist
+  if (manifest.playlists && manifest.playlists.length > 0) {
+    // Process master playlist
+    manifest.playlists.forEach((variant: any) => {
+      // Build the attribute string for the EXT-X-STREAM-INF tag
+      const attributes: string[] = [];
+      if (variant.attributes && variant.attributes.BANDWIDTH) {
+        attributes.push(`BANDWIDTH=${variant.attributes.BANDWIDTH}`);
+      }
+      if (variant.attributes && variant.attributes.RESOLUTION) {
+        const res = variant.attributes.RESOLUTION;
+        attributes.push(`RESOLUTION=${res.width}x${res.height}`);
+      }
+      if (variant.attributes && variant.attributes.CODECS) {
+        attributes.push(`CODECS="${variant.attributes.CODECS}"`);
+      }
+      // Add other attributes if necessary...
+
+      lines.push(`#EXT-X-STREAM-INF:${attributes.join(',')}`);
+      // The next line is the URI of the variant
+      lines.push(variant.uri);
+    });
+  } else if (manifest.segments && manifest.segments.length > 0) {
+    // Process media playlist
+
+    // If a start tag is present, add the EXT-X-START tag
+    if (manifest.start && manifest.start.timeOffset !== undefined) {
+      const precise = manifest.start.precise ? ',PRECISE=YES' : '';
+      lines.push(`#EXT-X-START:TIME-OFFSET=${manifest.start.timeOffset}${precise}`);
+    }
+    // If target duration exists, add the EXT-X-TARGETDURATION tag
+    if (manifest.targetDuration) {
+      lines.push(`#EXT-X-TARGETDURATION:${manifest.targetDuration}`);
+    }
+    // If media sequence is defined, add the EXT-X-MEDIA-SEQUENCE tag
+    if (manifest.mediaSequence !== undefined) {
+      lines.push(`#EXT-X-MEDIA-SEQUENCE:${manifest.mediaSequence}`);
+    }
+
+    // Iterate over each segment in the media playlist
+    manifest.segments.forEach((segment: any) => {
+      // Add the EXTINF tag with duration and title (if available)
+      if (segment.duration !== undefined) {
+        const title = segment.title ? segment.title : '';
+        lines.push(`#EXTINF:${segment.duration},${title}`);
+      }
+      // Add the URI of the segment
+      lines.push(segment.uri);
+      // If there is a discontinuity, add the discontinuity tag
+      if (segment.discontinuity) {
+        lines.push('#EXT-X-DISCONTINUITY');
+      }
+    });
+    // If the playlist is marked as ended, add the EXT-X-ENDLIST tag
+    if (manifest.endList) {
+      lines.push('#EXT-X-ENDLIST');
+    }
+  } else {
+    console.warn('Manifest does not contain playlists or segments.');
+  }
+
+  // Combine all lines into a single string
+  let result = lines.join('\n');
+
+  // Apply post-processing if a postProcess function is provided
+  if (postProcess && typeof postProcess === 'function') {
+    result = postProcess(result);
+  }
+
+  return result;
+}
+
 export class PlaylistHandler {
   public playlist: string;
 
@@ -127,22 +215,25 @@ export class PlaylistHandler {
       const realManifestUrl = request.res.responseUrl;
       const urlParams = this.network === 'foxsports' ? new URL(realManifestUrl).search : '';
 
-      const playlist = HLS.parse(manifest);
+      /** Parse the manifest */
+      const parser = new Parser();
+      parser.push(manifest);
+      parser.end();
+      const playlist: Manifest = parser.manifest;
 
       /** Sort playlist so highest resolution is first in list (Emby workaround) */
-      playlist.variants?.sort((v1, v2) => {
-        if (v1.bandwidth > v2.bandwidth) {
+      playlist.playlists?.sort((v1, v2) => {
+        if (v1.attributes.BANDWIDTH > v2.attributes.BANDWIDTH) {
           return -1;
         }
-
-        if (v1.bandwidth < v2.bandwidth) {
+        if (v1.attributes.BANDWIDTH < v2.attributes.BANDWIDTH) {
           return 1;
         }
-
         return 0;
       });
 
-      const clonedManifest = updateVersion(HLS.stringify(playlist));
+      const stringifiedManifest = stringifyManifest(playlist);
+      const clonedManifest = updateVersion(stringifiedManifest);
       let updatedManifest = clonedManifest;
 
       if (this.network === 'nesn') {
@@ -187,16 +278,15 @@ export class PlaylistHandler {
         });
       }
 
-      playlist.variants?.forEach(variant => {
+      playlist.playlists?.forEach((variant: any) => {
         const fullChunklistUrl = parseReplacementUrl(variant.uri, realManifestUrl);
-
         const chunklistName = cacheLayer.getChunklistFromUrl(`${fullChunklistUrl}${urlParams}`);
         updatedManifest = updatedManifest.replace(variant.uri, `${this.baseProxyUrl}${chunklistName}.m3u8`);
       });
 
       this.playlist = updatedManifest;
     } catch (e) {
-      console.error(e);
+      // console.error(e);
       console.log('Could not parse M3U8 properly!');
     }
   }
@@ -231,7 +321,11 @@ export class PlaylistHandler {
       const clonedChunklist = updateVersion(chunkList);
       let updatedChunkList = clonedChunklist;
 
-      const chunks = HLS.parse(clonedChunklist);
+      /** Parse the manifest */
+      const parser = new Parser();
+      parser.push(clonedChunklist);
+      parser.end();
+      const chunks: Manifest = parser.manifest;
 
       const shouldProxy =
         proxyAllSegments || baseManifestUrl.includes('akamai') || this.network === 'mlbtv' || this.network === 'gotham';
