@@ -386,7 +386,7 @@ class FoxHandler {
             maxRes: streamOrder[a],
             os: 'Android',
             osv: '11.0.0',
-            streamId: eventId,
+            streamId: eventId.replace('_dtc', ''),
             streamType: 'live',
           },
           {
@@ -422,7 +422,6 @@ class FoxHandler {
     const events: IFoxEvent[] = [];
 
     const [now, inTwoDays] = normalTimeRange();
-    now.startOf('day');
 
     const dateRange = `${now.toISOString()}..${inTwoDays.toISOString()}`;
 

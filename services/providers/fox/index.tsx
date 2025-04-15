@@ -99,6 +99,9 @@ fox.get('/tve-login/:code', async c => {
     return c.html(<Login code={code} />);
   }
 
+  // Trigger a refresh of tokens straight away
+  await foxHandler.authenticateRegCode(false);
+
   const {affectedDocuments} = await db.providers.updateAsync<IProvider<TFoxTokens>, any>(
     {name: 'foxsports'},
     {$set: {enabled: true}},
