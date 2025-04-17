@@ -89,6 +89,7 @@ interface IFoxEventsData {
 interface IFoxMeta {
   only4k?: boolean;
   uhd?: boolean;
+  dtc_events?: boolean;
 }
 
 const foxConfigPath = path.join(configPath, 'fox_tokens.json');
@@ -129,7 +130,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
   const {meta} = await db.providers.findOneAsync<IProvider<any, IFoxMeta>>({name: 'foxsports'});
 
   for (const event of events) {
-    const entryExists = await db.entries.findOneAsync<IEntry>({id: event.id});
+    const entryExists = await db.entries.findOneAsync<IEntry>({id: `${event.id.replace('_dtc', '')}`});
 
     if (!entryExists) {
       const start = moment(event.startDate);
@@ -161,7 +162,7 @@ const parseAirings = async (events: IFoxEvent[]) => {
         duration: end.diff(start, 'seconds'),
         end: end.valueOf(),
         from: 'foxsports',
-        id: event.id,
+        id: event.id.replace('_dtc', ''),
         image: event.images.logo?.FHD || event.images.seriesDetail?.FHD || event.images.seriesList?.FHD,
         name: eventName,
         network: event.callSign,
@@ -298,10 +299,15 @@ class FoxHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
+    const {enabled, meta} = await db.providers.findOneAsync<IProvider<TFoxTokens, IFoxMeta>>({name: 'foxsports'});
 
     if (!enabled) {
       return;
+    }
+
+    if (!meta.dtc_events) {
+      await db.entries.removeAsync({from: 'foxsports', id: {$regex: /_dtc/}}, {multi: true});
+      await db.providers.updateAsync({name: 'foxsports'}, {$set: {meta: {...meta, dtc_events: true}}});
     }
 
     console.log('Looking for FOX Sports events...');
