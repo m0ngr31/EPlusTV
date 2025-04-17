@@ -268,10 +268,20 @@ class FoxHandler {
       console.log('Using MAX_RESOLUTION variable is no longer needed. Please use the UI going forward');
     }
 
-    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
+    const {enabled, meta} = await db.providers.findOneAsync<IProvider<TFoxTokens, IFoxMeta>>({name: 'foxsports'});
 
     if (!enabled) {
       return;
+    }
+
+    if (!meta.dtc_events) {
+      const events = await db.entries.findAsync({from: 'foxsports', id: {$regex: /_dtc/}});
+
+      for (const event of events) {
+        await db.entries.updateAsync({from: 'foxsports', id: event.id}, {$set: {id: event.id.replace('_dtc', '')}});
+      }
+
+      await db.providers.updateAsync({name: 'foxsports'}, {$set: {meta: {...meta, dtc_events: true}}});
     }
 
     // Load tokens from local file and make sure they are valid
@@ -299,15 +309,10 @@ class FoxHandler {
   };
 
   public getSchedule = async (): Promise<void> => {
-    const {enabled, meta} = await db.providers.findOneAsync<IProvider<TFoxTokens, IFoxMeta>>({name: 'foxsports'});
+    const {enabled} = await db.providers.findOneAsync<IProvider>({name: 'foxsports'});
 
     if (!enabled) {
       return;
-    }
-
-    if (!meta.dtc_events) {
-      await db.entries.removeAsync({from: 'foxsports', id: {$regex: /_dtc/}}, {multi: true});
-      await db.providers.updateAsync({name: 'foxsports'}, {$set: {meta: {...meta, dtc_events: true}}});
     }
 
     console.log('Looking for FOX Sports events...');
