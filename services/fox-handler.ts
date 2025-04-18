@@ -389,7 +389,7 @@ class FoxHandler {
     for (let a = resIndex; a < streamOrder.length; a++) {
       try {
         const {data} = await axios.post(
-          this.appConfig.api.content.watch,
+          'https://prod.api.video.fox/v2.0/watch',
           {
             capabilities: ['fsdk/yo/v3'],
             deviceHeight: 2160,
