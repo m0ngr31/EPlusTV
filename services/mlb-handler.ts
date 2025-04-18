@@ -640,21 +640,6 @@ class MLBHandler {
     }
   };
 
-  public recheckMlbNetworkAccess = async (): Promise<boolean> => {
-    await this.getSession();
-    return await this.checkMlbNetworkAccess();
-  };
-
-  public recheckSnyAccess = async (): Promise<boolean> => {
-    await this.getSession();
-    return await this.checkSnyAccess();
-  };
-
-  public recheckSnlaAccess = async (): Promise<boolean> => {
-    await this.getSession();
-    return await this.checkSnlaAccess();
-  };
-
   private updateChannelAccess = async (index: number, enabled: boolean): Promise<void> => {
     const {linear_channels} = await db.providers.findOneAsync<IProvider<TMLBTokens>>({name: 'mlbtv'});
 
@@ -671,9 +656,15 @@ class MLBHandler {
   };
 
   private checkMlbBigInningAccess = async (): Promise<boolean> => {
-    const {meta} = await db.providers.findOneAsync<IProvider<TMLBTokens, IProviderMeta>>({name: 'mlbtv'});
+    if (!this.entitlements) {
+      await this.getSession();
+    }
 
-    const enabled = !meta.onlyFree;
+    let enabled = false;
+
+    if ((this.entitlements || [])?.length > 0) {
+      enabled = true;
+    }
 
     await this.updateChannelAccess(0, enabled);
 
@@ -745,8 +736,8 @@ class MLBHandler {
     }
   };
 
-  private checkMlbNetworkAccess = async (): Promise<boolean> => {
-    if (!this.entitlements) {
+  public checkMlbNetworkAccess = async (getEntitlements = false): Promise<boolean> => {
+    if (!this.entitlements || getEntitlements) {
       await this.getSession();
     }
 
@@ -799,8 +790,8 @@ class MLBHandler {
     }
   };
 
-  private checkSnyAccess = async (): Promise<boolean> => {
-    if (!this.entitlements) {
+  public checkSnyAccess = async (getEntitlements = false): Promise<boolean> => {
+    if (!this.entitlements || getEntitlements) {
       await this.getSession();
     }
 
@@ -900,8 +891,8 @@ class MLBHandler {
     }
   };
 
-  private checkSnlaAccess = async (): Promise<boolean> => {
-    if (!this.entitlements) {
+  public checkSnlaAccess = async (getEntitlements = false): Promise<boolean> => {
+    if (!this.entitlements || getEntitlements) {
       await this.getSession();
     }
 
@@ -1086,7 +1077,10 @@ class MLBHandler {
 
       await this.save();
 
-      await this.recheckMlbNetworkAccess();
+      await this.getSession();
+
+      await this.checkMlbBigInningAccess();
+      await this.checkMlbNetworkAccess();
       await this.checkSnyAccess();
       await this.checkSnlaAccess();
       await this.getOktaToken();
