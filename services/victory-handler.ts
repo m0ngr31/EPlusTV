@@ -33,21 +33,21 @@ const DEVICE_INFO = {
   screenResW: 3840,
 };
 
-const ALLOWED_SERIES = ['66', '67', '68', '97', '99', '128', '139', '140', '141', '142'];
+const ALLOWED_SERIES = ['66', '67', '68', '97', '99', '128', '139', '140', '141', '142', '150'];
 
 const fillEvent = (event: IVictoryEvent): [string, string[]] => {
   let sport = '';
   const categories = ['Victory+'];
   const seriesId = event.seriesId;
 
-  if (seriesId === '66' || seriesId === '67' || seriesId === '68') {
+  if (seriesId === '66' || seriesId === '67' || seriesId === '68' || seriesId === '150') {
     // Stars or Ducks or Blues game
     sport = 'Hockey';
     categories.push('Hockey', 'NHL');
   } else if (seriesId === '140' || seriesId === '141' || seriesId === '142') {
     // WHL
     sport = 'Hockey';
-    categories.push('Hockey', 'WHL')
+    categories.push('Hockey', 'WHL');
   } else if (seriesId === '97') {
     // Premier Lacrosse League
     sport = 'Lacrosse';
@@ -71,6 +71,7 @@ const parseAirings = async (events: IVictoryEvent[]) => {
       !event.id ||
       !ALLOWED_SERIES.includes(event.seriesId) ||
       (event.seriesId === '66' && !meta.stars) ||
+      (event.seriesId === '150' && !meta.stars) ||
       (event.seriesId === '67' && !meta.ducks) ||
       (event.seriesId === '68' && !meta.blues) ||
       (event.seriesId === '128' && !meta.rangers)
@@ -126,10 +127,10 @@ class VictoryHandler {
       await db.providers.insertAsync<IProvider<TVictoryTokens>>({
         enabled: false,
         meta: {
+          blues: false,
           ducks: false,
           rangers: false,
           stars: false,
-          blues: false,
         },
         name: 'victory',
         tokens: data,
