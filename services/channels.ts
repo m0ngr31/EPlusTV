@@ -240,6 +240,14 @@ export const CHANNELS = {
         stationId: '131359',
         tvgName: 'GLORY',
       },
+      100: {
+        checkChannelEnabled: () => checkChannelEnabled('outside', 'OTVSTR'),
+        id: 'OTVSTR',
+        logo: 'https://tmsimg.fancybits.co/assets/s114313_ll_h15_ab.png?w=360&h=270',
+        name: 'Outside',
+        stationId: '114313',
+        tvgName: 'OTVSTR',
+      },
     };
   },
 };

@@ -35,6 +35,7 @@ import {cbsHandler} from './services/cbs-handler';
 import {nhlHandler} from './services/nhltv-handler';
 import {victoryHandler} from './services/victory-handler';
 import {kboHandler} from './services/kbo-handler';
+import {outsideHandler} from './services/outside-handler';
 import {
   cleanEntries,
   clearChannels,
@@ -79,6 +80,7 @@ import {Nwsl} from './services/providers/nwsl/views';
 import {NHL} from './services/providers/nhl-tv/views';
 import {Victory} from './services/providers/victory/views';
 import {KBO} from './services/providers/kbo/views';
+import {Outside} from './services/providers/outside/views';
 
 import {
   initMiscDb,
@@ -142,6 +144,7 @@ const schedule = async () => {
     nhlHandler.getSchedule(),
     victoryHandler.getSchedule(),
     kboHandler.getSchedule(),
+    outsideHandler.getSchedule(),
   ]);
 
   console.log('=== Done getting events ===');
@@ -181,6 +184,7 @@ app.get('/', async c => {
               <Gotham />
               <Victory />
               <B1G />
+              <Outside />
               <FloSports />
               <NHL />
               <MntWest />
@@ -594,6 +598,7 @@ process.on('SIGINT', shutDown);
     ballyHandler.initialize(),
     nsicHandler.initialize(),
     kboHandler.initialize(),
+    outsideHandler.initialize(),
   ]);
 
   await Promise.all([

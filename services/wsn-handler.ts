@@ -1,35 +1,12 @@
-import axios from 'axios';
 import moment from 'moment';
 
-import {userAgent} from './user-agent';
 import {IEntry, IProvider, TChannelPlaybackInfo} from './shared-interfaces';
 import {db} from './database';
 import {debug} from './debug';
 import {normalTimeRange} from './shared-helpers';
+import {ITubiEvent, tubiHelper} from './tubi-helper';
 
-interface IWSNRes {
-  video_resources: {
-    type: string;
-    manifest: {
-      url: string;
-    };
-  }[];
-  programs: IWSNEvent[];
-}
-
-interface IWSNEvent {
-  images: {
-    thumbnail: string[];
-    poster: string[];
-  };
-  title: string;
-  start_time: string;
-  end_time: string;
-  description: string;
-  id: string;
-}
-
-const parseAirings = async (events: IWSNEvent[]) => {
+const parseAirings = async (events: ITubiEvent[]) => {
   const [now, endSchedule] = normalTimeRange();
 
   for (const event of events) {
@@ -102,7 +79,7 @@ class WomensSportsNetworkHandler {
     console.log("Looking for Women's Sports Network events...");
 
     try {
-      const {programs} = await this.getTubiData();
+      const {programs} = await tubiHelper(692073);
 
       debug.saveRequestData(programs, 'wsn', 'epg');
 
@@ -115,7 +92,7 @@ class WomensSportsNetworkHandler {
 
   public getEventData = async (): Promise<TChannelPlaybackInfo> => {
     try {
-      const {video_resources} = await this.getTubiData();
+      const {video_resources} = await tubiHelper(692073);
       const eventData = video_resources.find(a => a.type === 'hlsv3');
 
       if (eventData) {
@@ -124,29 +101,6 @@ class WomensSportsNetworkHandler {
     } catch (e) {
       console.error(e);
       console.log('Could not get event data');
-    }
-  };
-
-  private getTubiData = async (): Promise<IWSNRes> => {
-    try {
-      const url = [
-        'https://',
-        'epg-cdn.production-public.tubi.io',
-        '/content/epg/programming',
-        '?content_id=692073',
-        '&platform=web',
-      ].join('');
-
-      const {data} = await axios.get<{rows: IWSNRes[]}>(url, {
-        headers: {
-          'user-agent': userAgent,
-        },
-      });
-
-      return data.rows[0];
-    } catch (e) {
-      console.error(e);
-      console.log("Could not get Women's Sports Network data");
     }
   };
 }

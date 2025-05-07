@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/FIGZdR3.png">
 </p>
 
-Current version: **4.9.6**
+Current version: **4.10.0**
 
 # About
 This takes ESPN+, ESPN, FOX Sports, CBS Sports, Paramount+, Gotham Sports, NFL, B1G+, NESN, Mountain West, Northern Sun, KBO, Victory+, NHL.tv, FloSports, LOVB Live, PWHL, or MLB.tv programming and transforms it into a "live TV" experience with virtual linear channels. It will discover what is on, and generate a schedule of channels that will give you M3U and XMLTV files that you can import into something like [Jellyfin](https://jellyfin.org) or [Channels](https://getchannels.com).
@@ -171,6 +171,18 @@ Available to login with FloSports credentials
 #### KBO
 
 Available for free
+
+#### Outside TV
+
+Available to login with Outside TV credentials (free account)
+
+##### Linear Channels
+
+Dedicated linear channels - Will only schedule when dedicated linear channels is set
+
+| Network Name |
+|---|
+| Outside |
 
 #### MLB.tv
 
