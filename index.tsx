@@ -36,6 +36,7 @@ import {nhlHandler} from './services/nhltv-handler';
 import {victoryHandler} from './services/victory-handler';
 import {kboHandler} from './services/kbo-handler';
 import {outsideHandler} from './services/outside-handler';
+import {wnbaHandler} from './services/wnba-handler';
 import {
   cleanEntries,
   clearChannels,
@@ -81,6 +82,7 @@ import {NHL} from './services/providers/nhl-tv/views';
 import {Victory} from './services/providers/victory/views';
 import {KBO} from './services/providers/kbo/views';
 import {Outside} from './services/providers/outside/views';
+import {WNBA} from './services/providers/wnba/views';
 
 import {
   initMiscDb,
@@ -145,6 +147,7 @@ const schedule = async () => {
     victoryHandler.getSchedule(),
     kboHandler.getSchedule(),
     outsideHandler.getSchedule(),
+    wnbaHandler.getSchedule(),
   ]);
 
   console.log('=== Done getting events ===');
@@ -190,6 +193,7 @@ app.get('/', async c => {
               <MntWest />
               <NorthernSun />
               <Bally />
+              <WNBA />
               <PWHL />
               <Nwsl />
               <LOVB />
@@ -599,6 +603,7 @@ process.on('SIGINT', shutDown);
     nsicHandler.initialize(),
     kboHandler.initialize(),
     outsideHandler.initialize(),
+    wnbaHandler.initialize(),
   ]);
 
   await Promise.all([
@@ -615,6 +620,7 @@ process.on('SIGINT', shutDown);
     cbsHandler.refreshTokens(),
     victoryHandler.refreshTokens(),
     nhlHandler.refreshTokens(),
+    wnbaHandler.refreshTokens(),
   ]);
 
   if (sslCertificatePath && sslPrivateKeyPath) {
@@ -670,6 +676,7 @@ setInterval(
       cbsHandler.refreshTokens(),
       victoryHandler.refreshTokens(),
       nhlHandler.refreshTokens(),
+      wnbaHandler.refreshTokens(),
     ]),
   1000 * 60 * 30,
 );

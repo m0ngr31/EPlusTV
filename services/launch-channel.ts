@@ -25,6 +25,7 @@ import {victoryHandler} from './victory-handler';
 import {kboHandler} from './kbo-handler';
 import {nwslHandler} from './nwsl-handler';
 import {outsideHandler} from './outside-handler';
+import {wnbaHandler} from './wnba-handler';
 
 const checkingStream = {};
 
@@ -105,6 +106,8 @@ const startChannelStream = async (channelId: string, appUrl: string) => {
         case 'outside':
           [url, headers] = await outsideHandler.getEventData(appStatus.channels[channelId].current);
           break;
+        case 'wnba':
+          [url, headers] = await wnbaHandler.getEventData(appStatus.channels[channelId].current);
         default:
           [url, headers] = await espnHandler.getEventData(appStatus.channels[channelId].current);
       }

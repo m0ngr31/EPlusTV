@@ -214,6 +214,10 @@ Available for free
 
 Available for free
 
+#### WNBA League Pass
+
+Available to login with WNBA League Pass credentials
+
 #### PWHL
 
 Available for free
